@@ -1,0 +1,64 @@
+no pings! always send .see of ones near a writer and .to of id near you (who they would have to .see back from)
+anytime any packet comes in check to see if we want to bucket the sender (if they're close to us), if so open a line to them
+always just ignore telexes if to throttle back
+
+"open line"
+	dial yourself via the recipient
+	they'll respond with a .see (and _line)
+		unless they're the closest to you, then they /should/ open a line back to place in their own bucket
+	if they have an open line to you, you're the closest to yourself, they'll .see yourself to you
+
+data structure thoughts
+	two root lists
+		writers
+			hashtable by cb as the key
+			each one contains details about a writer and it's last known state
+		hashes
+			hashtable by sha1 hash as the key
+			contains what we know about this hash
+				popularity
+				signal stats
+				recent telexes
+				any fwds we have for it
+	secondary indexes
+		buckets
+			binary distance from self (159 of them)
+			each contains a list of writers by cb
+	active
+		any writer we've gotten a packet from in the last X minutes
+		used only for finding closer writers to recommend
+		158 buckets, a fixed array
+			each entry is also an array of writers
+	writer
+		ip:port/hash
+		last sent
+		fail (incremented by eviction/nat loops)
+		last seen (always set fail=0 when updated)
+		first seen
+		line/pin
+		possibly nat'd, only set when a .nat was what created the writer (first telex)
+		referrer (so we can .nat them if needed)
+		fwd state
+	nat'd
+		every X min (5?) walk array
+		if last seen > 5, dial self via them (so they .see us back)
+	forwards
+		array of writers that we have active forwards for
+		every X min, refresh
+		if any become stale, re-dial for closer
+
+selection
+	get bucket (distance from self)
+	sort by distance from .to
+	select last seen <5min
+	select first seen oldest
+	and/or with a _line?
+
+eviction
+	if more than X in bucket
+	send a .to=self empty telex if last seen > X, increment fail 
+	any last sent - last seen > X and fail > Y
+	any missing _pin (never got packets back)
+	finally, youngest (but older than 60s or so, might be mid-dial?)
+
+incoming

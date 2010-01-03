@@ -1,0 +1,166 @@
+<html>
+<head>
+	<title>TeleHash - Edge Based Event Streams</title>
+	<style>
+	#bod {
+		font-family:American Typewriter;
+		font-weight:200;
+		margin-left:300px;
+	}
+	h1 {
+		font-weight:200;
+		font-size:42pt;
+		text-align:center;
+	}
+	#s {
+		font-size:32pt;
+		color:white;
+	}
+	#menu {
+		position:fixed;
+		top:10px;
+		left:10px;
+	}
+	#hash {
+		position:fixed;
+		top:165px;
+		left:18px;
+		font-family:American Typewriter;
+		color:white;
+		font-size:9pt;
+	}
+	#menu li {
+		font-family:American Typewriter;
+		list-style-type:none;
+		padding-left:10px;
+		font-weight:200;
+		font-size:18pt;
+	}
+	#menu a {
+		font-size:24pt;
+		color:black;
+		text-decoration:none;
+	}
+	#menu a:hover {
+		color:black;
+		text-decoration:underline;
+	}
+	h3 {
+		margin-top:-35px;
+		text-align:center;
+	}
+	p,ul {
+		font-family:Verdana;
+		padding-left:10px;
+	}
+	</style>
+</head>
+<body background="bg.gif">
+<div id="menu">
+	<img src="http://jeremie.com/i/810c8079d4a77e514296b3a58710c903.png"/><br/>
+	<li>&#x260E; <a href="#about">ABOUT</a></li>
+	<li>&#x260E; <a href="#spec">SPEC</a></li>
+	<li>&#x260E; <a href="#code">CODE</a></li>
+	<li>&#x260E; <a href="#who">WHO</a></li>
+</div>
+<div id="hash">eaffb349b9fa33a23eaf1bf1d9913cef94f1b057</div>
+<div id="bod">
+	<h1>TeleHa<span id="s">&#x26A1;</span>h</h1>
+	<h3>Edge Based Event Streams</h3>
+
+<a name="about"><h2>About</h2></a>
+
+<p>TeleHash is a distributed network and open protocol for relaying web-centric events between in a real-time and fully decentralized manner.  Essentially, any kind of event occurring about, within, or in relation to any web page can be shared or observed.  TeleHash is adjacent to the web, adding a new channel and new dimension to every site in a radically open platform that is operated and owned purely by the users.
+	
+<p>It works by having everyone who is participating sharing part of the workload of detecting and distributing events, usually from within their web browser or desktop.  When an event happens locally it is announced to the network, and when events of interest happen they will be routed back locally for processing or display to the user.
+	
+<p>Everything within TeleHash revolves around one or more hashes, usually of a URL or some fragment of content on a page and its relationships.  Events that occur can include when pages have content added or updated (like twitter/feed urls), when comments are added, where visitors are arriving from or departing to, the presence of friends, or any conceivable activity or notification in relation to one or more pages.
+</a>
+
+<a name="spec"><h2>Spec</h2></a>
+<p>WARNING: pre-draft state!
+<p>
+<ul>Lexicon:
+<li>		writer - every telehash node is a writer, guid formed from sha1(ip:port)
+<li>		telex - each packet, contains one or more commands, signals, or variables
+<li>		signal - (starts alphanumeric) a generic name/value pair relevant to an end, payload
+<li>		command - (starts with a .) an instruction or direction of what action to take
+<li>		variable - (starts with a _) a name/value pair local to a telex
+<li>		end - where any signals are directed to, a command with a hash value
+<li>		line - active relationship between two writers
+<li>		dial - to seek a writer to send signals/commands to, a multi-step process approaching the .end
+<li>		listen - to be registered on another writer that will forward certain signals when they arrive
+</ul>
+
+<pre>
+	// telex with example vars/sigs/cmds
+	{
+		"_at":1262027120,
+		"_cb":"1.2.3.4:12345",
+		".cb":"1.2.3.4:12345",
+		"_line":8888,
+		".pin":1234,
+		".end":"a9993e364706816aba3e25717850c26c9cd0d89d",
+		"foo":"0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33",
+		".nat":"4.4.4.4:4444",
+		".see":["5.6.7.8:23456","11.22.33.44:112233"],
+		".fwd":{"foo":10,"bar":5}
+	}
+</pre>
+
+
+<p>		Every node is called a Writer, which is any process listening on an IP and UDP port both sending and receiving packets from that port.  A Writer is positioned within the DHT by the SHA1 of their IP:PORT.
+
+<p>		A Telex is any individual UDP packet sent to or by any Writer.  It's raw contents are a single plain UTF-8 JSON object containing one or more commands, variables, or signals.
+
+
+<ul>	Basics, contents of any Telex:
+
+<li>		_* - Variables
+<li>			_at - GMT epoch timestamp of when any included signals were created
+<li>			_cb - Callback, authorative IP:PORT of sending writer
+<li>			_line - Integer, private and unique constant from any sender to recipient writer, used for validation
+<li>
+<li>		.* - Commands
+<li>			.end - The SHA1 hash value that the telex is directed towards
+<li>			.see - An array of writers (IP:PORT) that the recipient may find useful
+<li>			.cb - The IP:PORT of the recipient (to inform them in case they didn't know their real one)
+<li>			.pin - The _line value that the recipient had sent, to validate this telex (required for some commands)
+<li>			.natr - An IP:PORT value, requesting the recipient to send a .nat command to that IP:PORT with senders _cb (poke holes in NATs)
+<li>			.nat - An IP:PORT to send a telex to, in order to open up a tunnel between them through any NAT devices
+<li>			.fwd - An object with signals as names and integer values representing how many matching .end+signal telexes to forward
+<li>			.fwds - Same object sent anytime to show current status of active forwards on a writer for the requestor
+<li>			.hist - Same object format, but send up to that many historical matching telexes
+<li>			.stat - TBD, request statistics on matching signals
+<li>
+<li>		alnum* - Signals, application specific, payload specific to a .end
+<li>			href - The SHA1 of the HREF clicked on (.end is SHA1 of current page)
+<li>			from - The SHA1 of the previous page (.end is the SHA1 of the new page)
+<li>			etag - The value of the etag header (.end is current page)
+<li>			cht - The Content-Hash-Tree calculation of the current page
+</ul>
+
+<h2>	Overview</h2>
+
+<p>		Dialing (routing): Whenever a Telex comes in with a .end, check to see if any closer Writers are known and if so .see back to that Writer a list of closer IP:PORTs.  If none are closer or if that .end is the more popular of ones we've seen (congestion control) don't respond.
+<br>
+<img src="http://jeremie.com/i/4804887134e7d9b6ef33d0fc8e642f99.png" />
+<p>		Listening: To observe signals coming in around an interesting .end, first try dialing it in order to discover the closest Writers we can find.  Then send a .end and .fwd of which signals to observe to those Writers, who if willing will respond with a .fwds to confirm that it's active.  Any Writer can process any .fwd request, and should check every incoming signal to see if it matches any active listener.
+
+<p>		Startup: A Writer must have a cache or seed list of other Writers to bootstrap from.  It would first reach out to a few of them without sending any _cb so that they would respond with a .cb informing it of its visible public IP:PORT.  Then, it would .end its own id against the seed list and use all the .see responses to start filling up its kbuckets (see Kademlia).
+
+<p>		Validation: For any incoming telex, if it contains a _line that value should be checked against any previous value for it (or stored if it's the first one).  If there's a mismatch, drop, eventually our local line to it will expire if theirs truly changed.  If there's a .pin, ensure that matches the _line value we sent, if not then drop.
+
+<p>		NATs: Whenever any Writer .see's new IP:PORT's to us, remember that it was them so that when trying to initiate the first Telex to that NEWIP:PORT we also send a ".natr":"NEWIP:PORT" (and .pin) to the originating Writer.  That Writer then sends a ".nat":"OURIP:PORT" to them in case they are behind a NAT and they will send a Telex out to us to ensure an open path of communication.
+
+<a name="code"><h2>Code</h2></a>
+
+<p>A test node that will send back .cb commands to tell you your public IP is running at telehash.org:42424.  Git repo for some sample code soon :)
+	
+<a name="who"><h2>Who</h2></a>
+
+<p>TeleHash is the culmination of years of discussions with many people, and is being primarily bootstrapped by <a href="http://jeremie.com/">Jeremie Miller</a>.  Feedback is welcomed via <a href="xmpp:jer@jabber.org">IM</a> until a wiki is set up here.
+
+
+</div>
+</html>
