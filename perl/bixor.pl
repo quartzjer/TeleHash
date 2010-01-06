@@ -1,13 +1,13 @@
-use Data::Dumper;
+#use Data::Dumper;
 
 # big xor utils
 # each bix is an array of 20 chars
 
-my $in = $ARGV[0];
-my $b = bix_new($in);
-my $b2 = bix_new($ARGV[1]);
-my $out = bix_str($b);
-printf "got %s converted to %s and xor'd %s and sbit %d\n",$in,$out,bix_str(bix_or($b,$b2)),bix_sbit(bix_or($b,$b2));
+#my $in = $ARGV[0];
+#my $b = bix_new($in);
+#my $b2 = bix_new($ARGV[1]);
+#my $out = bix_str($b);
+#printf "got %s converted to %s and xor'd %s and sbit %d\n",$in,$out,bix_str(bix_or($b,$b2)),bix_sbit(bix_or($b,$b2));
 
 # takes hex string
 sub bix_new
@@ -53,3 +53,4 @@ sub bix_sbit
 	}
 	return -1;
 }
+1;
