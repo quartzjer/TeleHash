@@ -1,3 +1,4 @@
+#!/usr/bin/perl
 #use Data::Dumper;
 
 # big xor utils

@@ -33,3 +33,8 @@ printf "%s told us we are %s\n",$j->{"_cb"},$j->{".cb"};
 # quite temporary
 require "./bixor.pl";
 printf "our distance from the seed is %d\n",bix_sbit(bix_or(bix_new(sha1_hex($j->{"_cb"})),bix_new(sha1_hex($j->{".cb"}))));
+
+# send a test .to
+defined(send(SOCKET, sprintf("{'_cb':'%s','.to':'%s'}",$j->{".cb"},sha1_hex($j->{".cb"})), 0, $saddr))		or die ".to failed to $seed: $!";
+recv(SOCKET, $buff, 8192, 0);
+printf ".to test returned %s\n",$buff;
