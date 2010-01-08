@@ -37,7 +37,16 @@ while(my $caddr = recv(SOCKET, $buff, 8192, 0))
 		printf("from %d writers, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,bix_new($ckeys[1]))));
 		my @cipps = map {$cache{$_}} splice @ckeys, 0, 5; # just take top 5 closest
 		my $jo = { "_cb"=>$ipp, ".see"=>\@cipps }; 
-    	defined(send(SOCKET, $json->to_json($jo), 0, $caddr))    or die "send $cb $!";
+    	defined(send(SOCKET, $json->to_json($jo), 0, $caddr))    or die ".see $cb $!";
+		next;
+	}
+	if($j->{".natr"})
+	{
+		my($ip,$port) = split(":",$j->{".natr"});
+		my $nip = gethostbyname($ip);
+		my $naddr = sockaddr_in($port,$nip);
+		my $jo = { "_cb"=>$ipp, ".nat"=>$j->{"_cb"} }; 
+    	defined(send(SOCKET, $json->to_json($jo), 0, $naddr))    or die ".nat $ip:$port $!";
 		next;
 	}
 }
