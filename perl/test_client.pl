@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+use IO::Select;
 use Digest::SHA1 qw(sha1_hex);
 use Socket;
 use JSON::DWIW;
@@ -13,6 +14,10 @@ my $paddr = sockaddr_in(0, $iaddr); # pick local port at random
 socket(SOCKET, PF_INET, SOCK_DGRAM, $proto)	or die "socket: $!";
 bind(SOCKET, $paddr)						or die "bind: $!";
 
+# start using select to have timeouts
+$sel = IO::Select->new();
+$sel->add(\*SOCKET);
+
 # send a hello to our seed
 my $seed = $ARGV[0]||"telehash.org:42424";
 my($ip,$port) = split(":",$seed);
@@ -21,6 +26,8 @@ my $saddr = sockaddr_in($port,$sip);
 defined(send(SOCKET, "{}", 0, $saddr))		or die "hello failed to $seed: $!";
 
 # get the first response and validate
+my @ready = $sel->can_read(10); # testing timeouts
+die("timed out waiting") unless(scalar @ready > 0);
 my $buff;
 my $caddr = recv(SOCKET, $buff, 8192, 0);
 my($cport, $addr) = sockaddr_in($caddr);
