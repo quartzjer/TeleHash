@@ -96,10 +96,8 @@
 	// telex with example vars/sigs/cmds
 	{
 		"_at":1262027120,
-		"_cb":"1.2.3.4:12345",
-		".cb":"1.2.3.4:12345",
-		"_line":8888,
-		".pin":1234,
+		"_line":"1.2.3.4:12345:42424",
+		".pin":42424,
 		".end":"a9993e364706816aba3e25717850c26c9cd0d89d",
 		"foo":"0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33",
 		".nat":"4.4.4.4:4444",
@@ -118,15 +116,13 @@
 
 <li>		_* - Variables
 <li>			_at - GMT epoch timestamp of when any included signals were created
-<li>			_cb - Callback, authorative IP:PORT of sending writer
-<li>			_line - Integer, private and unique constant from any sender to recipient writer, used for validation
+<li>			_line - The private unique id of the line from one writer to another, in the format "IP:PORT:PIN"
 <li>
 <li>		.* - Commands
 <li>			.end - The SHA1 hash value that the telex is directed towards
 <li>			.see - An array of writers (IP:PORT) that the recipient may find useful
-<li>			.cb - The IP:PORT of the recipient (to inform them in case they didn't know their real one)
-<li>			.pin - The _line value that the recipient had sent, to validate this telex (required for some commands)
-<li>			.natr - An IP:PORT value, requesting the recipient to send a .nat command to that IP:PORT with senders _cb (poke holes in NATs)
+<li>			.pin - From the _line value that the recipient had sent, an unsigned short, to validate this telex (required for some commands)
+<li>			.natr - An IP:PORT value, requesting the recipient to send a .nat command to that IP:PORT with senders IP:PORT (poke holes in NATs)
 <li>			.nat - An IP:PORT to send a telex to, in order to open up a tunnel between them through any NAT devices
 <li>			.fwd - An object with signals as names and integer values representing how many matching .end+signal telexes to forward
 <li>			.fwds - Same object sent anytime to show current status of active forwards on a writer for the requestor
@@ -147,7 +143,7 @@
 <img src="http://jeremie.com/i/4804887134e7d9b6ef33d0fc8e642f99.png" />
 <p>		Listening: To observe signals coming in around an interesting .end, first try dialing it in order to discover the closest Writers we can find.  Then send a .end and .fwd of which signals to observe to those Writers, who if willing will respond with a .fwds to confirm that it's active.  Any Writer can process any .fwd request, and should check every incoming signal to see if it matches any active listener.
 
-<p>		Startup: A Writer must have a cache or seed list of other Writers to bootstrap from.  It would first reach out to a few of them without sending any _cb so that they would respond with a .cb informing it of its visible public IP:PORT.  Then, it would .end its own id against the seed list and use all the .see responses to start filling up its kbuckets (see Kademlia).
+<p>		Startup: A Writer must have a cache or seed list of other Writers to bootstrap from.  It would first reach out to a few of them sending a random .end that they would respond with a _line informing it of its visible public IP:PORT.  Then, it would .end its own IP:PORT hash against all the writers and use all the .see responses to start filling up its kbuckets (see Kademlia).
 
 <p>		Validation: For any incoming telex, if it contains a _line that value should be checked against any previous value for it (or stored if it's the first one).  If there's a mismatch, drop, eventually our local line to it will expire if theirs truly changed.  If there's a .pin, ensure that matches the _line value we sent, if not then drop.
 
@@ -157,7 +153,7 @@
 
 <p>All code so far is avail via <a href="http://github.com/quartzjer/TeleHash">github</a>.
 
-<p>A test node that will send back .cb commands to tell you your public IP is running at telehash.org:42424.
+<p>A test node that will send back a _line to tell you your public IP and respond to .end with a test .see is running at telehash.org:42424.
 	
 <a name="who"><h2>Who</h2></a>
 

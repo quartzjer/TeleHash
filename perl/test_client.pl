@@ -20,10 +20,13 @@ $sel->add(\*SOCKET);
 
 # send a hello to our seed
 my $seed = $ARGV[0]||"telehash.org:42424";
-my($ip,$port) = split(":",$seed);
-my $sip = gethostbyname($ip);
-my $saddr = sockaddr_in($port,$sip);
-defined(send(SOCKET, "{}", 0, $saddr))		or die "hello failed to $seed: $!";
+my($host,$port) = split(":",$seed);
+my $ip = gethostbyname($host);
+my $seedipp = sprintf("%s:%d",inet_ntoa($ip),$port);
+my $saddr = sockaddr_in($port,$ip);
+my $jo = telex($seedipp);
+$jo->{".end"} = sha1_hex(rand()); # random end, just to provoke a .see that has a _line to identify ourselves
+defined(send(SOCKET, $json->to_json($jo), 0, $saddr))		or die "hello failed to $seed: $!";
 
 # get the first response and validate
 my @ready = $sel->can_read(10); # testing timeouts
@@ -33,29 +36,28 @@ my $caddr = recv(SOCKET, $buff, 8192, 0);
 my($cport, $addr) = sockaddr_in($caddr);
 my $sender = sprintf("%s:%d",inet_ntoa($addr),$cport);
 my $j = $json->from_json($buff)				or die("json parse failed: $buff");
-defined($j->{"_cb"} eq $sender)				or die("seed source $sender disagrees with it's callback ".$j->{"_cb"});
-defined($j->{".cb"})						or die("first response was missing a callback command");
+defined($j->{"_line"})						or die("first response was missing a line variable");
 
-my $cb = $j->{".cb"};
-my $seedcb = $j->{"_cb"};
-printf "%s told us we are %s\n",$seedcb,$cb;
+my ($myip,$myport) = split(":",$j->{"_line"});
+my $ipp = sprintf("%s:%d",$myip,$myport);
+printf "%s told us we are %s\n",$sender,$ipp;
 
 # quite temporary
 require "./bixor.pl";
-printf "our distance from the seed is %d\n",bix_sbit(bix_or(bix_new(sha1_hex($j->{"_cb"})),bix_new(sha1_hex($cb))));
+printf "our distance from the seed is %d\n",bix_sbit(bix_or(bix_new(sha1_hex($ipp)),bix_new(sha1_hex($sender))));
 
-# send a test .to
-my $jo = telex($seedcb);
-$jo->{".to"} = sha1_hex($j->{".cb"}); # dial our own hash to find writers close to us
+# send a test .end
+my $jo = telex($seedipp);
+$jo->{".end"} = sha1_hex($ipp); # dial our own hash to find writers close to us
 defined(send(SOCKET, $json->to_json($jo), 0, $saddr))		or die ".to failed to $seed: $!";
 recv(SOCKET, $buff, 8192, 0);
-printf ".to test returned %s\n",$buff;
+printf ".end test returned %s\n",$buff;
 my $j = $json->from_json($buff)				or die("json parse failed: $buff");
 
 # loop through all and say hello
 for my $sipp (@{$j->{".see"}})
 {
-	next if($sipp eq $cb); # skip ourselves :)
+	next if($sipp eq $ipp); # skip ourselves :)
 	my($ip,$port) = split(":",$sipp);
 	my $wip = gethostbyname($ip);
 	my $waddr = sockaddr_in($port,$wip);
@@ -90,8 +92,7 @@ sub telex
 {
 	my $to = shift;
 	my $js = shift || {};
-	$js->{"_cb"} = $cb; # always send who we think we are
 	$lines{$to} = int(rand(65535)) unless($lines{$to}); # assign a line for this recipient just once
-	$js->{"_line"} = $lines{$to};
+	$js->{"_line"} = sprintf("%s:%s",$to,$lines{$to});
 	return $js;
 }

@@ -24,17 +24,10 @@ while(my $caddr = recv(SOCKET, $buff, 8192, 0))
 	my $cb = sprintf("%s:%d",inet_ntoa($addr),$cport);
 	printf "got %s from %s\n",$buff,$cb;
 	my $j = $json->from_json($buff) || next;
-	$cache{sha1_hex($cb)}=$cb; # track all seen writers for .to/.see testing
-	if(!$j->{"_cb"})
-	{ # all we do is reply to missing _cb's
-		my $jo = telex($cb);
-		$jo->{".cb"} = $cb; # tell them who they really are
-    	defined(send(SOCKET, $json->to_json($jo), 0, $caddr))    or die "send $cb $!";
-		next;
-	}
-	if($j->{".to"})
+	$cache{sha1_hex($cb)}=$cb; # track all seen writers for .end/.see testing
+	if($j->{".end"})
 	{
-		my $bto = bix_new($j->{".to"}); # convert to format for the big xor for faster sorting
+		my $bto = bix_new($j->{".end"}); # convert to format for the big xor for faster sorting
 		my @ckeys = sort {bix_sbit(bix_or($bto,bix_new($a))) <=> bix_sbit(bix_or($bto,bix_new($b)))} keys %cache; # sort by closest to the .to
 		printf("from %d writers, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,bix_new($ckeys[1]))));
 		my @cipps = map {$cache{$_}} splice @ckeys, 0, 5; # just take top 5 closest
@@ -49,7 +42,7 @@ while(my $caddr = recv(SOCKET, $buff, 8192, 0))
 		my $nip = gethostbyname($ip);
 		my $naddr = sockaddr_in($port,$nip);
 		my $jo = telex($cb);
-		$jo->{".nat"} = $j->{"_cb"}; 
+		$jo->{".nat"} = $cb; 
     	defined(send(SOCKET, $json->to_json($jo), 0, $naddr))    or die ".nat $ip:$port $!";
 		next;
 	}
@@ -60,8 +53,7 @@ sub telex
 {
 	my $to = shift;
 	my $js = shift || {};
-	$js->{"_cb"} = $ipp; # always send who we think we are
 	$lines{$to} = int(rand(65535)) unless($lines{$to}); # assign a line for this recipient just once
-	$js->{"_line"} = $lines{$to};
+	$js->{"_line"} = sprintf("%s:%s",$to,$lines{$to});
 	return $js;
 }
