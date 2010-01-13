@@ -25,7 +25,7 @@ my $ip = gethostbyname($host);
 my $seedipp = sprintf("%s:%d",inet_ntoa($ip),$port);
 my $saddr = sockaddr_in($port,$ip);
 my $jo = telex($seedipp);
-$jo->{".end"} = sha1_hex(rand()); # random end, just to provoke a .see that has a _line to identify ourselves
+$jo->{".end"} = sha1_hex(rand()); # random end, just to provoke a .see that has a _to to identify ourselves
 defined(send(SOCKET, $json->to_json($jo), 0, $saddr))		or die "hello failed to $seed: $!";
 
 # get the first response and validate
@@ -36,10 +36,9 @@ my $caddr = recv(SOCKET, $buff, 8192, 0);
 my($cport, $addr) = sockaddr_in($caddr);
 my $sender = sprintf("%s:%d",inet_ntoa($addr),$cport);
 my $j = $json->from_json($buff)				or die("json parse failed: $buff");
-defined($j->{"_line"})						or die("first response was missing a line variable");
+defined($j->{"_to"})						or die("first response was missing a _to variable");
 
-my ($myip,$myport) = split(":",$j->{"_line"});
-my $ipp = sprintf("%s:%d",$myip,$myport);
+my $ipp = $j->{"_to"};
 printf "%s told us we are %s\n",$sender,$ipp;
 
 # quite temporary
@@ -66,7 +65,7 @@ for my $sipp (@{$j->{".see"}})
 	# send direct (should open our outgoing to them)
 	defined(send(SOCKET, $json->to_json($jo), 0, $waddr))    or die "hello $sipp: $!";
 	# send natr via seed in case they're behind a nat
-	my $jo = telex($seedcb);
+	my $jo = telex($seedipp);
 	$jo->{".natr"} = $sipp;
 	defined(send(SOCKET, $json->to_json($jo), 0, $saddr))    or die ".natr $seed $!";
 }
@@ -93,6 +92,7 @@ sub telex
 	my $to = shift;
 	my $js = shift || {};
 	$lines{$to} = int(rand(65535)) unless($lines{$to}); # assign a line for this recipient just once
-	$js->{"_line"} = sprintf("%s:%s",$to,$lines{$to});
+	$js->{"_to"} = $to;
+	$js->{"_line"} = $lines{$to};
 	return $js;
 }

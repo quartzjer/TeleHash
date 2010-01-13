@@ -28,7 +28,7 @@ while(my $caddr = recv(SOCKET, $buff, 8192, 0))
 	if($j->{".end"})
 	{
 		my $bto = bix_new($j->{".end"}); # convert to format for the big xor for faster sorting
-		my @ckeys = sort {bix_sbit(bix_or($bto,bix_new($a))) <=> bix_sbit(bix_or($bto,bix_new($b)))} keys %cache; # sort by closest to the .to
+		my @ckeys = sort {bix_sbit(bix_or($bto,bix_new($a))) <=> bix_sbit(bix_or($bto,bix_new($b)))} keys %cache; # sort by closest to the .end
 		printf("from %d writers, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,bix_new($ckeys[1]))));
 		my @cipps = map {$cache{$_}} splice @ckeys, 0, 5; # just take top 5 closest
 		my $jo = telex($cb);
@@ -54,6 +54,7 @@ sub telex
 	my $to = shift;
 	my $js = shift || {};
 	$lines{$to} = int(rand(65535)) unless($lines{$to}); # assign a line for this recipient just once
-	$js->{"_line"} = sprintf("%s:%s",$to,$lines{$to});
+	$js->{"_to"} = $to;
+	$js->{"_line"} = $lines{$to};
 	return $js;
 }
