@@ -18,14 +18,15 @@ bind(SOCKET, $paddr)                          or die "bind: $!";
 $sel = IO::Select->new();
 $sel->add(\*SOCKET);
 
-# send a hello to our seed
+# resolve our seed to it's ip:port
 my($seedhost,$seedport) = split(":",$seed);
 my $seedip = gethostbyname($seedhost);
 my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
-my $saddr = sockaddr_in($seedport,$seedip);
+
+# send a hello to the seed
 my $jo = telex($seedipp);
 $jo->{".end"} = sha1_hex(rand()); # random end, just to provoke a .see that has a _to to identify ourselves
-defined(send(SOCKET, $json->to_json($jo), 0, $saddr))		or die "hello failed to $seed: $!";
+tsend($jo);
 
 my %cache; # just a dumb cache
 my %lines; # static line assignments per writer
@@ -36,9 +37,15 @@ my $ipp;
 while(1)
 {
 	# wait for event or timeout loop
-	if(scalar $sel->can_read(10) == 0)
+	if(scalar $sel->can_read(60) == 0)
 	{
 		print ".";
+		for my $writer (keys %lines)
+		{
+			my $jo = telex($writer);
+			$jo->{".see"} = sha1_hex($ipp);
+			tsend($jo);
+		}
 		next;
 	}
 	my $caddr = recv(SOCKET, $buff, 8192, 0) || die("recv $!");
@@ -56,18 +63,15 @@ while(1)
 		printf("from %d writers, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,bix_new($ckeys[1]))));
 		my @cipps = map {$cache{$_}} splice @ckeys, 0, 5; # just take top 5 closest
 		my $jo = telex($cb);
-		$jo->{".see"} = \@cipps; 
-    	defined(send(SOCKET, $json->to_json($jo), 0, $caddr))    or die ".see $cb $!";
+		$jo->{".see"} = \@cipps;
+		tsend($jo);
 		next;
 	}
 	if($j->{".natr"})
 	{
-		my($ip,$port) = split(":",$j->{".natr"});
-		my $nip = gethostbyname($ip);
-		my $naddr = sockaddr_in($port,$nip);
-		my $jo = telex($cb);
+		my $jo = telex($j->{".natr"});
 		$jo->{".nat"} = $cb; 
-    	defined(send(SOCKET, $json->to_json($jo), 0, $naddr))    or die ".nat $ip:$port $!";
+		tsend($jo);
 		next;
 	}
 }
@@ -80,4 +84,13 @@ sub telex
 	$js->{"_to"} = $to;
 	$js->{"_line"} = $lines{$to};
 	return $js;
+}
+
+sub tsend
+{
+	my $j = shift;
+	my($ip,$port) = split(":",$j->{"_to"});
+	my $wip = gethostbyname($ip);
+	my $waddr = sockaddr_in($port,$wip);
+	defined(send(SOCKET, $json->to_json($j), 0, $waddr))    or die "send $to: $!";	
 }
