@@ -39,20 +39,15 @@ while(1)
 	# wait for event or timeout loop
 	if(scalar $sel->can_read(60) == 0)
 	{
-		print ".";
-		for my $writer (keys %lines)
-		{
-			my $jo = telex($writer);
-			$jo->{".see"} = sha1_hex($ipp);
-			tsend($jo);
-		}
+		printf "LOOP\n";
+		tscan();
 		next;
 	}
 	my $caddr = recv(SOCKET, $buff, 8192, 0) || die("recv $!");
 	# TODO need some source rate detection in case there's a loop
 	($cport, $addr) = sockaddr_in($caddr);
 	my $cb = sprintf("%s:%d",inet_ntoa($addr),$cport);
-	printf "\n%s: %s\n",$cb,$buff;
+	printf "RECV[%s]\t%s\n",$cb,$buff;
 	my $j = $json->from_json($buff) || next;
 	$cache{sha1_hex($cb)}=$cb; # track all seen writers for .end/.see testing
 	$ipp = $j->{"_to"} if(!$ipp && $j->{"_to"}); # discover our own ip:port
@@ -65,17 +60,30 @@ while(1)
 		my $jo = telex($cb);
 		$jo->{".see"} = \@cipps;
 		tsend($jo);
-		next;
 	}
 	if($j->{".natr"})
 	{
 		my $jo = telex($j->{".natr"});
 		$jo->{".nat"} = $cb; 
 		tsend($jo);
-		next;
+	}
+	if($j->{".nat"})
+	{
+		tsend(telex($j->{".nat"}));
+	}
+	for my $seeipp (@{$j->{".see"}})
+	{
+		next if($seeipp eq $ipp); # skip ourselves :)
+		next if($lines{$seeipp}); # skip if we know them already
+		tsend(telex($seeipp)); # send direct (should open our outgoing to them)
+		# send nat request back to the writer who .see'd us in case the new one is behind a nat
+		my $jo = telex($cb);
+		$jo->{".natr"} = $seeipp;
+		tsend($jo);
 	}
 }
 
+# create a new telex
 sub telex
 {
 	my $to = shift;
@@ -86,11 +94,25 @@ sub telex
 	return $js;
 }
 
+# actually send a telex to it's writer
 sub tsend
 {
 	my $j = shift;
 	my($ip,$port) = split(":",$j->{"_to"});
 	my $wip = gethostbyname($ip);
 	my $waddr = sockaddr_in($port,$wip);
-	defined(send(SOCKET, $json->to_json($j), 0, $waddr))    or die "send $to: $!";	
+	my $js = $json->to_json($j);
+	printf "SEND[%s]\t%s\n",$j->{"_to"},$js;
+	defined(send(SOCKET, $js, 0, $waddr))    or die "send $to: $!";	
+}
+
+# scan all known writers to keep any nat's open
+sub tscan
+{
+	for my $writer (keys %lines)
+	{
+		my $jo = telex($writer);
+		$jo->{".end"} = sha1_hex($ipp);
+		tsend($jo);
+	}
 }
