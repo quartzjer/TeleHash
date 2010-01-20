@@ -43,28 +43,42 @@ while(1)
 		tscan();
 		next;
 	}
+
+	# must be a telex waiting for us
 	my $caddr = recv(SOCKET, $buff, 8192, 0) || die("recv $!");
 	# TODO need some source rate detection in case there's a loop
+
+	# figure out who sent it
 	($cport, $addr) = sockaddr_in($caddr);
-	my $cb = sprintf("%s:%d",inet_ntoa($addr),$cport);
-	printf "RECV[%s]\t%s\n",$cb,$buff;
+	my $writer = sprintf("%s:%d",inet_ntoa($addr),$cport);
+	printf "RECV[%s]\t%s\n",$writer,$buff;
+
+	# json parse check
 	my $j = $json->from_json($buff) || next;
-	$cache{sha1_hex($cb)}=$cb; # track all seen writers for .end/.see testing
-	$ipp = $j->{"_to"} if(!$ipp && $j->{"_to"}); # discover our own ip:port
+
+	# keep track of when we've last got stuff from them
+	$lines{$writer}->{"last"} = time() if($lines{$writer});
+
+	# track all seen writers for .end/.see testing
+	$cache{sha1_hex($writer)}=$writer;
+	
+	# discover our own ip:port
+	$ipp = $j->{"_to"} if(!$ipp && $j->{"_to"});
+
 	if($j->{".end"})
 	{
 		my $bto = bix_new($j->{".end"}); # convert to format for the big xor for faster sorting
 		my @ckeys = sort {bix_sbit(bix_or($bto,bix_new($a))) <=> bix_sbit(bix_or($bto,bix_new($b)))} keys %cache; # sort by closest to the .end
 		printf("from %d writers, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,bix_new($ckeys[1]))));
 		my @cipps = map {$cache{$_}} splice @ckeys, 0, 5; # just take top 5 closest
-		my $jo = telex($cb);
+		my $jo = telex($writer);
 		$jo->{".see"} = \@cipps;
 		tsend($jo);
 	}
 	if($j->{".natr"})
 	{
 		my $jo = telex($j->{".natr"});
-		$jo->{".nat"} = $cb; 
+		$jo->{".nat"} = $writer; 
 		tsend($jo);
 	}
 	if($j->{".nat"})
@@ -77,7 +91,7 @@ while(1)
 		next if($lines{$seeipp}); # skip if we know them already
 		tsend(telex($seeipp)); # send direct (should open our outgoing to them)
 		# send nat request back to the writer who .see'd us in case the new one is behind a nat
-		my $jo = telex($cb);
+		my $jo = telex($writer);
 		$jo->{".natr"} = $seeipp;
 		tsend($jo);
 	}
@@ -88,9 +102,13 @@ sub telex
 {
 	my $to = shift;
 	my $js = shift || {};
-	$lines{$to} = int(rand(65535)) unless($lines{$to}); # assign a line for this recipient just once
+	unless($lines{$to})
+	{
+		# create a new line to track our relationship with this writer
+		$lines{$to} = { "id" => int(rand(65535)), "first" => time(), "last" => time() };
+	}
 	$js->{"_to"} = $to;
-	$js->{"_line"} = $lines{$to};
+	$js->{"_line"} = $lines{$to}->{"id"};
 	return $js;
 }
 
@@ -109,8 +127,14 @@ sub tsend
 # scan all known writers to keep any nat's open
 sub tscan
 {
+	my $at = time();
 	for my $writer (keys %lines)
 	{
+		if($at - $lines{$writer}->{"last"} > 600)
+		{ # ignore them if they are stale, timed out
+			printf "SKIP[%s]\n",$writer;
+			next;
+		}
 		my $jo = telex($writer);
 		$jo->{".end"} = sha1_hex($ipp);
 		tsend($jo);
