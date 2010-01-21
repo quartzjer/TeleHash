@@ -56,8 +56,22 @@ while(1)
 	# json parse check
 	my $j = $json->from_json($buff) || next;
 
-	# keep track of when we've last got stuff from them
-	$lines{$writer}->{"last"} = time() if($lines{$writer});
+	# if this is a writer we know, check a few things
+	if($lines{$writer})
+	{
+		# if we've not seen them in a while, full reset!!
+		$lines{$writer} = {} if(time() - $lines{$writer}->{"last"} > 600);
+
+		# keep track of when we've last got stuff from them
+		$lines{$writer}->{"last"} = time();
+		
+		# check to see if the line matches, and skip if not
+		if($lines{$writer}->{"_line"} && $lines{$writer}->{"_line"} ne $j->{"_line"})
+		{
+			print "LINE MISMATCH!\n";
+			next;
+		}
+	}
 
 	# track all seen writers for .end/.see testing
 	$cache{sha1_hex($writer)}=$writer;
@@ -65,6 +79,7 @@ while(1)
 	# discover our own ip:port
 	$ipp = $j->{"_to"} if(!$ipp && $j->{"_to"});
 
+	# a request to find other writers near this .end hash
 	if($j->{".end"})
 	{
 		my $bto = bix_new($j->{".end"}); # convert to format for the big xor for faster sorting
@@ -75,26 +90,41 @@ while(1)
 		$jo->{".see"} = \@cipps;
 		tsend($jo);
 	}
-	if($j->{".natr"})
+
+	# a request to send a .nat to a writer that we should know (and only from writers we have a line to)
+	if($j->{".natr"} && $lines{$j->{".natr"}} && $j->{".pin"} eq $lines{$writer}->{"id"})
 	{
 		my $jo = telex($j->{".natr"});
 		$jo->{".nat"} = $writer; 
 		tsend($jo);
 	}
+
+	# we're asked to send something to this ip:port to open a nat
 	if($j->{".nat"})
 	{
 		tsend(telex($j->{".nat"}));
 	}
-	for my $seeipp (@{$j->{".see"}})
+
+	# we've been told to talk to these writers
+	if($j->{".see"} && $j->{"_line"})
 	{
-		next if($seeipp eq $ipp); # skip ourselves :)
-		next if($lines{$seeipp}); # skip if we know them already
-		tsend(telex($seeipp)); # send direct (should open our outgoing to them)
-		# send nat request back to the writer who .see'd us in case the new one is behind a nat
-		my $jo = telex($writer);
-		$jo->{".natr"} = $seeipp;
-		tsend($jo);
+		# loop through and establish lines to them (just being dumb for now and trying everyone)
+		for my $seeipp (@{$j->{".see"}})
+		{
+			next if($seeipp eq $ipp); # skip ourselves :)
+			next if($lines{$seeipp}); # skip if we know them already
+			tsend(telex($seeipp)); # send direct (should open our outgoing to them)
+			# send nat request back to the writer who .see'd us in case the new one is behind a nat
+			my $jo = telex($writer);
+			$jo->{".natr"} = $seeipp;
+			$jo->{".pin"} = int($j->{"_line"}); # need to validate our request to them to natr for us
+			tsend($jo);
+		}
 	}
+	
+	# we do this at the end since the code needs to be refactored, and the $lines entry would only exist by now
+	# track the incoming line for this writer
+	$lines{$writer}->{"_line"} = $j->{"_line"} if($lines{$writer});
 }
 
 # create a new telex
@@ -128,11 +158,14 @@ sub tsend
 sub tscan
 {
 	my $at = time();
-	for my $writer (keys %lines)
+	my @writers = keys %lines;
+	my $purge = (scalar @writers > 1000)?1:0;
+	for my $writer (@writers)
 	{
-		if($at - $lines{$writer}->{"last"} > 600)
-		{ # ignore them if they are stale, timed out
+		if($at - $lines{$writer}->{"last"} > 600 && $writer ne $seedipp)
+		{ # ignore them if they are stale, timed out, and not our seed :)
 			printf "SKIP[%s]\n",$writer;
+			delete $lines{$writer} if($purge);
 			next;
 		}
 		my $jo = telex($writer);
