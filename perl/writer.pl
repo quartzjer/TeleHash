@@ -28,12 +28,13 @@ my $jo = telex($seedipp);
 $jo->{".end"} = sha1_hex(rand()); # random end, just to provoke a .see that has a _to to identify ourselves
 tsend($jo);
 
-my %cache; # just a dumb cache
+my %cache; # just a dumb cache of writer hashes
 my %lines; # static line assignments per writer
+my %ends; # any end hashes that we've handled
 require "./bixor.pl"; # temp testing hack
 my $buff;
 $|++;
-my $ipp;
+my $ipp, $ipphash;
 while(1)
 {
 	# wait for event or timeout loop
@@ -77,7 +78,12 @@ while(1)
 	$cache{sha1_hex($writer)}=$writer;
 	
 	# discover our own ip:port
-	$ipp = $j->{"_to"} if(!$ipp && $j->{"_to"});
+	if(!$ipp && $j->{"_to"})
+	{
+		$ipp = $j->{"_to"};
+		$ipphash = sha1_hex($ipp);
+		$cache{$ipphash}=$ipp; # for .end processing, to know ourselves
+	}
 
 	# a request to find other writers near this .end hash
 	if($j->{".end"})
@@ -85,10 +91,16 @@ while(1)
 		my $bto = bix_new($j->{".end"}); # convert to format for the big xor for faster sorting
 		my @ckeys = sort {bix_sbit(bix_or($bto,bix_new($a))) <=> bix_sbit(bix_or($bto,bix_new($b)))} keys %cache; # sort by closest to the .end
 		printf("from %d writers, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,bix_new($ckeys[1]))));
-		my @cipps = map {$cache{$_}} splice @ckeys, 0, 5; # just take top 5 closest
-		my $jo = telex($writer);
-		$jo->{".see"} = \@cipps;
-		tsend($jo);
+		# is this .end closest to US?  If so, handle it
+		if($ckeys[0] eq $ipphash)
+		{
+			doend($j,$writer);
+		}else{ # otherwise send them back a .see of ones closer
+			my @cipps = map {$cache{$_}} splice @ckeys, 0, 5; # just take top 5 closest
+			my $jo = telex($writer);
+			$jo->{".see"} = \@cipps;
+			tsend($jo);			
+		}
 	}
 
 	# a request to send a .nat to a writer that we should know (and only from writers we have a line to)
@@ -121,7 +133,17 @@ while(1)
 			tsend($jo);
 		}
 	}
-	
+
+	# handle a fwd command, must be verified
+	if($j->{".fwd"} && $j->{".pin"} eq $lines{$writer}->{"id"})
+	{
+		my $e = getend($j->{".end"});
+		$e->{"fwds"}->{$writer} = $j->{".fwd"};
+		my $jo = telex($writer);
+		$jo->{"fwds"} = $j->{".fwd"}; # just confirm whatever they sent for now
+		tsend($jo);
+	}
+
 	# we do this at the end since the code needs to be refactored, and the $lines entry would only exist by now
 	# track the incoming line for this writer
 	$lines{$writer}->{"_line"} = $j->{"_line"} if($lines{$writer});
@@ -172,4 +194,26 @@ sub tscan
 		$jo->{".end"} = sha1_hex($ipp);
 		tsend($jo);
 	}
+}
+
+# handle this telex as if we're the .end
+sub doend
+{
+	my $t = shift;
+	my $writer = shift;
+	my $e = getend($t->{".end"});
+	$e->{$writer} = $t; # store only one telex per writer per end
+	# check for any registered fwds
+	for my $fw (keys %{$e->{"fwds"}})
+	{
+		# check if any of the signals match, if so forward this telex
+		# TODO
+	}
+}
+
+sub getend
+{
+	my $hash = shift;
+	return $ends{$hash} if($ends{$hash});
+	return $ends{$hash} = {"fwds"=>{}};
 }
