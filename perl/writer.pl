@@ -1,4 +1,9 @@
 #!/usr/bin/perl
+
+# a prototype telehash writer
+
+# Jer 1/2010
+
 use Digest::SHA1 qw(sha1_hex);
 use IO::Select;
 use Socket;
@@ -67,7 +72,7 @@ while(1)
 		$lines{$writer}->{"last"} = time();
 		
 		# check to see if the line matches, and skip if not
-		if($lines{$writer}->{"_line"} && $lines{$writer}->{"_line"} ne $j->{"_line"})
+		if($lines{$writer}->{"_line"} && $lines{$writer}->{"_line"} != $j->{"_line"})
 		{
 			print "LINE MISMATCH!\n";
 			next;
@@ -80,6 +85,7 @@ while(1)
 	# discover our own ip:port
 	if(!$ipp && $j->{"_to"})
 	{
+		printf "SELF[%s]\n",$j->{"_to"};
 		$ipp = $j->{"_to"};
 		$ipphash = sha1_hex($ipp);
 		$cache{$ipphash}=$ipp; # for .end processing, to know ourselves
@@ -94,13 +100,14 @@ while(1)
 		# is this .end closest to US?  If so, handle it
 		if($ckeys[0] eq $ipphash)
 		{
-			doend($j,$writer);
+			printf("handling!\n");
 		}else{ # otherwise send them back a .see of ones closer
 			my @cipps = map {$cache{$_}} splice @ckeys, 0, 5; # just take top 5 closest
 			my $jo = telex($writer);
 			$jo->{".see"} = \@cipps;
 			tsend($jo);			
 		}
+		doend($j,$writer); # could always be registered forwards
 	}
 
 	# a request to send a .nat to a writer that we should know (and only from writers we have a line to)
@@ -108,11 +115,12 @@ while(1)
 	{
 		my $jo = telex($j->{".natr"});
 		$jo->{".nat"} = $writer; 
+		$jo->{".pin"} = int($lines{$jo->{"_to"}}); # validate ourselves to them
 		tsend($jo);
 	}
 
 	# we're asked to send something to this ip:port to open a nat
-	if($j->{".nat"})
+	if($j->{".nat"} && $j->{".pin"} eq $lines{$writer}->{"id"})
 	{
 		tsend(telex($j->{".nat"}));
 	}
@@ -135,7 +143,7 @@ while(1)
 	}
 
 	# handle a fwd command, must be verified
-	if($j->{".fwd"} && $j->{".pin"} eq $lines{$writer}->{"id"})
+	if($j->{".fwd"} && $j->{".pin"} == $lines{$writer}->{"id"})
 	{
 		my $e = getend($j->{".end"});
 		$e->{"fwds"}->{$writer} = $j->{".fwd"};
@@ -146,7 +154,7 @@ while(1)
 
 	# we do this at the end since the code needs to be refactored, and the $lines entry would only exist by now
 	# track the incoming line for this writer
-	$lines{$writer}->{"_line"} = $j->{"_line"} if($lines{$writer});
+	$lines{$writer}->{"_line"} = int($j->{"_line"}) if($lines{$writer});
 }
 
 # create a new telex
@@ -160,7 +168,7 @@ sub telex
 		$lines{$to} = { "id" => int(rand(65535)), "first" => time(), "last" => time() };
 	}
 	$js->{"_to"} = $to;
-	$js->{"_line"} = $lines{$to}->{"id"};
+	$js->{"_line"} = int($lines{$to}->{"id"});
 	return $js;
 }
 
@@ -204,10 +212,37 @@ sub doend
 	my $e = getend($t->{".end"});
 	$e->{$writer} = $t; # store only one telex per writer per end
 	# check for any registered fwds
-	for my $fw (keys %{$e->{"fwds"}})
+	for my $wf (keys %{$e->{"fwds"}})
 	{
+		printf "checking fwd %s\n",$wf;
+		# make sure we still have a line open to this writer, if not cancel this forward 
+		if(!$lines{$wf}) # todo for later refactor, this should be cleaned up when the line is purged not here
+		{
+			delete $e->{"fwds"}->{$wf};
+			next;
+		}
+		# get the actual .fwd request for this writer
+		my $fwds = $e->{"fwds"}->{$wf};
 		# check if any of the signals match, if so forward this telex
-		# TODO
+		my @sigs = grep($t->{$_},keys %$fwds);
+		next unless(scalar @sigs > 0);
+		map {$fwds->{$_}--} keys %$fwds; # decrement counters
+		for my $sig (keys %$fwds) # zap any that are gone
+		{
+			delete $fwds->{$sig} unless($fwds->{$sig} > 0);
+		}
+		delete $e->{"fwds"}->{$wf} unless(scalar keys %$fwds > 0); # no more fwds, zap
+
+		my $jo = telex($wf);
+		# copy all signals
+		for my $sig (grep(/^[[:alnum:]]+/, keys %$t))
+		{
+			$jo->{$sig} = $t->{$sig};
+		}
+		# copy timestamp if any
+		$jo->{"_at"} = $t->{"_at"} if($t->{"_at"});
+		$jo->{"fwds"} = $fwds; # tell them current status
+		tsend($jo);
 	}
 }
 
