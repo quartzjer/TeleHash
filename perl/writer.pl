@@ -9,6 +9,7 @@ use IO::Select;
 use Socket;
 use JSON::DWIW;
 my $json = JSON::DWIW->new;
+require "./bixor.pl"; # temp testing hack
 
 # defaults to listen on any ip and random port
 my $port = $ARGV[0]||0;
@@ -30,13 +31,13 @@ my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
 
 # send a hello to the seed
 my $jo = telex($seedipp);
-$jo->{".end"} = sha1_hex(rand()); # random end, just to provoke a .see that has a _to to identify ourselves
+# make sure the hash is really far away so they .see us back
+$jo->{".end"} = bix_str(bix_far(bix_new(sha1_hex($seedipp))));
 tsend($jo);
 
 my %cache; # just a dumb cache of writer hashes
 my %lines; # static line assignments per writer
 my %ends; # any end hashes that we've handled
-require "./bixor.pl"; # temp testing hack
 my $buff;
 $|++;
 my $ipp, $ipphash;

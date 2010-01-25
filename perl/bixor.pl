@@ -42,6 +42,19 @@ sub bix_or
 	return \@c;
 }
 
+# invert the bits, or make a hash as far away as possible
+sub bix_far
+{
+	my $a = shift;
+	my @c;
+	for my $i (0..39)
+	{
+		$c[$i] = $a->[$i] ^ hex 'f';
+	}
+	print "\n";
+	return \@c;
+}
+
 sub bix_sbit
 {
 	my $b = shift;
