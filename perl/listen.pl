@@ -26,15 +26,12 @@ bind(SOCKET, $paddr)                          or die "bind: $!";
 $sel = IO::Select->new();
 $sel->add(\*SOCKET);
 
-my $lineout = int(rand(65535));
-my $linein;
-
 # send initial hello to open line
 my $jo = telex($ipp);
 $jo->{".end"}=$end;
 tsend($jo);
 
-
+my $regd;
 while(1)
 {
 	# wait for event or timeout loop
@@ -61,20 +58,20 @@ while(1)
 	# json parse check
 	my $j = $json->from_json($buff) || next;
 
-	if(!$j->{"_line"})
+	if(!$j->{"_line"} && !$j->{"_ring"})
 	{
 		printf "LINEMISSING\n";
 		next;
 	}
 	
 	# first time they respond at all, send them the fwd request now that we have a _line to validate it
-	if(!$linein)
+	if(!$regd)
 	{
-		$linein = $j->{"_line"};
+		$regd++;
 		my $jo = telex($ipp);
 		$jo->{".fwd"} = {$sig=>$cnt};
 		$jo->{".end"} = $end;
-		$jo->{".pin"} = $linein;
+		$jo->{"_line"} = $j->{"_ring"};
 		tsend($jo);
 	}
 
@@ -86,7 +83,6 @@ sub telex
 	my $to = shift;
 	my $js = shift || {};
 	$js->{"_to"} = $to;
-	$js->{"_line"} = $lineout;
 	return $js;
 }
 

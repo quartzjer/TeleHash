@@ -63,6 +63,14 @@ while(1)
 	# json parse check
 	my $j = $json->from_json($buff) || next;
 
+	# discover our own ip:port
+	if(!$ipp && $j->{"_to"})
+	{
+		printf "SELF[%s]\n",$j->{"_to"};
+		$ipp = $j->{"_to"};
+		$ipphash = sha1_hex($ipp);
+	}
+
 	# we've been told to talk to these writers
 	if($j->{".see"})
 	{
@@ -71,6 +79,7 @@ while(1)
 		{
 			next if($seeipp eq $ipp); # skip ourselves :)
 			next if($cache{sha1_hex($seeipp)}); # skip if we know them already
+			next if($seeipp eq $writer); # sillyness check, they may have sent themselves
 			$cache{sha1_hex($seeipp)} = $seeipp;
 
 			my $jo = telex($seeipp); # send direct (should open our outgoing to them)
@@ -80,7 +89,7 @@ while(1)
 			# send nat request back to the writer who .see'd us in case the new one is behind a nat
 			my $jo = telex($writer);
 			$jo->{".natr"} = $seeipp;
-			$jo->{".pin"} = int($j->{"_line"}); # need to validate our request to them to natr for us
+			$jo->{"_line"} = int($j->{"_ring"}||$j->{"_line"}); # need to validate our request to them to natr for us
 			tsend($jo);
 		}
 	}else{ # incoming telex with no .see? prolly nat hole punch, dial them again regardless

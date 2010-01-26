@@ -64,20 +64,21 @@ while(1)
 	my $j = $json->from_json($buff) || next;
 
 	# if this is a writer we know, check a few things
-	if($lines{$writer})
+	my $line = getline($writer);
+	# if we've not seen them in a while, full reset!!
+	delete $line->{"open"} if(time() - $line->{"last"} > 600);
+	# keep track of when we've last got stuff from them
+	$line->{"last"} = time();
+	# check to see if the line matches, and skip if not
+	if($line->{"open"} && $line->{"open"} != $j->{"_line"})
 	{
-		# if we've not seen them in a while, full reset!!
-		$lines{$writer} = {} if(time() - $lines{$writer}->{"last"} > 600);
-
-		# keep track of when we've last got stuff from them
-		$lines{$writer}->{"last"} = time();
-		
-		# check to see if the line matches, and skip if not
-		if($lines{$writer}->{"_line"} && $lines{$writer}->{"_line"} != $j->{"_line"})
-		{
-			print "LINE MISMATCH!\n";
-			next;
-		}
+		print "LINE MISMATCH!\n";
+		next;
+	}
+	if(!$line->{"open"} && ($j->{"_line"} || $j->{"_ring"}))
+	{
+		$line->{"open"} = $j->{"_line"} if($j->{"_line"} % $line->{"ring"} == 0); # verify their line is a product of our ring
+		$line->{"open"} = int($j->{"_ring"} * $line->{"ring"}) if($j->{"_ring"}); # create a new line as a product of our ring
 	}
 
 	# track all seen writers for .end/.see testing
@@ -112,22 +113,21 @@ while(1)
 	}
 
 	# a request to send a .nat to a writer that we should know (and only from writers we have a line to)
-	if($j->{".natr"} && $lines{$j->{".natr"}} && $j->{".pin"} eq $lines{$writer}->{"id"})
+	if($j->{".natr"} && $lines{$j->{".natr"}} && $j->{"_line"})
 	{
 		my $jo = telex($j->{".natr"});
 		$jo->{".nat"} = $writer; 
-		$jo->{".pin"} = int($lines{$jo->{"_to"}}); # validate ourselves to them
 		tsend($jo);
 	}
 
 	# we're asked to send something to this ip:port to open a nat
-	if($j->{".nat"} && $j->{".pin"} eq $lines{$writer}->{"id"})
+	if($j->{".nat"} && $j->{"_line"})
 	{
 		tsend(telex($j->{".nat"}));
 	}
 
 	# we've been told to talk to these writers
-	if($j->{".see"} && $j->{"_line"})
+	if($j->{".see"} && $line->{"open"})
 	{
 		# loop through and establish lines to them (just being dumb for now and trying everyone)
 		for my $seeipp (@{$j->{".see"}})
@@ -138,13 +138,12 @@ while(1)
 			# send nat request back to the writer who .see'd us in case the new one is behind a nat
 			my $jo = telex($writer);
 			$jo->{".natr"} = $seeipp;
-			$jo->{".pin"} = int($j->{"_line"}); # need to validate our request to them to natr for us
 			tsend($jo);
 		}
 	}
 
 	# handle a fwd command, must be verified
-	if($j->{".fwd"} && $j->{".pin"} == $lines{$writer}->{"id"})
+	if($j->{".fwd"} && $j->{"_line"})
 	{
 		my $e = getend($j->{".end"});
 		$e->{"fwds"}->{$writer} = $j->{".fwd"};
@@ -152,10 +151,17 @@ while(1)
 		$jo->{"fwds"} = $j->{".fwd"}; # just confirm whatever they sent for now
 		tsend($jo);
 	}
+}
 
-	# we do this at the end since the code needs to be refactored, and the $lines entry would only exist by now
-	# track the incoming line for this writer
-	$lines{$writer}->{"_line"} = int($j->{"_line"}) if($lines{$writer});
+# for creating and tracking lines to writers
+sub getline
+{
+	my $writer = shift;
+	if(!$lines{$writer})
+	{
+		$lines{$writer} = { "ring" => int(rand(32768)), "first" => time(), "last" => time() };
+	}
+	return $lines{$writer};
 }
 
 # create a new telex
@@ -163,13 +169,15 @@ sub telex
 {
 	my $to = shift;
 	my $js = shift || {};
-	unless($lines{$to})
+	my $line = getline($to);
+	# if a line is open use that, else send a ring
+	if($line->{"open"})
 	{
-		# create a new line to track our relationship with this writer
-		$lines{$to} = { "id" => int(rand(65535)), "first" => time(), "last" => time() };
+		$js->{"_line"} = int($line->{"open"});		
+	}else{
+		$js->{"_ring"} = int($line->{"ring"});
 	}
 	$js->{"_to"} = $to;
-	$js->{"_line"} = int($lines{$to}->{"id"});
 	return $js;
 }
 

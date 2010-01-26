@@ -96,8 +96,7 @@
 	// telex with example vars/sigs/cmds
 	{
 		"_at":1262027120,
-		"_line":"1.2.3.4:12345:42424",
-		".pin":42424,
+		"_line":43723459,
 		".end":"a9993e364706816aba3e25717850c26c9cd0d89d",
 		"foo":"0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33",
 		".nat":"4.4.4.4:4444",
@@ -117,12 +116,12 @@
 <li>		_* - Variables
 <li>			_at - GMT epoch timestamp of when any included signals were created
 <li>			_to - The public IP:PORT that the Telex was sent to (helps with NATs)
-<li>			_line - The private unique id of the line from one writer to another, an unsigned short
+<li>			_ring - Used to open a line with a writer, value from 1 to 32768
+<li>			_line - The private unique id of the line from one writer to another, the product of the _ring from both
 <li>
 <li>		.* - Commands
 <li>			.end - The SHA1 hash value that the telex is directed towards
 <li>			.see - An array of writers (IP:PORT) that the recipient may find useful
-<li>			.pin - From the _line value that the recipient had sent, to validate this telex (required for some commands)
 <li>			.natr - An IP:PORT value, requesting the recipient to send a .nat command to that IP:PORT with senders IP:PORT (poke holes in NATs)
 <li>			.nat - An IP:PORT to send a telex to, in order to open up a tunnel between them through any NAT devices
 <li>			.fwd - An object with signals as names and integer values representing how many matching .end+signal telexes to forward
@@ -146,7 +145,7 @@
 
 <p>		Startup: A Writer must have a cache or seed list of other Writers to bootstrap from.  It would first reach out to a few of them sending a random .end that they would respond with a _to informing it of its visible public IP:PORT.  Then, it would .end its own IP:PORT hash against all the writers and use all the .see responses to start filling up its kbuckets (see Kademlia).
 
-<p>		Validation: For any incoming telex, make sure the _to matches what we thought we were and ignore otherwise.  If the telex contains a _line that value should be checked against any previous value for the sending Writer (or stored if it's the first one).  If there's a mismatch, drop, eventually our local line to it will expire if theirs truly changed.  If there's a .pin, ensure that matches the _line value we sent to them, if not then drop.
+<p>		Validation: For any incoming telex, make sure the _to matches what we thought we were and ignore otherwise.  If the telex contains a _line that value should be checked against any previous value for the sending Writer (or stored if it's the first one).  If there's a mismatch, drop, eventually our local line to it will expire if theirs truly changed.
 
 <p>		NATs: Whenever any Writer .see's new IP:PORT's to us, remember that it was them so that when trying to initiate the first Telex to that NEWIP:PORT we also send a ".natr":"NEWIP:PORT" (and .pin) to the originating Writer.  That Writer then sends a ".nat":"OURIP:PORT" to them in case they are behind a NAT and they will send a Telex out to us to ensure an open path of communication.
 
