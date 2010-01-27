@@ -53,6 +53,10 @@
 		font-family:Verdana;
 		padding-left:10px;
 	}
+	big {
+		color:#446;
+		font-family:American Typewriter;
+	}
 	</style>
 </head>
 <body background="bg.gif">
@@ -80,18 +84,20 @@
 <a name="spec"><h2>Spec</h2></a>
 <p>WARNING: pre-draft state!
 <p>
-<ul>Lexicon:
-<li>		writer - every telehash node is a writer, guid formed from sha1(ip:port)
-<li>		telex - each packet, contains one or more commands, signals, or variables
-<li>		signal - (starts alphanumeric) a generic name/value pair relevant to an end, payload
-<li>		command - (starts with a .) an instruction or direction of what action to take
-<li>		variable - (starts with a _) a name/value pair local to a telex
-<li>		end - where any signals are directed to, a command with a hash value
-<li>		line - active relationship between two writers
-<li>		dial - to seek a writer to send signals/commands to, a multi-step process approaching the .end
-<li>		listen - to be registered on another writer that will forward certain signals when they arrive
-</ul>
+<p>Lexicon:
+<ul><blockquote>
+<li>		<big>writer</big> - every telehash node is a writer, guid formed from sha1(ip:port)
+<li>		<big>telex</big> - each packet, contains one or more commands, signals, or variables
+<li>		<big>signal</big> - (starts alphanumeric) a generic name/value pair relevant to an end, payload
+<li>		<big>command</big> - (starts with a .) an instruction or direction of what action to take
+<li>		<big>variable</big> - (starts with a _) a name/value pair local to a telex
+<li>		<big>end</big> - where any signals are directed to, a command with a hash value
+<li>		<big>line</big> - active relationship between two writers
+<li>		<big>dial</big> - to seek a writer to send signals/commands to, a multi-step process approaching the .end
+<li>		<big>listen</big> - to be registered on another writer that will forward certain signals when they arrive
+</blockquote></ul>
 
+<p>
 <pre>
 	// telex with example vars/sigs/cmds
 	{
@@ -111,30 +117,35 @@
 <p>		A Telex is any individual UDP packet sent to or by any Writer.  It's raw contents are a single plain UTF-8 JSON object containing one or more commands, variables, or signals.
 
 
-<ul>	Basics, contents of any Telex:
+<p>	Basics, contents of any Telex:
 
-<li>		_* - Variables
-<li>			_at - GMT epoch timestamp of when any included signals were created
-<li>			_to - The public IP:PORT that the Telex was sent to (helps with NATs)
-<li>			_ring - Used to open a line with a writer, value from 1 to 32768
-<li>			_line - The private unique id of the line from one writer to another, the product of the _ring from both
-<li>
-<li>		.* - Commands
-<li>			.end - The SHA1 hash value that the telex is directed towards
-<li>			.see - An array of writers (IP:PORT) that the recipient may find useful
-<li>			.natr - An IP:PORT value, requesting the recipient to send a .nat command to that IP:PORT with senders IP:PORT (poke holes in NATs)
-<li>			.nat - An IP:PORT to send a telex to, in order to open up a tunnel between them through any NAT devices
-<li>			.fwd - An object with signals as names and integer values representing how many matching .end+signal telexes to forward
-<li>			.fwds - Same object sent anytime to show current status of active forwards on a writer for the requestor
-<li>			.hist - Same object format, but send up to that many historical matching telexes
-<li>			.stat - TBD, request statistics on matching signals
-<li>
-<li>		alnum* - Signals, application specific, payload specific to a .end
-<li>			href - The SHA1 of the HREF clicked on (.end is SHA1 of current page)
-<li>			from - The SHA1 of the previous page (.end is the SHA1 of the new page)
-<li>			etag - The value of the etag header (.end is current page)
-<li>			cht - The Content-Hash-Tree calculation of the current page
-</ul>
+<ul><blockquote>
+		_* - Variables
+<blockquote>
+<li>			<big>_at</big> - GMT epoch timestamp of when any included signals were created
+<li>			<big>_to</big> - The public IP:PORT that the Telex was sent to (helps with NATs)
+<li>			<big>_ring</big> - Used to open a line with a writer, value from 1 to 32768
+<li>			<big>_line</big> - The private unique id of the line from one writer to another, the product of the _ring from both
+</blockquote>
+		.* - Commands
+<blockquote>
+<li>			<big>.end</big> - The SHA1 hash value that the telex is directed towards
+<li>			<big>.see</big> - An array of writers (IP:PORT) that the recipient may find useful
+<li>			<big>.natr</big> - An IP:PORT value, requesting the recipient to send a .nat command to that IP:PORT with senders IP:PORT (poke holes in NATs)
+<li>			<big>.nat</big> - An IP:PORT to send a telex to, in order to open up a tunnel between them through any NAT devices
+<li>			<big>.fwd</big> - An object with signals as names and integer values representing how many matching .end+signal telexes to forward
+<li>			<big>.fwds</big> - Same object sent anytime to show current status of active forwards on a writer for the requestor
+<li>			<big>.hist</big> - Same object format, but send up to that many historical matching telexes
+<li>			<big>.stat</big> - TBD, request statistics on matching signals
+</blockquote>
+		alnum* - Signals, application specific, payload specific to a .end (examples)
+<blockquote>
+<li>			<big>href</big> - The SHA1 of the HREF clicked on (.end is SHA1 of current page)
+<li>			<big>from</big> - The SHA1 of the previous page (.end is the SHA1 of the new page)
+<li>			<big>etag</big> - The value of the etag header (.end is current page)
+<li>			<big>cht</big> - The Content-Hash-Tree calculation of the current page
+</blockquote>
+</blockquote></ul>
 
 <h2>	Overview</h2>
 
