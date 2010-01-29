@@ -111,6 +111,39 @@ while(1)
 		}
 		doend($j,$writer); # could always be registered forwards
 	}
+	
+	# they want recent telexes matching this .end and signals
+	if($j->{".hist"} && $j->{".end"})
+	{
+		my $hist = $j->{".hist"};
+		# todo, sanitize hist request?
+		my $e = getend($j->{".end"});
+		my @telexes;
+		# get list of all cached telexes for this end
+		for my $w (keys %$e)
+		{
+			push @telexes,$e->{$w} if(length($w) > 5); # horrible hack mixing keys of ip:port and other shit
+		}
+		for my $t (sort {$b->{"_at"} <=> $a->{"_at"}} @telexes)
+		{
+			my @sigs = grep($t->{$_},keys %$hist);
+			next unless(scalar @sigs > 0);
+			# this is a telex to send back to them
+			my $jo = telex($writer);
+			# copy all signals
+			for my $sig (grep(/^[[:alnum:]]+/, keys %$t))
+			{
+				$jo->{$sig} = $t->{$sig};
+				# also deduct the hist request for this sig if it had it
+				$hist->{$sig}-- if($hist->{$sig});
+				delete $hist->{$sig} if($hist->{$sig} <= 0);
+			}
+			# copy timestamp and .end
+			$jo->{"_at"} = $t->{"_at"};
+			$jo->{".end"} = $t->{".end"};
+			tsend($jo);
+		}
+	}
 
 	# a request to send a .nat to a writer that we should know (and only from writers we have a line to)
 	if($j->{".natr"} && $lines{$j->{".natr"}} && $j->{"_line"})
@@ -219,6 +252,7 @@ sub doend
 	my $t = shift;
 	my $writer = shift;
 	my $e = getend($t->{".end"});
+	$t->{"_at"} = time() unless($t->{"_at"}); # make sure _at is set
 	$e->{$writer} = $t; # store only one telex per writer per end
 	# check for any registered fwds
 	for my $wf (keys %{$e->{"fwds"}})
@@ -248,8 +282,9 @@ sub doend
 		{
 			$jo->{$sig} = $t->{$sig};
 		}
-		# copy timestamp if any
+		# copy .end and timestamp if any
 		$jo->{"_at"} = $t->{"_at"} if($t->{"_at"});
+		$jo->{".end"} = $t->{".end"};
 		$jo->{"fwds"} = $fwds; # tell them current status
 		tsend($jo);
 	}
