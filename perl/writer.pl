@@ -96,7 +96,7 @@ while(1)
 	if($j->{".end"})
 	{
 		my $bto = bix_new($j->{".end"}); # convert to format for the big xor for faster sorting
-		my %hashes = map {sha1_hex($_)=>$_} keys %lines;
+		my %hashes = map {sha1_hex($_)=>$_} grep($lines{$_}->{"open"}, keys %lines); # must have open line to announce them
 		my @bixes = map {bix_new($_)} keys %hashes; # pre-bix the array for faster sorting
 		my @ckeys = sort {bix_cmp(bix_or($bto,$a),bix_or($bto,$b))} @bixes; # sort by closest to the .end
 		printf("from %d writers, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,$ckeys[0])));
@@ -240,6 +240,7 @@ sub tscan
 	my @writers = keys %lines;
 	for my $writer (@writers)
 	{
+		delete $lines{$writer}->{"open"} if($at - $lines{$writer}->{"last"} > 300); # remove open line status if older than 5min
 		if($at - $lines{$writer}->{"last"} > 600)
 		{ # remove them if they are stale, timed out
 			printf "PURGE[%s]\n",$writer;
