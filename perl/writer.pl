@@ -30,10 +30,14 @@ my $seedip = gethostbyname($seedhost);
 my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
 
 # send a hello to the seed
-my $jo = telex($seedipp);
-# make sure the hash is really far away so they .see us back
-$jo->{".end"} = bix_str(bix_far(bix_new(sha1_hex($seedipp))));
-tsend($jo);
+sub bootstrap
+{
+	my $seed = shift;
+	my $jo = telex($seedipp);
+	# make sure the hash is really far away so they .see us back
+	$jo->{".end"} = bix_str(bix_far(bix_new(sha1_hex($seedipp))));
+	tsend($jo);
+}
 
 my %cache; # just a dumb cache of writer hashes
 my %lines; # static line assignments per writer
@@ -41,8 +45,12 @@ my %ends; # any end hashes that we've handled
 my $buff;
 $|++;
 my $ipp, $ipphash;
+my $connected=undef;
 while(1)
 {
+	# if we're not online, attempt to talk to the seed
+	bootstrap($seedipp) if(!$connected);
+
 	# wait for event or timeout loop
 	if(scalar $sel->can_read(60) == 0)
 	{
@@ -50,8 +58,9 @@ while(1)
 		tscan();
 		next;
 	}
-
+	
 	# must be a telex waiting for us
+	$connected = 1;
 	my $caddr = recv(SOCKET, $buff, 8192, 0) || die("recv $!");
 	# TODO need some source rate detection in case there's a loop
 
@@ -223,7 +232,11 @@ sub tsend
 	my $waddr = sockaddr_in($port,$wip);
 	my $js = $json->to_json($j);
 	printf "SEND[%s]\t%s\n",$j->{"_to"},$js;
-	defined(send(SOCKET, $js, 0, $waddr))    or die "send $to: $!";	
+	if(!defined(send(SOCKET, $js, 0, $waddr)))
+	{
+		$ipp=$connected=undef;
+		printf "OFFLINE\n";	
+	}
 }
 
 # scan all known writers to keep any nat's open
