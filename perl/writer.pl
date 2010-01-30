@@ -29,17 +29,6 @@ my($seedhost,$seedport) = split(":",$seed);
 my $seedip = gethostbyname($seedhost);
 my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
 
-# send a hello to the seed
-sub bootstrap
-{
-	my $seed = shift;
-	my $jo = telex($seedipp);
-	# make sure the hash is really far away so they .see us back
-	$jo->{".end"} = bix_str(bix_far(bix_new(sha1_hex($seedipp))));
-	tsend($jo);
-}
-
-my %cache; # just a dumb cache of writer hashes
 my %lines; # static line assignments per writer
 my %ends; # any end hashes that we've handled
 my $buff;
@@ -52,7 +41,7 @@ while(1)
 	bootstrap($seedipp) if(!$connected);
 
 	# wait for event or timeout loop
-	if(scalar $sel->can_read(60) == 0)
+	if(scalar $sel->can_read(10) == 0)
 	{
 		printf "LOOP\n";
 		tscan();
@@ -72,10 +61,22 @@ while(1)
 	# json parse check
 	my $j = $json->from_json($buff) || next;
 
+	# FIRST, if we're bootstrapping, discover our own ip:port
+	if(!$ipp && $j->{"_to"})
+	{
+		printf "SELF[%s]\n",$j->{"_to"};
+		$ipp = $j->{"_to"};
+		$ipphash = sha1_hex($ipp);
+		# WE are the seed, haha, remove our own line and skip
+		if($ipp eq $writer)
+		{
+			delete $lines{$ipp};
+			next;
+		}
+	}
+
 	# if this is a writer we know, check a few things
 	my $line = getline($writer);
-	# if we've not seen them in a while, full reset!!
-	delete $line->{"open"} if(time() - $line->{"last"} > 600);
 	# keep track of when we've last got stuff from them
 	$line->{"last"} = time();
 	# check to see if the line matches, and skip if not
@@ -90,35 +91,28 @@ while(1)
 		$line->{"open"} = int($j->{"_ring"} * $line->{"ring"}) if($j->{"_ring"}); # create a new line as a product of our ring
 	}
 
-	# track all seen writers for .end/.see testing
-	$cache{sha1_hex($writer)}=$writer;
-	
-	# discover our own ip:port
-	if(!$ipp && $j->{"_to"})
-	{
-		printf "SELF[%s]\n",$j->{"_to"};
-		$ipp = $j->{"_to"};
-		$ipphash = sha1_hex($ipp);
-		$cache{$ipphash}=$ipp; # for .end processing, to know ourselves
-	}
 
 	# a request to find other writers near this .end hash
 	if($j->{".end"})
 	{
 		my $bto = bix_new($j->{".end"}); # convert to format for the big xor for faster sorting
-		my @ckeys = sort {bix_sbit(bix_or($bto,bix_new($a))) <=> bix_sbit(bix_or($bto,bix_new($b)))} keys %cache; # sort by closest to the .end
-		printf("from %d writers, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,bix_new($ckeys[1]))));
+		my %hashes = map {sha1_hex($_)=>$_} keys %lines;
+		my @bixes = map {bix_new($_)} keys %hashes; # pre-bix the array for faster sorting
+		my @ckeys = sort {bix_cmp(bix_or($bto,$a),bix_or($bto,$b))} @bixes; # sort by closest to the .end
+		printf("from %d writers, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,$ckeys[0])));
 		# is this .end closest to US?  If so, handle it
-		if($ckeys[0] eq $ipphash)
+		if(bix_str($ckeys[0]) eq $ipphash)
 		{
 			printf("handling!\n");
-		}else{ # otherwise send them back a .see of ones closer
-			my @cipps = map {$cache{$_}} splice @ckeys, 0, 5; # just take top 5 closest
+		}else{
+			# otherwise send them back a .see of ones closer
+			my @cipps = map {$hashes{bix_str($_)}} splice @ckeys, 0, 5; # convert back to ip:ports, top 5
 			my $jo = telex($writer);
 			$jo->{".see"} = \@cipps;
 			tsend($jo);			
 		}
-		doend($j,$writer); # could always be registered forwards
+		# could always be registered forwards
+		doend($j,$writer) if($ends{$j->{".end"}});
 	}
 	
 	# they want recent telexes matching this .end and signals
@@ -244,13 +238,12 @@ sub tscan
 {
 	my $at = time();
 	my @writers = keys %lines;
-	my $purge = (scalar @writers > 1000)?1:0;
 	for my $writer (@writers)
 	{
-		if($at - $lines{$writer}->{"last"} > 600 && $writer ne $seedipp)
-		{ # ignore them if they are stale, timed out, and not our seed :)
-			printf "SKIP[%s]\n",$writer;
-			delete $lines{$writer} if($purge);
+		if($at - $lines{$writer}->{"last"} > 600)
+		{ # remove them if they are stale, timed out
+			printf "PURGE[%s]\n",$writer;
+			delete $lines{$writer};
 			next;
 		}
 		my $jo = telex($writer);
@@ -309,3 +302,14 @@ sub getend
 	return $ends{$hash} if($ends{$hash});
 	return $ends{$hash} = {"fwds"=>{}};
 }
+
+# send a hello to the seed
+sub bootstrap
+{
+	my $seed = shift;
+	my $jo = telex($seed);
+	# make sure the hash is really far away so they .see us back
+	$jo->{".end"} = bix_str(bix_far(bix_new(sha1_hex($seed))));
+	tsend($jo);
+}
+

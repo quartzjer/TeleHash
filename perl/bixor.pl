@@ -42,6 +42,18 @@ sub bix_or
 	return \@c;
 }
 
+sub bix_cmp
+{
+	my $a = shift;
+	my $b = shift;
+	for my $i (0..39)
+	{
+		next if($a->[$i] == $b->[$i]);
+		return $a->[$i] <=> $b->[$i];
+	}
+	return 0;
+}
+
 # invert the bits, or make a hash as far away as possible
 sub bix_far
 {
