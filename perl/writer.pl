@@ -251,6 +251,11 @@ sub tscan
 		$jo->{".end"} = sha1_hex($ipp);
 		tsend($jo);
 	}
+	if(scalar keys %lines == 0)
+	{
+		$ipp=$connected=undef;
+		printf "OFFLINE\n";	
+	}
 }
 
 # handle this telex as if we're the .end
