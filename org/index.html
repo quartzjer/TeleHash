@@ -91,9 +91,9 @@
 <li>		<big>signal</big> - (starts alphanumeric) a generic name/value pair relevant to an end, payload
 <li>		<big>command</big> - (starts with a .) an instruction or direction of what action to take
 <li>		<big>variable</big> - (starts with a _) a name/value pair local to a telex
-<li>		<big>end</big> - where any signals are directed to, a command with a hash value
+<li>		<big>end</big> - the primary signal with a hash value representing where the telex is directed to 
 <li>		<big>line</big> - active relationship between two writers
-<li>		<big>dial</big> - to seek a writer to send signals/commands to, a multi-step process approaching the .end
+<li>		<big>dial</big> - to seek a writer to send signals/commands to, a multi-step process approaching the end
 <li>		<big>listen</big> - to be registered on another writer that will forward certain signals when they arrive
 </blockquote></ul>
 
@@ -103,7 +103,7 @@
 	{
 		"_at":1262027120,
 		"_line":43723459,
-		".end":"a9993e364706816aba3e25717850c26c9cd0d89d",
+		"end":"a9993e364706816aba3e25717850c26c9cd0d89d",
 		"foo":"0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33",
 		".nat":"4.4.4.4:4444",
 		".see":["5.6.7.8:23456","11.22.33.44:112233"],
@@ -122,38 +122,38 @@
 <ul><blockquote>
 		_* - Variables
 <blockquote>
-<li>			<big>_at</big> - GMT epoch timestamp of when any included signals were created
 <li>			<big>_to</big> - The public IP:PORT that the Telex was sent to (helps with NATs)
 <li>			<big>_ring</big> - Used to open a line with a writer, value from 1 to 32768
 <li>			<big>_line</big> - The private unique id of the line from one writer to another, the product of the _ring from both
 </blockquote>
 		.* - Commands
 <blockquote>
-<li>			<big>.end</big> - The SHA1 hash value that the telex is directed towards
 <li>			<big>.see</big> - An array of writers (IP:PORT) that the recipient may find useful
 <li>			<big>.natr</big> - An IP:PORT value, requesting the recipient to send a .nat command to that IP:PORT with senders IP:PORT (poke holes in NATs)
 <li>			<big>.nat</big> - An IP:PORT to send a telex to, in order to open up a tunnel between them through any NAT devices
-<li>			<big>.fwd</big> - An object with signals as names and integer values representing how many matching .end+signal telexes to forward
+<li>			<big>.fwd</big> - An object with signals as names and integer values representing how many matching end+signal telexes to forward
 <li>			<big>.fwds</big> - Same object sent anytime to show current status of active forwards on a writer for the requestor
 <li>			<big>.hist</big> - Same object format, but send up to that many historical matching telexes
 <li>			<big>.stat</big> - TBD, request statistics on matching signals
 </blockquote>
-		alnum* - Signals, application specific, payload specific to a .end (examples)
+		alnum* - Signals, application specific, payload specific to an end (examples)
 <blockquote>
-<li>			<big>href</big> - The SHA1 of the HREF clicked on (.end is SHA1 of current page)
-<li>			<big>from</big> - The SHA1 of the previous page (.end is the SHA1 of the new page)
-<li>			<big>etag</big> - The value of the etag header (.end is current page)
+<li>			<big>end</big> - The SHA1 hash value that the telex is directed towards
+<li>			<big>at</big> - GMT epoch timestamp of when any peer signals were created
+<li>			<big>href</big> - The SHA1 of the HREF clicked on (end is SHA1 of current page)
+<li>			<big>from</big> - The SHA1 of the previous page (end is the SHA1 of the new page)
+<li>			<big>etag</big> - The value of the etag header (end is current page)
 <li>			<big>cht</big> - The Content-Hash-Tree calculation of the current page
 </blockquote>
 </blockquote></ul>
 
 <h2>	Common Patterns</h2>
 
-<p>		<big>.end .see</big> - Dialing (routing): Whenever a Telex comes in with a .end, check to see if any closer Writers are known and if so .see back to that Writer a list of closer IP:PORTs.  If none are closer or if that .end is the more popular of ones we've seen (congestion control) don't respond.
+<p>		<big>end .see</big> - Dialing (routing): Whenever a Telex comes in with a end, check to see if any closer Writers are known and if so .see back to that Writer a list of closer IP:PORTs.  If none are closer or if that end is the more popular of ones we've seen (congestion control) don't respond.
 
-<p>		<big>.end .fwd .fwds</big> - Listening: To observe signals coming in around an interesting .end, first try dialing it in order to discover the closest Writers we can find.  Then send a .end and .fwd of which signals to observe to those Writers, who if willing will respond with a .fwds to confirm that it's active.  Any Writer can process any .fwd request, and should check every incoming signal to see if it matches any active listener.
+<p>		<big>end .fwd .fwds</big> - Listening: To observe signals coming in around an interesting end, first try dialing it in order to discover the closest Writers we can find.  Then send an end and .fwd of which signals to observe to those Writers, who if willing will respond with a .fwds to confirm that it's active.  Any Writer can process any .fwd request, and should check every incoming signal to see if it matches any active listener.
 
-<p>		<big>.end _to</big> - Startup: A Writer must have a cache or seed list of other Writers to bootstrap from.  It would first reach out to a few of them sending a random .end that they would respond with a _to informing it of its visible public IP:PORT.  Then, it would Dial the SHA1 hash of that _to to start filling up its kbuckets (see Kademlia).  Use the _to for validation of future packets (EXPAND: how to handle different scenarios here).
+<p>		<big>end _to</big> - Startup: A Writer must have a cache or seed list of other Writers to bootstrap from.  It would first reach out to a few of them sending a random end that they would respond with a _to informing it of its visible public IP:PORT.  Then, it would Dial the SHA1 hash of that _to to start filling up its kbuckets (see Kademlia).  Use the _to for validation of future packets (EXPAND: how to handle different scenarios here).
 
 <p>		<big>_ring _line</big> - Lines: Any Writers that want to have an ongoing relationship (proximity, listening, keeping a NAT open, etc) or for validating the other Writer's IP:PORT should establish a Line with them.  Both Writers at any point can send a _ring with a random number it assigns and stores for the other Writer. When either one receives a _ring it then starts sending a _line that is a product of the _ring it assigned and the one it received.  Any incoming _line can then be verified as being divisible by the assigned _ring to validate the other Writer.
 
@@ -163,7 +163,7 @@
 
 <p>All code so far is avail via <a href="http://github.com/quartzjer/TeleHash">github</a>.
 
-<p>A test node that will send back a _to to tell you your public IP and respond to .end with a test .see is running at telehash.org:42424.
+<p>A test node that will send back a _to to tell you your public IP and respond to end with a test .see is running at telehash.org:42424.
 	
 <a name="who"><h2>Who</h2></a>
 
