@@ -91,7 +91,7 @@
 <li>		<big>signal</big> - (starts alphanumeric) a generic name/value pair relevant to an end, payload
 <li>		<big>command</big> - (starts with a .) an instruction or direction of what action to take
 <li>		<big>variable</big> - (starts with a _) a name/value pair local to a telex
-<li>		<big>end</big> - the primary signal with a hash value representing where the telex is directed to 
+<li>		<big>end</big> - the primary hash value representing where the telex is directed to 
 <li>		<big>line</big> - active relationship between two writers
 <li>		<big>dial</big> - to seek a writer to send signals/commands to, a multi-step process approaching the end
 <li>		<big>listen</big> - to be registered on another writer that will forward certain signals when they arrive
@@ -131,25 +131,25 @@
 <li>			<big>.see</big> - An array of writers (IP:PORT) that the recipient may find useful
 <li>			<big>.natr</big> - An IP:PORT value, requesting the recipient to send a .nat command to that IP:PORT with senders IP:PORT (poke holes in NATs)
 <li>			<big>.nat</big> - An IP:PORT to send a telex to, in order to open up a tunnel between them through any NAT devices
-<li>			<big>.fwd</big> - An object with signals as names and integer values representing how many matching end+signal telexes to forward
-<li>			<big>.fwds</big> - Same object sent anytime to show current status of active forwards on a writer for the requestor
+<li>			<big>.fwd</big> - An object with signals as names and integer values representing how many matching signal telexes to forward
+<li>			<big>.fwds</big> - Same object sent anytime to show current status of active forwards on a writer for the requester
 <li>			<big>.hist</big> - Same object format, but send up to that many historical matching telexes
 <li>			<big>.stat</big> - TBD, request statistics on matching signals
 </blockquote>
-		alnum* - Signals, application specific, payload specific to an end (examples)
+		alnum* - Signals, application specific, payload specific to an end
 <blockquote>
-<li>			<big>end</big> - The SHA1 hash value that the telex is directed towards
-<li>			<big>at</big> - GMT epoch timestamp of when any peer signals were created
-<li>			<big>href</big> - The SHA1 of the HREF clicked on (end is SHA1 of current page)
-<li>			<big>from</big> - The SHA1 of the previous page (end is the SHA1 of the new page)
-<li>			<big>etag</big> - The value of the etag header (end is current page)
-<li>			<big>cht</big> - The Content-Hash-Tree calculation of the current page
+<li>			<big>end</big> - [primary] The SHA1 hash value that the telex is directed towards
+<li>			<big>at</big> - [common] GMT epoch timestamp of when any peer signals were created
+<li>			<big>href</big> - [example] The SHA1 of the HREF clicked on (end is SHA1 of current page)
+<li>			<big>from</big> - [example] The SHA1 of the previous page (end is the SHA1 of the new page)
+<li>			<big>etag</big> - [example] The value of the etag header (end is current page)
+<li>			<big>cht</big> - [example] The Content-Hash-Tree calculation of the current page
 </blockquote>
 </blockquote></ul>
 
 <h2>	Common Patterns</h2>
 
-<p>		<big>end .see</big> - Dialing (routing): Whenever a Telex comes in with a end, check to see if any closer Writers are known and if so .see back to that Writer a list of closer IP:PORTs.  If none are closer or if that end is the more popular of ones we've seen (congestion control) don't respond.
+<p>		<big>end .see</big> - Dialing (routing): Whenever a Telex comes in with a end, check to see if any closer Writers are known and if so .see back to that Writer a list of closer IP:PORTs.  If none are closer or if that end is the more popular of ones we've seen (congestion control), .see back only ourselves.
 
 <p>		<big>end .fwd .fwds</big> - Listening: To observe signals coming in around an interesting end, first try dialing it in order to discover the closest Writers we can find.  Then send an end and .fwd of which signals to observe to those Writers, who if willing will respond with a .fwds to confirm that it's active.  Any Writer can process any .fwd request, and should check every incoming signal to see if it matches any active listener.
 
@@ -159,6 +159,16 @@
 
 <p>		<big>.nat .natr</big> - NATs: Whenever any Writer .see's new IP:PORT's to us, remember that it was them so that when trying to initiate the first Telex to that NEWIP:PORT we also send a ".natr":"NEWIP:PORT" (and _line) to the originating Writer.  That Writer then sends a ".nat":"OURIP:PORT" to them in case they are behind a NAT so that they will send a Telex out to us to ensure an open path of communication.
 
+<h2>Notes</h2>
+
+<p>For any incoming telex, once any _ring/_line is sorted out, a Writer then processes any commands (each is stateless and processed on their own).  If there is an end signal, it should cause a .see response of some sort, and possibly trigger caching this telex (for .hist processing) if the Writer is the closest.  Next, any and all contained signals should be checked against any active .fwd requests, and all matching .fwd Writers should get a copy of the telex.
+
+<p>When an incoming {.fwd={sigA=5,sigB=10},sigC=foo} is received, it is registering to only receive telexes that contain a sigC=foo and any sigA or sigB signals (up to 5 or 10 times respectively).  This can be used for more complex selection and filtering.
+	
+<p>Signals should primarily only ever contain hashes or generic (like xpath) content references and never actual content, as the sending and recipient parties must both be independently aware of the context or content in question so as to avoid any injection or attract spamming from 3rd parties.
+
+<p>The low level protocol is designed to be the absolute minimal to build connections and exchange notifications, all needs for peer trust, proxying, anonymizing, etc happen at a higher layer and outside of the basic protocol.
+	
 <a name="code"><h2>Code</h2></a>
 
 <p>All code so far is avail via <a href="http://github.com/quartzjer/TeleHash">github</a>.
