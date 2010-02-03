@@ -31,6 +31,8 @@ my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
 
 my %lines; # static line assignments per writer
 my %ends; # any end hashes that we've handled
+my @history; # last however many telexes (containing signals)
+my %forwards; # writers with active .fwd going
 my $buff;
 $|++;
 my $ipp, $ipphash;
@@ -85,73 +87,45 @@ while(1)
 		print "LINE MISMATCH!\n";
 		next;
 	}
+	# todo, should have lineto and linefrom open semantics for status checking on cmds
 	if(!$line->{"open"} && ($j->{"_line"} || $j->{"_ring"}))
 	{
 		$line->{"open"} = $j->{"_line"} if($j->{"_line"} % $line->{"ring"} == 0); # verify their line is a product of our ring
 		$line->{"open"} = int($j->{"_ring"} * $line->{"ring"}) if($j->{"_ring"}); # create a new line as a product of our ring
 	}
 
-
-	# a request to find other writers near this .end hash
-	if($j->{".end"})
-	{
-		my $bto = bix_new($j->{".end"}); # convert to format for the big xor for faster sorting
-		my %hashes = map {sha1_hex($_)=>$_} grep($lines{$_}->{"open"}, keys %lines); # must have open line to announce them
-		my @bixes = map {bix_new($_)} keys %hashes; # pre-bix the array for faster sorting
-		my @ckeys = sort {bix_cmp(bix_or($bto,$a),bix_or($bto,$b))} @bixes; # sort by closest to the .end
-		printf("from %d writers, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,$ckeys[0])));
-		# is this .end closest to US?  If so, handle it
-		if(bix_str($ckeys[0]) eq $ipphash)
-		{
-			printf("handling!\n");
-		}else{
-			# otherwise send them back a .see of ones closer
-			my @cipps = map {$hashes{bix_str($_)}} splice @ckeys, 0, 5; # convert back to ip:ports, top 5
-			my $jo = telex($writer);
-			$jo->{".see"} = \@cipps;
-			tsend($jo);			
-		}
-		# could always be registered forwards
-		doend($j,$writer) if($ends{$j->{".end"}});
-	}
+	# first process all commands
 	
-	# they want recent telexes matching this .end and signals
-	if($j->{".hist"} && $j->{".end"})
+	# they want recent telexes matching these signals
+	if($j->{".hist"})
 	{
 		my $hist = $j->{".hist"};
-		# todo, sanitize hist request?
-		my $e = getend($j->{".end"});
-		my @telexes;
-		# get list of all cached telexes for this end
-		for my $w (keys %$e)
+		# sanitize hist request
+		my %hists = map {$_ => $hist->{$_}} grep(/^[[:alnum:]]+/, keys %$hist);
+		# loop through all history new to old to find any matches
+		for my $t (@history)
 		{
-			push @telexes,$e->{$w} if(length($w) > 5); # horrible hack mixing keys of ip:port and other shit
-		}
-		for my $t (sort {$b->{"_at"} <=> $a->{"_at"}} @telexes)
-		{
-			my @sigs = grep($t->{$_},keys %$hist);
+			# first make sure any of the requested signals exist
+			my @sigs = grep($t->{$_},keys %hists);
 			next unless(scalar @sigs > 0);
-			# this is a telex to send back to them
-			my $jo = telex($writer);
-			# copy all signals
+			next unless(tmatch($j,$t));
+			# deduct from the hist request
 			for my $sig (grep(/^[[:alnum:]]+/, keys %$t))
 			{
-				$jo->{$sig} = $t->{$sig};
-				# also deduct the hist request for this sig if it had it
-				$hist->{$sig}-- if($hist->{$sig});
-				delete $hist->{$sig} if($hist->{$sig} <= 0);
+				$hists{$sig}-- if($hists{$sig});
+				delete $hists{$sig} if($hists{$sig} <= 0);
 			}
-			# copy timestamp and .end
-			$jo->{"_at"} = $t->{"_at"};
-			$jo->{".end"} = $t->{".end"};
-			tsend($jo);
+			# send them a copy
+			tsend(tnew($writer,$t));
+			# see if their request is used up
+			last unless(scalar keys %hists > 0); 
 		}
 	}
 
 	# a request to send a .nat to a writer that we should know (and only from writers we have a line to)
 	if($j->{".natr"} && $lines{$j->{".natr"}} && $j->{"_line"})
 	{
-		my $jo = telex($j->{".natr"});
+		my $jo = tnew($j->{".natr"});
 		$jo->{".nat"} = $writer; 
 		tsend($jo);
 	}
@@ -159,7 +133,7 @@ while(1)
 	# we're asked to send something to this ip:port to open a nat
 	if($j->{".nat"} && $j->{"_line"})
 	{
-		tsend(telex($j->{".nat"}));
+		tsend(tnew($j->{".nat"}));
 	}
 
 	# we've been told to talk to these writers
@@ -170,9 +144,9 @@ while(1)
 		{
 			next if($seeipp eq $ipp); # skip ourselves :)
 			next if($lines{$seeipp}); # skip if we know them already
-			tsend(telex($seeipp)); # send direct (should open our outgoing to them)
+			tsend(tnew($seeipp)); # send direct (should open our outgoing to them)
 			# send nat request back to the writer who .see'd us in case the new one is behind a nat
-			my $jo = telex($writer);
+			my $jo = tnew($writer);
 			$jo->{".natr"} = $seeipp;
 			tsend($jo);
 		}
@@ -181,12 +155,49 @@ while(1)
 	# handle a fwd command, must be verified
 	if($j->{".fwd"} && $j->{"_line"})
 	{
-		my $e = getend($j->{".end"});
-		$e->{"fwds"}->{$writer} = $j->{".fwd"};
-		my $jo = telex($writer);
-		$jo->{"fwds"} = $j->{".fwd"}; # just confirm whatever they sent for now
+		# sanitize
+		my $fwd = $j->{".fwd"};
+		my %fwds = map {$_ => ($fwd->{$_}>100)?100:int($fwd->{$_})} grep(/^[[:alnum:]]+/, keys %$fwd);
+		# todo, need to store signals for matching!
+		$forwards{$writer} = \%fwds; # always replace any existing
+		my $jo = tnew($writer);
+		$jo->{"fwds"} = \%fwds; # just confirm whatever they sent for now
 		tsend($jo);
 	}
+	
+	# now process signals, if any
+	next unless(grep(/^[[:alnum:]]+/,keys %$j));
+	
+	# a request to find other writers near this end hash
+	if($j->{"end"})
+	{
+		my $bto = bix_new($j->{"end"}); # convert to format for the big xor for faster sorting
+		my %hashes = map {sha1_hex($_)=>$_} grep($lines{$_}->{"open"}, keys %lines); # must have open line to announce them
+		my @bixes = map {bix_new($_)} keys %hashes; # pre-bix the array for faster sorting
+		my @ckeys = sort {bix_cmp(bix_or($bto,$a),bix_or($bto,$b))} @bixes; # sort by closest to the end
+		printf("from %d writers, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,$ckeys[0])));
+		# send them back a .see of whatever is the closest we know
+		my @cipps = map {$hashes{bix_str($_)}} splice @ckeys, 0, 5; # convert back to ip:ports, top 5
+		my $jo = tnew($writer);
+		$jo->{".see"} = \@cipps;
+		tsend($jo);			
+		# if we're the closest, we should try to cache this in the history longer
+		if(bix_str($ckeys[0]) eq $ipphash)
+		{
+			printf("closest!\n");
+		}
+	}
+	
+	# check for any active forwards (todo: optimize the matching, this is just brute force)
+	for my $w (keys %forwards)
+	{
+		# match signal filters
+		# match signals requested
+	}
+	
+	# cache in history, max 1000
+	unshift(@history,$j);
+	@history = splice(@history,0,1000);
 }
 
 # for creating and tracking lines to writers
@@ -201,10 +212,16 @@ sub getline
 }
 
 # create a new telex
-sub telex
+sub tnew
 {
 	my $to = shift;
-	my $js = shift || {};
+	my $clone = shift;
+	my $js = {};
+	# if there's a telex sent, clone all signals from it
+	for my $sig (grep(/^[[:alnum:]]+/, keys %$clone))
+	{
+		$js->{$sig} = $clone->{$sig};
+	}
 	my $line = getline($to);
 	# if a line is open use that, else send a ring
 	if($line->{"open"})
@@ -233,6 +250,16 @@ sub tsend
 	}
 }
 
+# see if the second telex is a match or superset of the first's signals
+sub tmatch
+{
+	my $t1 = shift;
+	my $t2 = shift;
+	my @sigs = grep(/^[[:alnum:]]+/, keys %$t1);
+	my @match = scalar map {$t2->{$_} eq $t1->{$_}} @sigs);
+	return (scalar @sigs == scalar @match); 
+}
+
 # scan all known writers to keep any nat's open
 sub tscan
 {
@@ -247,8 +274,8 @@ sub tscan
 			delete $lines{$writer};
 			next;
 		}
-		my $jo = telex($writer);
-		$jo->{".end"} = sha1_hex($ipp);
+		my $jo = tnew($writer);
+		$jo->{"end"} = sha1_hex($ipp);
 		tsend($jo);
 	}
 	if(scalar keys %lines == 0)
@@ -288,7 +315,7 @@ sub doend
 		}
 		delete $e->{"fwds"}->{$wf} unless(scalar keys %$fwds > 0); # no more fwds, zap
 
-		my $jo = telex($wf);
+		my $jo = tnew($wf);
 		# copy all signals
 		for my $sig (grep(/^[[:alnum:]]+/, keys %$t))
 		{
@@ -313,9 +340,9 @@ sub getend
 sub bootstrap
 {
 	my $seed = shift;
-	my $jo = telex($seed);
-	# make sure the hash is really far away so they .see us back
-	$jo->{".end"} = bix_str(bix_far(bix_new(sha1_hex($seed))));
+	my $jo = tnew($seed);
+	# make sure the hash is really far away so they .see us back a bunch
+	$jo->{"end"} = bix_str(bix_far(bix_new(sha1_hex($seed))));
 	tsend($jo);
 }
 
