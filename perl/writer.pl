@@ -155,11 +155,12 @@ while(1)
 	# handle a fwd command, must be verified
 	if($j->{".fwd"} && $j->{"_line"})
 	{
-		# sanitize
+		# sanitize, clean the .fwd and create a telex of just the signals and .fwd to store
 		my $fwd = $j->{".fwd"};
 		my %fwds = map {$_ => ($fwd->{$_}>100)?100:int($fwd->{$_})} grep(/^[[:alnum:]]+/, keys %$fwd);
-		# todo, need to store signals for matching!
-		$forwards{$writer} = \%fwds; # always replace any existing
+		my %t = map { $_ => $j->{$_} } grep(/^[[:alnum:]]+/, keys %$j);
+		$t{".fwd"} = \%fwds;
+		$forwards{$writer} = \%t; # always replace any existing
 		my $jo = tnew($writer);
 		$jo->{"fwds"} = \%fwds; # just confirm whatever they sent for now
 		tsend($jo);
@@ -191,11 +192,30 @@ while(1)
 	# check for any active forwards (todo: optimize the matching, this is just brute force)
 	for my $w (keys %forwards)
 	{
-		# match signal filters
-		# match signals requested
+		my $t = $forwards{$w};
+		next unless(tmatch($t,$j));
+		my $fwd = $t->{".fwd"};
+		my @sigs = grep($t->{$_},keys %$fwd);
+		next unless(scalar @sigs > 0);
+		# deduct from the fwd
+		for my $sig (grep(/^[[:alnum:]]+/, keys %$t))
+		{
+			$fwd->{$sig}-- if($fwd->{$sig});
+			delete $fwd->{$sig} if($fwd->{$sig} <= 0);
+		}
+		# send them a copy
+		my $jo = tnew($writer,$t);
+		$jo->{".fwd"} = $t->{".fwd"};
+		tsend($jo);
+		# see if the .fwd is used up
+		if(scalar keys %$fwd == 0)
+		{
+			delete $forwards{$w};
+		} 
 	}
 	
 	# cache in history, max 1000
+	$j->{"_at"} = time() unless($j->{"_at"}); # make sure _at is set
 	unshift(@history,$j);
 	@history = splice(@history,0,1000);
 }
@@ -256,7 +276,7 @@ sub tmatch
 	my $t1 = shift;
 	my $t2 = shift;
 	my @sigs = grep(/^[[:alnum:]]+/, keys %$t1);
-	my @match = scalar map {$t2->{$_} eq $t1->{$_}} @sigs);
+	my @match = scalar map {$t2->{$_} eq $t1->{$_}} @sigs;
 	return (scalar @sigs == scalar @match); 
 }
 
@@ -282,50 +302,6 @@ sub tscan
 	{
 		$ipp=$connected=undef;
 		printf "OFFLINE\n";	
-	}
-}
-
-# handle this telex as if we're the .end
-sub doend
-{
-	my $t = shift;
-	my $writer = shift;
-	my $e = getend($t->{".end"});
-	$t->{"_at"} = time() unless($t->{"_at"}); # make sure _at is set
-	$e->{$writer} = $t; # store only one telex per writer per end
-	# check for any registered fwds
-	for my $wf (keys %{$e->{"fwds"}})
-	{
-		printf "checking fwd %s\n",$wf;
-		# make sure we still have a line open to this writer, if not cancel this forward 
-		if(!$lines{$wf}) # todo for later refactor, this should be cleaned up when the line is purged not here
-		{
-			delete $e->{"fwds"}->{$wf};
-			next;
-		}
-		# get the actual .fwd request for this writer
-		my $fwds = $e->{"fwds"}->{$wf};
-		# check if any of the signals match, if so forward this telex
-		my @sigs = grep($t->{$_},keys %$fwds);
-		next unless(scalar @sigs > 0);
-		map {$fwds->{$_}--} keys %$fwds; # decrement counters
-		for my $sig (keys %$fwds) # zap any that are gone
-		{
-			delete $fwds->{$sig} unless($fwds->{$sig} > 0);
-		}
-		delete $e->{"fwds"}->{$wf} unless(scalar keys %$fwds > 0); # no more fwds, zap
-
-		my $jo = tnew($wf);
-		# copy all signals
-		for my $sig (grep(/^[[:alnum:]]+/, keys %$t))
-		{
-			$jo->{$sig} = $t->{$sig};
-		}
-		# copy .end and timestamp if any
-		$jo->{"_at"} = $t->{"_at"} if($t->{"_at"});
-		$jo->{".end"} = $t->{".end"};
-		$jo->{"fwds"} = $fwds; # tell them current status
-		tsend($jo);
 	}
 }
 
