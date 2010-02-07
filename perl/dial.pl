@@ -31,7 +31,7 @@ my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
 
 # send a hello to the seed
 my $jo = telex($seedipp);
-$jo->{".end"} = $hash;
+$jo->{"end"} = $hash;
 tsend($jo);
 
 my %cache; # just a dumb cache of writer hashes
@@ -79,11 +79,11 @@ while(1)
 		{
 			next if($seeipp eq $ipp); # skip ourselves :)
 			next if($cache{sha1_hex($seeipp)}); # skip if we know them already
-			next if($seeipp eq $writer); # sillyness check, they may have sent themselves
 			$cache{sha1_hex($seeipp)} = $seeipp;
+			next if($seeipp eq $writer); # if they think they're close, they may have sent themselves
 
 			my $jo = telex($seeipp); # send direct (should open our outgoing to them)
-			$jo->{".end"} = $hash;
+			$jo->{"end"} = $hash;
 			tsend($jo);
 
 			# send nat request back to the writer who .see'd us in case the new one is behind a nat
@@ -97,7 +97,7 @@ while(1)
 		{
 			$resend{$writer}++;
 			my $jo = telex($writer);
-			$jo->{".end"} = $hash;
+			$jo->{"end"} = $hash;
 			tsend($jo);
 		}
 	}

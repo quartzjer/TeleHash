@@ -24,7 +24,7 @@ bind(SOCKET, $paddr)                          or die "bind: $!";
 $sel = IO::Select->new();
 $sel->add(\*SOCKET);
 
-my $j = {"_to"=>$ipp, ".end"=>$end, $sig=>$val};
+my $j = {"_to"=>$ipp, "end"=>$end, $sig=>$val};
 my($ip,$port) = split(":",$ipp);
 my $wip = gethostbyname($ip);
 my $waddr = sockaddr_in($port,$wip);

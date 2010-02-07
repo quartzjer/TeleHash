@@ -4,15 +4,16 @@
 
 # TODO: doesn't support writers behind a nat yet
 
+use Digest::SHA1 qw(sha1_hex);
 use IO::Select;
 use Socket;
 use JSON::DWIW;
 my $json = JSON::DWIW->new;
 
 my $ipp = $ARGV[0];
-my $end = $ARGV[1];
-my $sig = $ARGV[2];
-my $cnt = $ARGV[3] || die("./listen.pl ip:port hashcode signal count");
+my $sig = $ARGV[1];
+my $cnt = $ARGV[2] || die("./listen.pl ip:port signal count hashcode");
+my $end = $ARGV[3];
 
 # defaults to listen on any ip and random port
 my $port = 0;
@@ -28,14 +29,14 @@ $sel->add(\*SOCKET);
 
 # send initial hello to open line
 my $jo = telex($ipp);
-$jo->{".end"}=$end;
+$jo->{"end"}=sha1_hex($ipp);
 tsend($jo);
 
 my $regd;
 while(1)
 {
 	# wait for event or timeout loop
-	if(scalar $sel->can_read(300) == 0)
+	if(scalar $sel->can_read(50) == 0)
 	{
 		tsend(telex($ipp)); # send keepalive
 		next;
@@ -70,7 +71,7 @@ while(1)
 		$regd++;
 		my $jo = telex($ipp);
 		$jo->{".fwd"} = {$sig=>$cnt};
-		$jo->{".end"} = $end;
+		$jo->{"end"} = $end if($end);
 		$jo->{"_line"} = $j->{"_ring"};
 		tsend($jo);
 	}

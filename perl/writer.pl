@@ -5,6 +5,7 @@
 # Jer 1/2010
 
 use Digest::SHA1 qw(sha1_hex);
+use Data::Dumper;
 use IO::Select;
 use Socket;
 use JSON::DWIW;
@@ -54,6 +55,7 @@ while(1)
 	$connected = 1;
 	my $caddr = recv(SOCKET, $buff, 8192, 0) || die("recv $!");
 	# TODO need some source rate detection in case there's a loop
+	# give each writer a karma, number of telexes to process before dropping, new ones only a few, ++ on timer
 
 	# figure out who sent it
 	($cport, $addr) = sockaddr_in($caddr);
@@ -81,8 +83,8 @@ while(1)
 	my $line = getline($writer);
 	# keep track of when we've last got stuff from them
 	$line->{"last"} = time();
-	# check to see if the line matches, and skip if not
-	if($line->{"open"} && $line->{"open"} != $j->{"_line"})
+	# check to see if the _line matches or the _ring matches
+	if($line->{"open"} && ($line->{"open"} != $j->{"_line"} || ($j->{"_ring"} > 0 && $line->{"open"} % $j->{"_ring"} != 0)))
 	{
 		print "LINE MISMATCH!\n";
 		next;
@@ -174,6 +176,7 @@ while(1)
 	{
 		my $bto = bix_new($j->{"end"}); # convert to format for the big xor for faster sorting
 		my %hashes = map {sha1_hex($_)=>$_} grep($lines{$_}->{"open"}, keys %lines); # must have open line to announce them
+		$hashes{$ipphash} = $ipp; # include ourselves always
 		my @bixes = map {bix_new($_)} keys %hashes; # pre-bix the array for faster sorting
 		my @ckeys = sort {bix_cmp(bix_or($bto,$a),bix_or($bto,$b))} @bixes; # sort by closest to the end
 		printf("from %d writers, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,$ckeys[0])));
@@ -193,18 +196,22 @@ while(1)
 	for my $w (keys %forwards)
 	{
 		my $t = $forwards{$w};
+		print Dumper($t);
 		next unless(tmatch($t,$j));
+		print "1";
 		my $fwd = $t->{".fwd"};
-		my @sigs = grep($t->{$_},keys %$fwd);
+		my @sigs = grep($j->{$_},keys %$fwd);
 		next unless(scalar @sigs > 0);
 		# deduct from the fwd
-		for my $sig (grep(/^[[:alnum:]]+/, keys %$t))
+		print "2";
+		for my $sig (grep(/^[[:alnum:]]+/, keys %$j))
 		{
 			$fwd->{$sig}-- if($fwd->{$sig});
 			delete $fwd->{$sig} if($fwd->{$sig} <= 0);
 		}
+		print "3";
 		# send them a copy
-		my $jo = tnew($writer,$t);
+		my $jo = tnew($w,$j);
 		$jo->{".fwd"} = $t->{".fwd"};
 		tsend($jo);
 		# see if the .fwd is used up
@@ -215,7 +222,7 @@ while(1)
 	}
 	
 	# cache in history, max 1000
-	$j->{"_at"} = time() unless($j->{"_at"}); # make sure _at is set
+	$j->{"at"} = time() unless($j->{"at"}); # make sure an at signal is set
 	unshift(@history,$j);
 	@history = splice(@history,0,1000);
 }
@@ -276,7 +283,7 @@ sub tmatch
 	my $t1 = shift;
 	my $t2 = shift;
 	my @sigs = grep(/^[[:alnum:]]+/, keys %$t1);
-	my @match = scalar map {$t2->{$_} eq $t1->{$_}} @sigs;
+	my @match = grep {$t2->{$_} eq $t1->{$_}} @sigs;
 	return (scalar @sigs == scalar @match); 
 }
 
