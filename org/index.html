@@ -163,7 +163,7 @@
 
 <p>For any incoming telex, once any _ring/_line is sorted out, a Writer then processes any commands (each is stateless and processed on their own).  If there is an end signal, it should cause a .see response of some sort, and possibly trigger caching this telex (for .hist processing) if the Writer is the closest.  Next, any and all contained signals should be checked against any active .fwd requests, and all matching .fwd Writers should get a copy of the telex.
 
-<p>When an incoming {.fwd={sigA=5,sigB=10},sigC=foo} is received, it is registering to only receive telexes that contain a sigC=foo and any sigA or sigB signals (up to 5 or 10 times respectively).  This can be used for more complex selection and filtering.
+<p>When an incoming {.fwd={sigA=5,sigB=10},sigC=foo} is received, it is registering to only receive telexes that contain a sigC=foo and any sigA or sigB signals (up to 5 or 10 times respectively).  This can be used for more complex selection and filtering.  At least one matching signal (like sigC) is required for any .fwd or .hist command.
 	
 <p>Signals should primarily only ever contain hashes or generic (like xpath) content references and never actual content, as the sending and recipient parties must both be independently aware of the context or content in question so as to avoid any injection or attract spamming from 3rd parties.
 

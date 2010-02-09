@@ -98,8 +98,8 @@ while(1)
 
 	# first process all commands
 	
-	# they want recent telexes matching these signals
-	if($j->{".hist"})
+	# they want recent telexes matching these signals (at least one matching signal required)
+	if($j->{".hist"} && scalar grep(/^[[:alnum:]]+/, keys %$j) > 0)
 	{
 		my $hist = $j->{".hist"};
 		# sanitize hist request
@@ -161,11 +161,15 @@ while(1)
 		my $fwd = $j->{".fwd"};
 		my %fwds = map {$_ => ($fwd->{$_}>100)?100:int($fwd->{$_})} grep(/^[[:alnum:]]+/, keys %$fwd);
 		my %t = map { $_ => $j->{$_} } grep(/^[[:alnum:]]+/, keys %$j);
-		$t{".fwd"} = \%fwds;
-		$forwards{$writer} = \%t; # always replace any existing
-		my $jo = tnew($writer);
-		$jo->{"fwds"} = \%fwds; # just confirm whatever they sent for now
-		tsend($jo);
+		# only accept it if there's at least one signal to filter on
+		if(scalar keys %t > 0)
+		{
+			$t{".fwd"} = \%fwds;
+			$forwards{$writer} = \%t; # always replace any existing
+			my $jo = tnew($writer);
+			$jo->{"fwds"} = \%fwds; # just confirm whatever they sent for now
+			tsend($jo);
+		}
 	}
 	
 	# now process signals, if any
@@ -221,7 +225,8 @@ while(1)
 		} 
 	}
 	
-	# cache in history, max 1000
+	# cache in history if there's any signals, max 1000
+	next unless(scalar grep(/^[[:alnum:]]+/, keys %$j) > 0);
 	$j->{"at"} = time() unless($j->{"at"}); # make sure an at signal is set
 	unshift(@history,$j);
 	@history = splice(@history,0,1000);
