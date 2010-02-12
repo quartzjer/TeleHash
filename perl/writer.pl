@@ -38,6 +38,12 @@ my $buff;
 $|++;
 my $ipp, $ipphash;
 my $connected=undef;
+# track ip/ports to prevent excessive flooding
+my %fw_ips; # track ips;
+my $fw_tps = 20; # max telex per sec
+my $fw_window = 5; # seconds per window
+my $fw_last = int(time);
+my %fw_karma; # whitelisting
 while(1)
 {
 	# if we're not online, attempt to talk to the seed
@@ -54,12 +60,14 @@ while(1)
 	# must be a telex waiting for us
 	$connected = 1;
 	my $caddr = recv(SOCKET, $buff, 8192, 0) || die("recv $!");
-	# TODO need some source rate detection in case there's a loop
-	# give each writer a karma, number of telexes to process before dropping, new ones only a few, ++ on timer
 
 	# figure out who sent it
 	($cport, $addr) = sockaddr_in($caddr);
 	my $writer = sprintf("%s:%d",inet_ntoa($addr),$cport);
+
+	# drop if this sender is flooding us
+	next if(floodwall($writer));
+
 	printf "RECV[%s]\t%s\n",$writer,$buff;
 
 	# json parse check
@@ -334,3 +342,41 @@ sub bootstrap
 	tsend($jo);
 }
 
+sub floodwall
+{
+	my $writer = shift;
+	# first check if it's a karma setting
+	my $karma = shift;
+	if($karma)
+	{
+		$fw_karma{$writer}+=$karma;
+		return undef;
+	}
+
+	# if karma saved, decide on own
+	if($fw_karma{$writer})
+	{
+		$fw_karma{$writer}--;
+		return undef if($fw_karma{$writer} > 0);
+		delete $fw_karma{$writer};
+	}
+
+	# now, if we're in a new window, reset
+	my $at = int(time());
+	if($fw_last+5 < $at)
+	{
+		%fw_ipps = {};
+		$fw_last = $at;
+	}
+
+	# count packets per ip
+	my($ip,$port) = split(":",$writer);
+	$fw_ips{$ip}++;
+
+	# if the IP is OK
+	return undef if($fw_ips{$ip} < $fw_window*$fw_tps);
+	
+	# too many, FAIL
+	printf "FLOODWALL[%s]\n",$writer;
+	return 1;
+}
