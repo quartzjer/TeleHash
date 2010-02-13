@@ -44,15 +44,18 @@ my $fw_tps = 20; # max telex per sec
 my $fw_window = 5; # seconds per window
 my $fw_last = int(time);
 my %fw_karma; # whitelisting
+my $buckets = bucket_init(); # big array of buckets 
+my $lastloop = int(time);
 while(1)
 {
 	# if we're not online, attempt to talk to the seed
 	bootstrap($seedipp) if(!$connected);
 
 	# wait for event or timeout loop
-	if(scalar $sel->can_read(10) == 0)
+	if(scalar $sel->can_read(10) == 0 || $lastloop+10 < int(time))
 	{
 		printf "LOOP\n";
+		$lastloop = int(time);
 		tscan();
 		next;
 	}
@@ -154,11 +157,16 @@ while(1)
 		{
 			next if($seeipp eq $ipp); # skip ourselves :)
 			next if($lines{$seeipp}); # skip if we know them already
-			tsend(tnew($seeipp)); # send direct (should open our outgoing to them)
-			# send nat request back to the writer who .see'd us in case the new one is behind a nat
-			my $jo = tnew($writer);
-			$jo->{".natr"} = $seeipp;
-			tsend($jo);
+			# XXX if we're dialing we'd want to use any of these closer to that end
+			# also check to see if we want them in a bucket
+			if(bucket_see($seeipp,$buckets))
+			{
+				tsend(tnew($seeipp)); # send direct (should open our outgoing to them)
+				# send nat request back to the writer who .see'd us in case the new one is behind a nat
+				my $jo = tnew($writer);
+				$jo->{".natr"} = $seeipp;
+				tsend($jo);				
+			}
 		}
 	}
 
@@ -186,16 +194,10 @@ while(1)
 	# a request to find other writers near this end hash
 	if($j->{"end"})
 	{
-		my $bto = bix_new($j->{"end"}); # convert to format for the big xor for faster sorting
-		my %hashes = map {sha1_hex($_)=>$_} grep($lines{$_}->{"open"}, keys %lines); # must have open line to announce them
-		$hashes{$ipphash} = $ipp; # include ourselves always
-		my @bixes = map {bix_new($_)} keys %hashes; # pre-bix the array for faster sorting
-		my @ckeys = sort {bix_cmp(bix_or($bto,$a),bix_or($bto,$b))} @bixes; # sort by closest to the end
-		printf("from %d writers, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,$ckeys[0])));
-		# send them back a .see of whatever is the closest we know
-		my @cipps = map {$hashes{bix_str($_)}} splice @ckeys, 0, 5; # convert back to ip:ports, top 5
+		# get writers from buckets near to this end
+		my $cipps = bucket_near($j->{"end"},$buckets);
 		my $jo = tnew($writer);
-		$jo->{".see"} = \@cipps;
+		$jo->{".see"} = $cipps;
 		tsend($jo);			
 		# if we're the closest, we should try to cache this in the history longer
 		if(bix_str($ckeys[0]) eq $ipphash)
@@ -280,7 +282,9 @@ sub tsend
 	my $j = shift;
 	my($ip,$port) = split(":",$j->{"_to"});
 	my $wip = gethostbyname($ip);
+	return unless($wip); # bad ip?
 	my $waddr = sockaddr_in($port,$wip);
+	return unless($waddr); # bad port?
 	my $js = $json->to_json($j);
 	printf "SEND[%s]\t%s\n",$j->{"_to"},$js;
 	if(!defined(send(SOCKET, $js, 0, $waddr)))
@@ -307,6 +311,7 @@ sub tscan
 	my @writers = keys %lines;
 	for my $writer (@writers)
 	{
+		next if($writer eq $ipp); # ??
 		delete $lines{$writer}->{"open"} if($at - $lines{$writer}->{"last"} > 300); # remove open line status if older than 5min
 		if($at - $lines{$writer}->{"last"} > 600)
 		{ # remove them if they are stale, timed out
@@ -340,6 +345,61 @@ sub bootstrap
 	# make sure the hash is really far away so they .see us back a bunch
 	$jo->{"end"} = bix_str(bix_far(bix_new(sha1_hex($seed))));
 	tsend($jo);
+	# make sure seed is in a bucket
+	bucket_see($seed,$buckets);
+}
+
+# create the array of buckets
+sub bucket_init
+{
+	my @ba;
+	for my $pos (0..159)
+	{
+		$ba[$pos] = {};
+	}
+	return \@ba;
+}
+
+# find active writers
+sub bucket_near
+{
+	my $end = shift;
+	my $buckets = shift;
+	my $bto = bix_new($end); # convert to format for the big xor for faster sorting
+	my $bme = bix_new($ipphash);
+	my $start = bix_sbit(bix_or($bto,$bme));
+	my @ret;
+	return \@ret if($start < 0 || $start > 159); # err!?
+	# first check all buckets closer
+	for my $pos ($start .. 0)
+	{
+		push @ret,grep($lines{$_}->{"open"},keys %{$buckets->[$pos]}); # only push active writers
+		last if(scalar @ret >= 5);
+	}
+	# the check all buckets further
+	for my $pos (($start+1) .. 159)
+	{
+		push @ret,grep($lines{$_}->{"open"},keys %{$buckets->[$pos]}); # only push active writers
+		last if(scalar @ret >= 5);
+	}
+	my %hashes = map {sha1_hex($_)=>$_} @ret;
+	$hashes{$ipphash} = $ipp; # include ourselves always
+	my @bixes = map {bix_new($_)} keys %hashes; # pre-bix the array for faster sorting
+	my @ckeys = sort {bix_cmp(bix_or($bto,$a),bix_or($bto,$b))} @bixes; # sort by closest to the end
+	printf("from %d writers, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,$ckeys[0])));
+	@ret = map {$hashes{bix_str($_)}} splice @ckeys, 0, 5; # convert back to ip:ports, top 5
+	return \@ret;
+}
+
+# see if we want to try this writer or not, and maybe prune the bucket
+sub bucket_see
+{
+	my $writer = shift;
+	my $buckets = shift;
+	my $pos = bix_sbit(bix_or(bix_new($writer),bix_new($ipphash)));
+	return undef if($pos < 0 || $pos > 159); # err!?
+	$buckets->[$pos]->{$writer}++;
+	return 1; # for now we're always taking everyone, in future need to be more selective when the bucket is "full"!
 }
 
 sub floodwall
@@ -362,10 +422,10 @@ sub floodwall
 	}
 
 	# now, if we're in a new window, reset
-	my $at = int(time());
+	my $at = int(time);
 	if($fw_last+5 < $at)
 	{
-		%fw_ipps = {};
+		%fw_ips = ();
 		$fw_last = $at;
 	}
 
