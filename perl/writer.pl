@@ -105,6 +105,7 @@ while(1)
 	{
 		$line->{"open"} = $j->{"_line"} if($j->{"_line"} % $line->{"ring"} == 0); # verify their line is a product of our ring
 		$line->{"open"} = int($j->{"_ring"} * $line->{"ring"}) if($j->{"_ring"}); # create a new line as a product of our ring
+		bucket_see($writer,$buckets) if($line->{"open"}); # make sure they get added to a bucket too?
 	}
 
 	# first process all commands
@@ -371,14 +372,18 @@ sub bucket_near
 	my @ret;
 	return \@ret if($start < 0 || $start > 159); # err!?
 	# first check all buckets closer
-	for my $pos ($start .. 0)
+	printf "NEAR[%d %s] ",$start,$end;
+	my $pos = $start+1;
+	while(--$pos)
 	{
+#printf "%d/%d %s",$pos,scalar @ret,Dumper($buckets->[$pos]);
 		push @ret,grep($lines{$_}->{"open"},keys %{$buckets->[$pos]}); # only push active writers
 		last if(scalar @ret >= 5);
 	}
 	# the check all buckets further
 	for my $pos (($start+1) .. 159)
 	{
+#printf "%d/%d ",$pos,scalar @ret;
 		push @ret,grep($lines{$_}->{"open"},keys %{$buckets->[$pos]}); # only push active writers
 		last if(scalar @ret >= 5);
 	}
@@ -397,6 +402,7 @@ sub bucket_see
 	my $writer = shift;
 	my $buckets = shift;
 	my $pos = bix_sbit(bix_or(bix_new($writer),bix_new($ipphash)));
+	printf "BUCKET[%d %s]\n",$pos,$writer;
 	return undef if($pos < 0 || $pos > 159); # err!?
 	$buckets->[$pos]->{$writer}++;
 	return 1; # for now we're always taking everyone, in future need to be more selective when the bucket is "full"!
