@@ -168,6 +168,20 @@
 <p>Signals should primarily only ever contain hashes or generic (like xpath) content references and never actual content, as the sending and recipient parties must both be independently aware of the context or content in question so as to avoid any injection or attract spamming from 3rd parties.
 
 <p>The low level protocol is designed to be the absolute minimal to build connections and exchange notifications, all needs for peer trust, proxying, anonymizing, etc happen at a higher layer and outside of the basic protocol.
+
+<h2>Writer Implementations</h2>
+
+<p>There is a few different common levels of support a Writer can implement, from the most ultra-simple to a full Writer:
+	<ul><blockquote>
+		<li>Announcer - Only dials and sends signals, doesn't process any commands other than .see and doesn't send any _ring, possibly short-lived, can send signals.
+		<li>Listener - Stays running, also supports returning basic _ring/_line so that it can send .fwd commands in order to receive new signals, but processes no other commands.
+		<li>Friendly - Will send a _to and seed itself and track other writers in order to respond to end signals, also supports .nat[r] commands, but doesn't process any signals or any .fwd/.hist commands.
+		<li>Full - Supports all commands, tracks incoming signals for future .hist/.stat and relaying to any active .fwd.
+	</blockquote></ul>
+
+<p>Friendly/Full Writers need to implement seeding, keeping lines open, a basic bucketing system that tracks active Writers at different distances from themselves.
+
+<p>Full Writers need to also implement a simple floodwall to prevent too many signals from passing through (either by mistake or not), as well as have internal data structures to store and filter telexes and keep stats on signals.
 	
 <a name="code"><h2>Code</h2></a>
 
