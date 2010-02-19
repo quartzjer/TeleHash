@@ -52,12 +52,13 @@ while(1)
 	bootstrap($seedipp) if(!$connected);
 
 	# wait for event or timeout loop
-	if(scalar $sel->can_read(10) == 0 || $lastloop+10 < int(time))
+	my $newmsg = scalar $sel->can_read(10);
+	if($newmsg == 0 || $lastloop+10 < int(time))
 	{
 		printf "LOOP\n";
 		$lastloop = int(time);
 		tscan();
-		next;
+		next if($newmsg == 0); # timeout loop
 	}
 	
 	# must be a telex waiting for us
