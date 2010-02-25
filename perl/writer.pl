@@ -370,8 +370,8 @@ sub bucket_near
 	my $bto = bix_new($end); # convert to format for the big xor for faster sorting
 	my $bme = bix_new($ipphash);
 	my $start = bix_sbit(bix_or($bto,$bme));
+	$start = 0 if($start < 0 || $start > 159); # err, this needs to be handled better or something
 	my @ret;
-	return \@ret if($start < 0 || $start > 159); # err!?
 	# first check all buckets closer
 	printf "NEAR[%d %s] ",$start,$end;
 	my $pos = $start+1;
