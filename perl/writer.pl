@@ -96,7 +96,7 @@ while(1)
 	# keep track of when we've last got stuff from them
 	$line->{"last"} = time();
 	# check to see if the _line matches or the _ring matches
-	if($line->{"open"} && ($line->{"open"} != $j->{"_line"} || ($j->{"_ring"} > 0 && $line->{"open"} % $j->{"_ring"} != 0)))
+	if($line->{"open"} > 0 && ($line->{"open"} != $j->{"_line"} || ($j->{"_ring"} > 0 && $line->{"open"} % $j->{"_ring"} != 0)))
 	{
 		print "LINE MISMATCH!\n";
 		next;
@@ -250,6 +250,7 @@ sub getline
 	my $writer = shift;
 	if(!$lines{$writer})
 	{
+		printf "LINE[%s]\n",$writer;		
 		$lines{$writer} = { "ring" => int(rand(32768)), "first" => time(), "last" => time() };
 	}
 	return $lines{$writer};
@@ -318,6 +319,7 @@ sub tscan
 		if($at - $lines{$writer}->{"last"} > 600)
 		{ # remove them if they are stale, timed out
 			printf "PURGE[%s]\n",$writer;
+			$lines{$writer} = undef;
 			delete $lines{$writer};
 			next;
 		}

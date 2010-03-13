@@ -1,6 +1,6 @@
 <html>
 <head>
-	<title>TeleHash - Edge Based Event Streams</title>
+	<title>TeleHash - Decentralized JSON Notification Protocol</title>
 	<style>
 	#bod {
 		font-family:American Typewriter;
@@ -70,43 +70,54 @@
 <div id="hash">eaffb349b9fa33a23eaf1bf1d9913cef94f1b057</div>
 <div id="bod">
 	<h1>TeleHa<span id="s">&#x26A1;</span>h</h1>
-	<h3>Edge Based Event Streams</h3>
+	<h3>Decentralized JSON Notification Protocol</h3>
 
 <a name="about"><h2>About</h2></a>
 
-<p>TeleHash is a distributed network and open protocol for relaying web-centric events between in a real-time and fully decentralized manner.  Essentially, any kind of event occurring about, within, or in relation to any web page can be shared or observed.  TeleHash is adjacent to the web, adding a new channel and new dimension to every site in a radically open platform that is operated and owned purely by the users.
-	
-<p>It works by having everyone who is participating sharing part of the workload of detecting and distributing events, usually from within their web browser or desktop.  When an event happens locally it is announced to the network, and when events of interest happen they will be routed back locally for processing or display to the user.
-	
-<p>Everything within TeleHash revolves around one or more hashes, usually of a URL or some fragment of content on a page and its relationships.  Events that occur can include when pages have content added or updated (like twitter/feed urls), when comments are added, where visitors are arriving from or departing to, the presence of friends, or any conceivable activity or notification in relation to one or more pages.
+<p>TeleHash is an open distributed network protocol for relaying generic <a href="">JSON</a> notifications in a real-time and fully decentralized manner.  It is designed to efficiently route and distribute any kind of event occurring within or in relation to any application or piece of shared content.  The core benefits of TeleHash over other existing platforms and protocols is that it is both generic (not tied to any specific application or content structures) and is radically decentralized with no servers or points of central control.
+
+<p>It works by having everyone who is participating sharing part of the workload of detecting and distributing events, usually from within their web browser or desktop/mobile application.  When an event is detected locally it is distributed intelligently into the network, and when events of interest happen they will be routed back locally for processing or display to the user.  This is accomplished by sending and receiving very simple small bits of JSON via <a href="">UDP</a> using an easy routing system based on <a href="">Kademlia</a>, a proven and popular <a href="">Distributed Hash Table</a>.
+
+<p>Everything within TeleHash revolves around one or more generic <a href="">hashes</a>, usually of a URL or some fragment of content and its relationships.  Examples of some web-centric events include when pages have content added or updated (like twitter/feed urls), when comments are added, links visitors are arriving from or departing to, the presence of friends, or any conceivable activity or notification in relation to one or more pages.
+
+<p>While it is still young, the protocol and early implementations are evolving quickly and can already be used to distribute events. Everyone is welcome to start experimenting and get involved in any form.
 </a>
 
 <a name="spec"><h2>Spec</h2></a>
-<p>WARNING: pre-draft state!
+<p>WARNING: pardon the formatting and terseness, draft state!
 <p>
 <p>Lexicon:
 <ul><blockquote>
-<li>		<big>writer</big> - every telehash node is a writer, guid formed from sha1(ip:port)
-<li>		<big>telex</big> - each packet, contains one or more commands, signals, or variables
-<li>		<big>signal</big> - (starts alphanumeric) a generic name/value pair relevant to an end, payload
-<li>		<big>command</big> - (starts with a .) an instruction or direction of what action to take
-<li>		<big>variable</big> - (starts with a _) a name/value pair local to a telex
-<li>		<big>end</big> - the primary hash value representing where the telex is directed to 
-<li>		<big>line</big> - active relationship between two writers
-<li>		<big>dial</big> - to seek a writer to send signals/commands to, a multi-step process approaching the end
-<li>		<big>listen</big> - to be registered on another writer that will forward certain signals when they arrive
+<li>		<big>Writer</big> - every telehash node is a writer, it's guid formed from sha1(ip:port)
+<li>		<big>Telex</big> - each packet, contains one or more commands, signals, or variables
+<li>		<big>Signal</big> - (starts alphanumeric) a generic name/value pair relevant to an end, payload
+<li>		<big>Command</big> - (starts with a .) an instruction or direction of what action to take
+<li>		<big>Variable</big> - (starts with a _) a name/value pair local to a telex
+<li>		<big>End</big> - the primary hash value representing where the telex is directed to 
+<li>		<big>Line</big> - active relationship between two writers
+<li>		<big>Dial</big> - to seek a writer to send signals/commands to, a multi-step process approaching the end
+<li>		<big>Listen</big> - to be registered on another writer that will forward certain signals when they arrive
 </blockquote></ul>
 
 <p>
 <pre>
-	// telex with example vars/sigs/cmds
+	// basic telex with example command
 	{
-		"_at":1262027120,
+		"_ring":43723,
+		".see":["5.6.7.8:23456","11.22.33.44:11223"],
+	}
+
+	// telex with example signals
+	{
+		"end":"a9993e364706816aba3e25717850c26c9cd0d89d",
+		"at":1262027120,
+		"foo":"0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33",
+	}
+
+	// telex with example forward request
+	{
 		"_line":43723459,
 		"end":"a9993e364706816aba3e25717850c26c9cd0d89d",
-		"foo":"0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33",
-		".nat":"4.4.4.4:4444",
-		".see":["5.6.7.8:23456","11.22.33.44:112233"],
 		".fwd":{"foo":10,"bar":5}
 	}
 </pre>
@@ -160,6 +171,8 @@
 <p>		<big>.nat .natr</big> - NATs: Whenever any Writer .see's new IP:PORT's to us, remember that it was them so that when trying to initiate the first Telex to that NEWIP:PORT we also send a ".natr":"NEWIP:PORT" (and _line) to the originating Writer.  That Writer then sends a ".nat":"OURIP:PORT" to them in case they are behind a NAT so that they will send a Telex out to us to ensure an open path of communication.
 
 <h2>Notes</h2>
+
+<!-- AKA command/var? Allow more hash ids of a writer derived from internal 10. 192. etc IPs? -->
 
 <p>For any incoming telex, once any _ring/_line is sorted out, a Writer then processes any commands (each is stateless and processed on their own).  If there is an end signal, it should cause a .see response of some sort, and possibly trigger caching this telex (for .hist processing) if the Writer is the closest.  Next, any and all contained signals should be checked against any active .fwd requests, and all matching .fwd Writers should get a copy of the telex.
 

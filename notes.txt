@@ -8,6 +8,26 @@ always just ignore telexes if to throttle back
 		unless they're the closest to you, then they /should/ open a line back to place in their own bucket
 	if they have an open line to you, you're the closest to yourself, they'll .see yourself to you
 
+client model thoughts
+	three layers
+		wire
+			json, floodwall, line validation, timeouts
+			calls out to any processing filters
+		processing
+			handles all incoming commands
+			checks for any application feedback
+			line and bucket maintenance 
+		app interface
+			basic high level calls/callbacks for apps
+	telex_send(..., callback, expiration)
+		if no response from other writer by expiration then callback will fire too
+		depending on the type of telex, wire layer will build a filter to catch responses
+			.end looks for *any* .see's until expire
+			.fwd looks for *any* matching signals until (optional) .fwds is empty or expire
+			.hist looks for *any* matching signals until expire
+	line events
+		register to receive any line creation, coming expiration, or deletion event
+
 data structure thoughts
 	two root lists
 		writers
