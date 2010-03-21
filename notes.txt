@@ -27,6 +27,28 @@ client model thoughts
 			.hist looks for *any* matching signals until expire
 	line events
 		register to receive any line creation, coming expiration, or deletion event
+		
+common utility patterns
+	centralized signing (rsa?) for announcing self to trusted peers
+		configured shared authority, probably app-defined or selectable
+		custom protocol to authority to authenticate app on initialization (http or th)
+		have announcement signal signed by authority
+		dial the hash(es) that peers would be listening on sending your identifying signal and it's sig
+			"itsme"="1.2.3.4:5678"
+			"itsme-sig"="60AD5A78..."
+	self-signed (trust is discovered and then remembered, like ssh/otr)
+		sign announcements
+		custom protocol to return your public key on demand
+		when an announcement happens from someone new, ask them for the pubkey and check to see if they're known/validated
+
+dogfooding
+	chat/list, called "what"
+		use simple rsa, openssl?
+		gen or use config'd private key
+		have a dedicated thapp that takes a signed what announcement (name+url+ipp), signs it back
+			manually approve any new sigs first time, then auto-sign
+		"what" client announces using that sig and their own sig so they are whitelisted
+		any messages are normal signals signed by each client
 
 data structure thoughts
 	two root lists
