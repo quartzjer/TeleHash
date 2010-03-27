@@ -11,14 +11,20 @@ always just ignore telexes if to throttle back
 client model thoughts
 	three layers
 		wire
-			json, floodwall, line validation, timeouts
+			json, line validation, timeouts
 			calls out to any processing filters
-		processing
-			handles all incoming commands
-			checks for any application feedback
-			line and bucket maintenance 
+		filters
+			checks all telexes to match filters to callbacks
+		bucket
+			responds to any end
+			self seeding and maintenance of buckets
+		hist
+			.hist command, keeps cache of history
+		forwards
+			.fwd command, sets up filters and relays
 		app interface
-			basic high level calls/callbacks for apps
+			send telexes
+			register related filters for answers/timeouts
 	telex_send(..., callback, expiration)
 		if no response from other writer by expiration then callback will fire too
 		depending on the type of telex, wire layer will build a filter to catch responses

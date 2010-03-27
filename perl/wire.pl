@@ -16,6 +16,7 @@ sub wire_new
 	$wire->{select} = = IO::Select->new();
 	$wire->{select}->add(\*SOCKET);
 	$wire->{ats} = {}; # hash of timestamps
+	$wire->{lines} = {}; # lines active, key is ipp
 	return $wire;
 }
 
@@ -44,6 +45,7 @@ sub wire_send
 	return unless($wip); # bad ip?
 	my $waddr = sockaddr_in($port,$wip);
 	return unless($waddr); # bad port?
+	# TODO: look for a line and set vars if so, update sentat
 	my $tdat = encode("UTF-8",JSON:DWIW−>to_json($t));
 	printf "SEND[%s]\t%s\n",$t->{"_to"},$tdat;
 	return send(SOCKET, $tdat, 0, $waddr);
@@ -69,7 +71,7 @@ sub wire_read
 
 		# json parse check and look for interested parties
 		my $t = JSON::DWIW->from_json(decode("UTF-8",$buff));
-		# TODO: line validation
+		# TODO: line validation, update seenat
 		wire_match($t) if($t);
 	}
 
@@ -84,11 +86,39 @@ sub wire_read
 	}
 }
 
-# flag this writer should have a line kept open to it
+# flag this writer should have a line kept open to it (with optional ring), call back if it's going to expire or failed
+#	wire_line($wire,"1.2.3.4:5678",910,cb_check,cb_fail,arg)
 sub wire_line
 {
-	# take a writer and a callback, and an optional ring
+	my ($wire,$ipp,$ringin,$cb,$arg) = shift;
+	if(!$wire->{lines}->{$ipp})
+	{ # create a new line
+		my $ringout = int(rand(32768));
+		$wire->{lines}->{$ipp} = {wire=>$wire, ringin=>$ringin, ringout=>$ringout, line=>($ringin*$ringout), callbacks=>{}, seenat=>0, sentat=>0};
+	}
+	my $line = $wire->{lines}->{$ipp};
+	
 	# can be called multiple times, noop
-	# call back whenever the line is about to expire
-	# will make sure incoming packets are verified
+	return if($line->{callbacks}->{$cb});
+
+	# save this callback and set up to call it right away
+	$line->{callbacks}->{$cb} = $arg;
+	wire_at($wire,time+5,wire_line_check,$line);
+}
+
+# maintenance on lines
+sub wire_line_check
+{
+	my $line = shift;
+
+	# first check if the line has been active, then defer the check
+	my $age = time - $line->{seenat};
+	if($age < 50)
+	{
+		wire_at($line->{wire},55-$age,wire_line_check,$line);
+		return;
+	}
+	
+	# notify the callback(s), delete ourselves if none care anymore
+	# TODO
 }
