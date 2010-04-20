@@ -90,7 +90,7 @@
 <ul><blockquote>
 <li>		<big>Writer</big> - every telehash node is a writer, it's guid formed from sha1(ip:port)
 <li>		<big>Telex</big> - each packet, contains one or more commands, signals, or variables
-<li>		<big>Signal</big> - (starts alphanumeric) a generic name/value pair relevant to an end, payload
+<li>		<big>Signal</big> - (starts alphanumeric) a generic name/value pair relevant to an end, payload, always string value
 <li>		<big>Command</big> - (starts with a .) an instruction or direction of what action to take
 <li>		<big>Variable</big> - (starts with a _) a name/value pair local to a telex
 <li>		<big>End</big> - the primary hash value representing where the telex is directed to 
@@ -110,15 +110,7 @@
 	// telex with example signals
 	{
 		"end":"a9993e364706816aba3e25717850c26c9cd0d89d",
-		"at":1262027120,
 		"foo":"0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33",
-	}
-
-	// telex with example forward request
-	{
-		"_line":43723459,
-		"end":"a9993e364706816aba3e25717850c26c9cd0d89d",
-		".fwd":{"foo":10,"bar":5}
 	}
 </pre>
 
@@ -136,21 +128,20 @@
 <li>			<big>_to</big> - The public IP:PORT that the Telex was sent to (helps with NATs)
 <li>			<big>_ring</big> - Used to open a line with a writer, value from 1 to 32768
 <li>			<big>_line</big> - The private unique id of the line from one writer to another, the product of the _ring from both
+<li>			<big>_limbo</big> - Bytes sent are added, received are subtracted, current state (before this telex) is the value included. When the current value is over 10k all new telexes should stop/drop
+<li>			<big>_seq</big> - Integer value from 0 to 4, incremented any time the Telex is forwarded
 </blockquote>
 		.* - Commands
 <blockquote>
 <li>			<big>.see</big> - An array of writers (IP:PORT) that the recipient may find useful
 <li>			<big>.natr</big> - An IP:PORT value, requesting the recipient to send a .nat command to that IP:PORT with senders IP:PORT (poke holes in NATs)
 <li>			<big>.nat</big> - An IP:PORT to send a telex to, in order to open up a tunnel between them through any NAT devices
-<li>			<big>.fwd</big> - An object with signals as names and integer values representing how many matching signal telexes to forward
-<li>			<big>.fwds</big> - Same object sent anytime to show current status of active forwards on a writer for the requester
-<li>			<big>.hist</big> - Same object format, but send up to that many historical matching telexes
-<li>			<big>.stat</big> - TBD, request statistics on matching signals
+<li>			<big>.fwd</big> - An array containing a list of filters that describe which telexes to match and forward back to the sender
+<li>			<big>.fwds</big> - A response object mirroring the accepted .fwd values
 </blockquote>
 		alnum* - Signals, application specific, payload specific to an end
 <blockquote>
 <li>			<big>end</big> - [primary] The SHA1 hash value that the telex is directed towards
-<li>			<big>at</big> - [common] GMT epoch timestamp of when any peer signals were created
 <li>			<big>href</big> - [example] The SHA1 of the HREF clicked on (end is SHA1 of current page)
 <li>			<big>from</big> - [example] The SHA1 of the previous page (end is the SHA1 of the new page)
 <li>			<big>etag</big> - [example] The value of the etag header (end is current page)
@@ -162,7 +153,20 @@
 
 <p>		<big>end .see</big> - Dialing (routing): Whenever a Telex comes in with a end, check to see if any closer Writers are known and if so .see back to that Writer a list of closer IP:PORTs.  If none are closer or if that end is the more popular of ones we've seen (congestion control), .see back only ourselves.
 
-<p>		<big>end .fwd .fwds</big> - Listening: To observe signals coming in around an interesting end, first try dialing it in order to discover the closest Writers we can find.  Then send an end and .fwd of which signals to observe to those Writers, who if willing will respond with a .fwds to confirm that it's active.  Any Writer can process any .fwd request, and should check every incoming signal to see if it matches any active listener.
+<p>		<big>.fwd</big> - Listening: To observe signals coming in around an interesting end, first try dialing it in order to discover the closest Writers we can find.  Then send a .fwd of which signals to observe to those Writers close to the end, who if willing will respond with a .fwds to confirm that it's active.  Any Writer can process any .fwd request, and should check every incoming signal to see if it matches any listener with an active line.
+<pre>
+		// telex with example forward request
+		{
+			"_line":43723459,
+			".fwd":
+			[
+				{"is":{ "end":"a9993e364706816aba3e25717850c26c9cd0d89d" }, "has":[ "foo" ] },
+				{"is":{ "foo":"0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33" } },
+				{"has":[ "foo", "bar" ] },
+			]
+		}
+</pre>
+
 
 <p>		<big>end _to</big> - Startup: A Writer must have a cache or seed list of other Writers to bootstrap from.  It would first reach out to a few of them sending a random end that they would respond with a _to informing it of its visible public IP:PORT.  Then, it would Dial the SHA1 hash of that _to to start filling up its kbuckets (see Kademlia).  Use the _to for validation of future packets (EXPAND: how to handle different scenarios here).
 
@@ -174,10 +178,8 @@
 
 <!-- AKA command/var? Allow more hash ids of a writer derived from internal 10. 192. etc IPs? -->
 
-<p>For any incoming telex, once any _ring/_line is sorted out, a Writer then processes any commands (each is stateless and processed on their own).  If there is an end signal, it should cause a .see response of some sort, and possibly trigger caching this telex (for .hist processing) if the Writer is the closest.  Next, any and all contained signals should be checked against any active .fwd requests, and all matching .fwd Writers should get a copy of the telex.
+<p>For any incoming telex, once any _ring/_line is sorted out, a Writer then processes any commands (each is stateless and processed on their own).  If there is an end signal, it should cause a .see response of some sort (unless there's a _seq > 0).  Next, if the _seq is less than 4, any and all contained signals should be checked against any active .fwd filters, and all matching .fwd Writers should get a copy of the telex with the _seq incremented.
 
-<p>When an incoming {.fwd={sigA=5,sigB=10},sigC=foo} is received, it is registering to only receive telexes that contain a sigC=foo and any sigA or sigB signals (up to 5 or 10 times respectively).  This can be used for more complex selection and filtering.  At least one matching signal (like sigC) is required for any .fwd or .hist command.
-	
 <p>Signals should primarily only ever contain hashes or generic (like xpath) content references and never actual content, as the sending and recipient parties must both be independently aware of the context or content in question so as to avoid any injection or attract spamming from 3rd parties.
 
 <p>The low level protocol is designed to be the absolute minimal to build connections and exchange notifications, all needs for peer trust, proxying, anonymizing, etc happen at a higher layer and outside of the basic protocol.
@@ -187,16 +189,16 @@
 <p>There is a few different common levels of support a Writer can implement, from the most ultra-simple to a full Writer:
 	<ul><blockquote>
 		<li>Announcer - Only dials and sends signals, doesn't process any commands other than .see and doesn't send any _ring, possibly short-lived, can send signals.
-		<li>Listener - Stays running, also supports returning basic _ring/_line so that it can send .fwd commands in order to receive new signals, but processes no other commands.
-		<li>Friendly - Will send a _to and seed itself and track other writers in order to respond to end signals, also supports .nat[r] commands, but doesn't process any signals or any .fwd/.hist commands.
-		<li>Full - Supports all commands, tracks incoming signals for future .hist/.stat and relaying to any active .fwd.
+		<li>Listener - Stays running, also supports returning basic _ring/_line/_limbo so that it can send .fwd commands in order to receive new signals, but processes no other commands.
+		<li>Friendly - Will send a _to and seed itself and track other writers in order to respond to end signals, also supports .nat[r] commands, but doesn't process any signals or any .fwd commands.
+		<li>Full - Supports all commands and relaying to any active .fwd filter.
 	</blockquote></ul>
 
 <p>Friendly/Full Writers need to implement seeding, keeping lines open, a basic bucketing system that tracks active Writers at different distances from themselves.
 
-<p>A Full Writer needs to throttle signals from any other Writer to one-telex-per-end-per-second to prevent too many signals from passing through (either by mistake or not), as well as have internal data structures to store and filter telexes and keep stats on signals.
-
-<p>The ideology of vars/cmds/sigs is as such: A _variable can be of any type and it's purpose is to convey information about that single instance of a telex, meant to only carry extra information about that one exchange between two Writers, meta/headers, it is never meant to be used by any application or persisted/relayed.  A .command also can have any type of value and it's intended to cause an action on the recipient involving it's value and optionally including any signals in the same telex, also never to be relayed/persisted, private between Writers and open for applications to use custom commands to talk directly to each other.  A signal is always a string value usually relating to or from an application and is always considered public, possibly persisted and relayed to other Writers, and should only be used to convey information that may be of interest to an unknown or more than one party, discovery/announcements.
+<p>The _limbo var is important to any long-lived Writer to prevent sudden flooding and to control bandwidth rates.  For each outgoing Telex the recipient Writer would have a local limbo count for how many bytes were sent to it, and when incoming Telexes come back that should balance out.  The most it can grow to is 10k, preventing any more data than that from being sent without an answer.  When incoming telexes from many Writers all have a high _limbo then it's an indicator of packet loss or backlog to the local Writer.  If there is expected to be a higher than 10k amount of bandwidth needed between two Writers, the _limbo can be intentionally set to a larger negative number to increase that allowed buffer between them.
+	
+<p>The ideology of vars/cmds/sigs is as such: A _variable can be of any type and it's purpose is to convey information about that single instance of a Telex and the state of a connection between Writers, meant to only carry extra information about the exchange, meta/headers, it is never meant to be used by any application or persisted/relayed.  A .command also can have any type of value and it's intended to cause an action on the recipient involving it's value and optionally including any signals in the same telex, also never to be relayed/persisted, private between Writers and open for applications to use custom commands to talk directly to each other.  A signal is always a string value usually relating to or from an application and is always considered public, possibly persisted and relayed to other Writers, and should only be used to convey information that may be of interest to an unknown or more than one party, discovery/announcements.
 	
 <a name="code"><h2>Code</h2></a>
 
