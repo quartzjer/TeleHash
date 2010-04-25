@@ -10,7 +10,7 @@ my $json = JSON::DWIW->new;
 my $ipp = $ARGV[0];
 my $end = $ARGV[1];
 my $sig = $ARGV[2];
-my $val = $ARGV[3] || die("./signal.pl ip:port endhash signame sigvalue");
+my $val = $ARGV[3] || die("./signal.pl ip:port hashcode signame sigvalue");
 
 # defaults to listen on any ip and random port
 my $port = 0;

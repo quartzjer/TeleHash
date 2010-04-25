@@ -10,9 +10,10 @@ use Socket;
 use JSON::DWIW;
 my $json = JSON::DWIW->new;
 
-my $ipp = $ARGV[0] || die("./listen.pl ip:port [signal] [endhash]");
+my $ipp = $ARGV[0];
 my $sig = $ARGV[1];
-my $end = $ARGV[2];
+my $cnt = $ARGV[2] || die("./listen.pl ip:port signal count hashcode");
+my $end = $ARGV[3];
 
 # defaults to listen on any ip and random port
 my $port = 0;
@@ -32,8 +33,6 @@ $jo->{"end"}=sha1_hex($ipp);
 tsend($jo);
 
 my $regd;
-my $limbo = 0;
-my $line = 0;
 while(1)
 {
 	# wait for event or timeout loop
@@ -65,18 +64,15 @@ while(1)
 		printf "LINEMISSING\n";
 		next;
 	}
-
-	# track limbo so we can keep getting more forwards
-	$limbo -= length($buff);
-
+	
 	# first time they respond at all, send them the fwd request now that we have a _line to validate it
 	if(!$regd)
 	{
 		$regd++;
 		my $jo = telex($ipp);
-		$jo->{".fwd"} = {"has"=>[$sig]};
-		$jo->{".fwd"}->{"is"} = {"end"=>$end} if($end);
-		$line = $j->{"_ring"};
+		$jo->{".fwd"} = {$sig=>$cnt};
+		$jo->{"end"} = $end if($end);
+		$jo->{"_line"} = $j->{"_ring"};
 		tsend($jo);
 	}
 
@@ -98,10 +94,7 @@ sub tsend
 	my($ip,$port) = split(":",$j->{"_to"});
 	my $wip = gethostbyname($ip);
 	my $waddr = sockaddr_in($port,$wip);
-	$j->{"_limbo"} = $limbo;
-	$j->{"_line"} = $line if($line > 0);
 	my $js = $json->to_json($j);
-	$limbo += length($js);
 	printf "SEND[%s]\t%s\n",$j->{"_to"},$js;
 	defined(send(SOCKET, $js, 0, $waddr))    or die "send $to: $!";	
 }

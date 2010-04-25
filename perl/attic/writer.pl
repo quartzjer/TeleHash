@@ -3,7 +3,6 @@
 # a prototype telehash writer
 
 # Jer 1/2010
-# big reorg 4/2010
 
 use Digest::SHA1 qw(sha1_hex);
 use Data::Dumper;
@@ -11,7 +10,7 @@ use IO::Select;
 use Socket;
 use JSON::DWIW;
 my $json = JSON::DWIW->new;
-require "./bixor.pl"; # pardon the lame style of code reuse
+require "./bixor.pl"; # temp testing hack
 
 # defaults to listen on any ip and random port
 my $port = $ARGV[0]||0;
@@ -32,11 +31,19 @@ my $seedip = gethostbyname($seedhost);
 my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
 
 my %lines; # static line assignments per writer
+my %ends; # any end hashes that we've handled
+my @history; # last however many telexes (containing signals)
 my %forwards; # writers with active .fwd going
 my $buff;
 $|++;
 my $ipp, $ipphash;
 my $connected=undef;
+# track ip/ports to prevent excessive flooding
+my %fw_ips; # track ips;
+my $fw_tps = 20; # max telex per sec
+my $fw_window = 5; # seconds per window
+my $fw_last = int(time);
+my %fw_karma; # whitelisting
 my $buckets = bucket_init(); # big array of buckets 
 my $lastloop = int(time);
 while(1)
@@ -62,6 +69,9 @@ while(1)
 	($cport, $addr) = sockaddr_in($caddr);
 	my $writer = sprintf("%s:%d",inet_ntoa($addr),$cport);
 
+	# drop if this sender is flooding us
+	next if(floodwall($writer));
+
 	printf "RECV[%s]\t%s\n",$writer,$buff;
 
 	# json parse check
@@ -83,16 +93,14 @@ while(1)
 
 	# if this is a writer we know, check a few things
 	my $line = getline($writer);
+	# keep track of when we've last got stuff from them
+	$line->{"last"} = time();
 	# check to see if the _line matches or the _ring matches
 	if($line->{"open"} > 0 && ($line->{"open"} != $j->{"_line"} || ($j->{"_ring"} > 0 && $line->{"open"} % $j->{"_ring"} != 0)))
 	{
 		print "LINE MISMATCH!\n";
 		next;
 	}
-	# keep track of when we've last got stuff from them and limbo
-	$line->{"last"} = time();
-	$line->{"limbo"} -= length($buff);
-	$line->{"_limbo"} = int($j->{"_limbo"});
 	# todo, should have lineto and linefrom open semantics for status checking on cmds
 	if(!$line->{"open"} && ($j->{"_line"} || $j->{"_ring"}))
 	{
@@ -102,6 +110,32 @@ while(1)
 	}
 
 	# first process all commands
+	
+	# they want recent telexes matching these signals (at least one matching signal required)
+	if($j->{".hist"} && scalar grep(/^[[:alnum:]]+/, keys %$j) > 0)
+	{
+		my $hist = $j->{".hist"};
+		# sanitize hist request
+		my %hists = map {$_ => $hist->{$_}} grep(/^[[:alnum:]]+/, keys %$hist);
+		# loop through all history new to old to find any matches
+		for my $t (@history)
+		{
+			# first make sure any of the requested signals exist
+			my @sigs = grep($t->{$_},keys %hists);
+			next unless(scalar @sigs > 0);
+			next unless(tmatch($j,$t));
+			# deduct from the hist request
+			for my $sig (grep(/^[[:alnum:]]+/, keys %$t))
+			{
+				$hists{$sig}-- if($hists{$sig});
+				delete $hists{$sig} if($hists{$sig} <= 0);
+			}
+			# send them a copy
+			tsend(tnew($writer,$t));
+			# see if their request is used up
+			last unless(scalar keys %hists > 0); 
+		}
+	}
 
 	# a request to send a .nat to a writer that we should know (and only from writers we have a line to)
 	if($j->{".natr"} && $lines{$j->{".natr"}} && $j->{"_line"})
@@ -159,14 +193,19 @@ while(1)
 	# now process signals, if any
 	next unless(grep(/^[[:alnum:]]+/,keys %$j));
 	
-	# a request to find other writers near this end hash (ignore any telex in a sequence)
-	if($j->{"end"} && int($j->{"_seq"}) == 0)
+	# a request to find other writers near this end hash
+	if($j->{"end"})
 	{
 		# get writers from buckets near to this end
 		my $cipps = bucket_near($j->{"end"},$buckets);
 		my $jo = tnew($writer);
 		$jo->{".see"} = $cipps;
 		tsend($jo);			
+		# if we're the closest, we should try to cache this in the history longer
+		if(bix_str($ckeys[0]) eq $ipphash)
+		{
+			printf("closest!\n");
+		}
 	}
 	
 	# check for any active forwards (todo: optimize the matching, this is just brute force)
@@ -174,17 +213,22 @@ while(1)
 	{
 		my $t = $forwards{$w};
 		print Dumper($t);
-		my @sigs = grep(/^[[:alnum:]]+/, keys %$t1);
-		my @match = grep {$t2->{$_} eq $t1->{$_}} @sigs;
-		return (scalar @sigs == scalar @match); 
+		next unless(tmatch($t,$j));
 		print "1";
 		my $fwd = $t->{".fwd"};
 		my @sigs = grep($j->{$_},keys %$fwd);
 		next unless(scalar @sigs > 0);
+		# deduct from the fwd
+		print "2";
+		for my $sig (grep(/^[[:alnum:]]+/, keys %$j))
+		{
+			$fwd->{$sig}-- if($fwd->{$sig});
+			delete $fwd->{$sig} if($fwd->{$sig} <= 0);
+		}
 		print "3";
 		# send them a copy
 		my $jo = tnew($w,$j);
-		$jo->{"_seq"} = int($t->{"_seq"})+1;
+		$jo->{".fwd"} = $t->{".fwd"};
 		tsend($jo);
 		# see if the .fwd is used up
 		if(scalar keys %$fwd == 0)
@@ -192,6 +236,12 @@ while(1)
 			delete $forwards{$w};
 		} 
 	}
+	
+	# cache in history if there's any signals, max 1000
+	next unless(scalar grep(/^[[:alnum:]]+/, keys %$j) > 0);
+	$j->{"at"} = time() unless($j->{"at"}); # make sure an at signal is set
+	unshift(@history,$j);
+	@history = splice(@history,0,1000);
 }
 
 # for creating and tracking lines to writers
@@ -238,17 +288,23 @@ sub tsend
 	return unless($wip); # bad ip?
 	my $waddr = sockaddr_in($port,$wip);
 	return unless($waddr); # bad port?
-	my $line = getline($j->{"_to"});
-	# update our limbo tracking and send current state
-	$j->{"_limbo"} = $line->{"limbo"};
 	my $js = $json->to_json($j);
-	$line->{"limbo"} += length($js);
 	printf "SEND[%s]\t%s\n",$j->{"_to"},$js;
 	if(!defined(send(SOCKET, $js, 0, $waddr)))
 	{
 		$ipp=$connected=undef;
 		printf "OFFLINE\n";	
 	}
+}
+
+# see if the second telex is a match or superset of the first's signals
+sub tmatch
+{
+	my $t1 = shift;
+	my $t2 = shift;
+	my @sigs = grep(/^[[:alnum:]]+/, keys %$t1);
+	my @match = grep {$t2->{$_} eq $t1->{$_}} @sigs;
+	return (scalar @sigs == scalar @match); 
 }
 
 # scan all known writers to keep any nat's open
@@ -353,4 +409,43 @@ sub bucket_see
 	return undef if($pos < 0 || $pos > 159); # err!?
 	$buckets->[$pos]->{$writer}++;
 	return 1; # for now we're always taking everyone, in future need to be more selective when the bucket is "full"!
+}
+
+sub floodwall
+{
+	my $writer = shift;
+	# first check if it's a karma setting
+	my $karma = shift;
+	if($karma)
+	{
+		$fw_karma{$writer}+=$karma;
+		return undef;
+	}
+
+	# if karma saved, decide on own
+	if($fw_karma{$writer})
+	{
+		$fw_karma{$writer}--;
+		return undef if($fw_karma{$writer} > 0);
+		delete $fw_karma{$writer};
+	}
+
+	# now, if we're in a new window, reset
+	my $at = int(time);
+	if($fw_last+5 < $at)
+	{
+		%fw_ips = ();
+		$fw_last = $at;
+	}
+
+	# count packets per ip
+	my($ip,$port) = split(":",$writer);
+	$fw_ips{$ip}++;
+
+	# if the IP is OK
+	return undef if($fw_ips{$ip} < $fw_window*$fw_tps);
+	
+	# too many, FAIL
+	printf "FLOODWALL[%s]\n",$writer;
+	return 1;
 }
