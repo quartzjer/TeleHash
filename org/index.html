@@ -129,7 +129,7 @@
 <li>			<big>_ring</big> - Used to open a line with a writer, value from 1 to 32768
 <li>			<big>_line</big> - The private unique id of the line from one writer to another, the product of the _ring from both
 <li>			<big>_limbo</big> - Bytes sent are added, received are subtracted, current state (before this telex) is the value included. When the current value differs from the last received by +10k all new telexes should stop/drop
-<li>			<big>_seq</big> - Integer value from 0 to 4, incremented any time the Telex is forwarded
+<li>			<big>_hop</big> - Integer value from 0 to 4, incremented any time the Telex is forwarded
 </blockquote>
 		.* - Commands
 <blockquote>
@@ -178,7 +178,7 @@
 
 <!-- AKA command/var? Allow more hash ids of a writer derived from internal 10. 192. etc IPs? -->
 
-<p>For any incoming telex, once any _ring/_line is sorted out, a Writer then processes any commands (each is stateless and processed on their own).  If there is an end signal, it should cause a .see response of some sort (unless there's a _seq > 0).  Next, if the _seq is less than 4, any and all contained signals should be checked against any active .fwd filters, and all matching .fwd Writers should get a copy of the telex with the _seq incremented.
+<p>For any incoming telex, once any _ring/_line is sorted out, a Writer then processes any commands (each is stateless and processed on their own).  If there is an end signal, it should cause a .see response of some sort (unless there's a _hop > 0).  Next, if the _hop is less than 4, any and all contained signals should be checked against any active .fwd filters, and all matching .fwd Writers should get a copy of the telex with the _hop incremented.
 
 <p>Signals should primarily only ever contain hashes or generic (like xpath) content references and never actual content, as the sending and recipient parties must both be independently aware of the context or content in question so as to avoid any injection or attract spamming from 3rd parties.
 

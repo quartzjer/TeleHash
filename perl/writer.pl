@@ -159,8 +159,8 @@ while(1)
 	# now process signals, if any
 	next unless(grep(/^[[:alnum:]]+/,keys %$j));
 	
-	# a request to find other writers near this end hash (ignore any telex in a sequence)
-	if($j->{"end"} && int($j->{"_seq"}) == 0)
+	# a request to find other writers near this end hash (ignore any relay'd telex)
+	if($j->{"end"} && int($j->{"_hop"}) == 0)
 	{
 		# get writers from buckets near to this end
 		my $cipps = bucket_near($j->{"end"},$buckets);
@@ -184,7 +184,7 @@ while(1)
 		print "3";
 		# send them a copy
 		my $jo = tnew($w,$j);
-		$jo->{"_seq"} = int($t->{"_seq"})+1;
+		$jo->{"_hop"} = int($t->{"_hop"})+1;
 		tsend($jo);
 		# see if the .fwd is used up
 		if(scalar keys %$fwd == 0)
