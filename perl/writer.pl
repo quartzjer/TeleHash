@@ -50,7 +50,7 @@ while(1)
 	{
 		printf "LOOP\n";
 		$lastloop = int(time);
-		tscan();
+		linecheck();
 		next if($newmsg == 0); # timeout loop
 	}
 	
@@ -82,7 +82,8 @@ while(1)
 	}
 
 	# if this is a writer we know, check a few things
-	my $line = getline($writer);
+	my $line = getline($writer,$j->{"_ring"});
+
 	# check to see if the _line matches or the _ring matches
 	if($line->{"open"} > 0 && ($line->{"open"} != $j->{"_line"} || ($j->{"_ring"} > 0 && $line->{"open"} % $j->{"_ring"} != 0)))
 	{
@@ -200,11 +201,55 @@ sub getline
 	my $writer = shift;
 	if(!$lines{$writer})
 	{
-		printf "LINE[%s]\n",$writer;		
-		$lines{$writer} = { "ring" => int(rand(32768)), "first" => time(), "last" => time() };
+		printf "LINE[%s]\n",$writer;
+		$lines{$writer} = { ipp=>$writer, ringout=>int(rand(32768)+1), seenat=>0, sentat=>0, limboout=>0, limboin=>0, lineat=>0 };
 	}
-	return $lines{$writer};
 }
+
+# validate a telex with incoming ring/line vars
+sub checkline
+{
+	my $line = shift;
+	my $t = shift;
+	
+	# first, if it's been more than 10 seconds after a line opened, be super strict, no more ringing allowed, _line absolutely required
+	if($line->{lineat} > 0 && time() - $line->{lineat} > 10)
+	{
+		return undef unless($t->{_line} == $line->{line});
+	}
+
+	# second, process incoming _line
+	if($t->{_line})
+	{
+		return undef if($line->{line} && $t->{_line} != $line->{line}); # must match if exist
+		return undef if($t->{_line} % $line->{ringout} != 0); # must be a product of our sent ring!!
+		# we can set up the line now if needed
+		if($line->{lineat} == 0)
+		{
+			$line->{ringin} = $t->{_line} / $line->{ringout}; # will be valid if the % = 0 above
+			$line->{line} = $t->{_line};
+			$line->{lineat} = time();
+		}
+	}
+
+	# last, process any incoming _ring's (remember, could be out of order, after a _line)
+	if($t->{_ring})
+	{
+		return undef if($line->{ringin} && $t->{_ring} != $line->{ringin}); # already had a ring and this one doesn't match, should be rare
+		return undef unless($t->{_ring} > 0 && $t->{_ring} <= 32768); # make sure within valid range
+		# we can set up the line now if needed
+		if($line->{lineat} == 0)
+		{
+			$line->{ringin} = $t->{_ring};
+			$line->{line} = $line->{ringin} * $line->{ringout};
+			$line->{lineat} = time();
+		}
+		$t->{_line} = $line->{line}; # set the valid _line var on this telex
+	}
+
+	return 1;
+}
+
 
 # create a new telex
 sub tnew
