@@ -83,26 +83,62 @@ while(1)
 
 	# if this is a writer we know, check a few things
 	my $line = getline($writer,$j->{"_ring"});
-
-	# check to see if the _line matches or the _ring matches
-	if($line->{"open"} > 0 && ($line->{"open"} != $j->{"_line"} || ($j->{"_ring"} > 0 && $line->{"open"} % $j->{"_ring"} != 0)))
+	my $lstat = checkline($line,$j);
+	if(!$lstat)
 	{
-		print "LINE MISMATCH!\n";
+		printf "LINE FAIL[%s]\n",$json->to_json($line);
 		next;
+	}else{
+		printf "LINE STATUS %s\n",$j->{"_line"}?"OPEN":"RINGING";
 	}
-	# keep track of when we've last got stuff from them and limbo
-	$line->{"last"} = time();
-	$line->{"limbo"} -= length($buff);
-	$line->{"_limbo"} = int($j->{"_limbo"});
+
+	# the only thing we can do before we have an "open" line is process any signals
+	if(grep(/^[[:alnum:]]+/,keys %$j))
+	{
+		# any first-hop end signal is responded to
+		if($j->{"end"} && int($j->{"_hop"}) == 0)
+		{
+			# get writers from buckets near to this end
+			my $cipps = bucket_near($j->{"end"},$buckets);
+			my $jo = tnew($writer);
+			$jo->{".see"} = $cipps;
+			tsend($jo);			
+		}
+
+		# todo: create a sig/val hash, check for unique and cache it
+		# if not last-hop, check for any active forwards (todo: optimize the matching, this is just brute force)
+		if(int($j->{"_hop"}) < 4)
+		{
+			for my $w (keys %forwards)
+			{
+				my $t = $forwards{$w};
+				print Dumper($t);
+				my @sigs = grep(/^[[:alnum:]]+/, keys %$t1);
+				my @match = grep {$t2->{$_} eq $t1->{$_}} @sigs;
+				return (scalar @sigs == scalar @match); 
+				print "1";
+				my $fwd = $t->{".fwd"};
+				my @sigs = grep($j->{$_},keys %$fwd);
+				next unless(scalar @sigs > 0);
+				print "3";
+				# send them a copy
+				my $jo = tnew($w,$j);
+				$jo->{"_hop"} = int($t->{"_hop"})+1;
+				tsend($jo);
+			}
+		}
+	}
+	
+	# to process any commands we need an open line (since we always send a ring and expect a line back)
+	next unless(!$j->{"_line"});
+	
 	# todo, should have lineto and linefrom open semantics for status checking on cmds
 	if(!$line->{"open"} && ($j->{"_line"} || $j->{"_ring"}))
 	{
 		$line->{"open"} = $j->{"_line"} if($j->{"_line"} % $line->{"ring"} == 0); # verify their line is a product of our ring
 		$line->{"open"} = int($j->{"_ring"} * $line->{"ring"}) if($j->{"_ring"}); # create a new line as a product of our ring
-		bucket_see($writer,$buckets) if($line->{"open"}); # make sure they get added to a bucket too?
 	}
 
-	# first process all commands
 
 	# a request to send a .nat to a writer that we should know (and only from writers we have a line to)
 	if($j->{".natr"} && $lines{$j->{".natr"}} && $j->{"_line"})
@@ -157,42 +193,8 @@ while(1)
 		}
 	}
 	
-	# now process signals, if any
-	next unless(grep(/^[[:alnum:]]+/,keys %$j));
 	
-	# a request to find other writers near this end hash (ignore any relay'd telex)
-	if($j->{"end"} && int($j->{"_hop"}) == 0)
-	{
-		# get writers from buckets near to this end
-		my $cipps = bucket_near($j->{"end"},$buckets);
-		my $jo = tnew($writer);
-		$jo->{".see"} = $cipps;
-		tsend($jo);			
-	}
-	
-	# check for any active forwards (todo: optimize the matching, this is just brute force)
-	for my $w (keys %forwards)
-	{
-		my $t = $forwards{$w};
-		print Dumper($t);
-		my @sigs = grep(/^[[:alnum:]]+/, keys %$t1);
-		my @match = grep {$t2->{$_} eq $t1->{$_}} @sigs;
-		return (scalar @sigs == scalar @match); 
-		print "1";
-		my $fwd = $t->{".fwd"};
-		my @sigs = grep($j->{$_},keys %$fwd);
-		next unless(scalar @sigs > 0);
-		print "3";
-		# send them a copy
-		my $jo = tnew($w,$j);
-		$jo->{"_hop"} = int($t->{"_hop"})+1;
-		tsend($jo);
-		# see if the .fwd is used up
-		if(scalar keys %$fwd == 0)
-		{
-			delete $forwards{$w};
-		} 
-	}
+
 }
 
 # for creating and tracking lines to writers
@@ -229,6 +231,7 @@ sub checkline
 			$line->{ringin} = $t->{_line} / $line->{ringout}; # will be valid if the % = 0 above
 			$line->{line} = $t->{_line};
 			$line->{lineat} = time();
+			bucket_see($line->{ipp},$buckets); # make sure they get added to a bucket too
 		}
 	}
 
@@ -243,8 +246,8 @@ sub checkline
 			$line->{ringin} = $t->{_ring};
 			$line->{line} = $line->{ringin} * $line->{ringout};
 			$line->{lineat} = time();
+			bucket_see($line->{ipp},$buckets); # make sure they get added to a bucket too
 		}
-		$t->{_line} = $line->{line}; # set the valid _line var on this telex
 	}
 
 	return 1;

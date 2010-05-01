@@ -182,7 +182,7 @@
 
 <p>Signals should primarily only ever contain hashes or generic (like xpath) content references and never actual content, as the sending and recipient parties must both be independently aware of the context or content in question so as to avoid any injection or attract spamming from 3rd parties.
 
-<p>The low level protocol is designed to be the absolute minimal to build connections and exchange notifications, all needs for peer trust, proxying, anonymizing, etc happen at a higher layer and outside of the basic protocol.
+<p>The low level protocol is designed to be the absolute minimal to build connections and exchange notifications, all needs for peer trust, proxying, anonymizing, etc happen at a higher layer and outside of the basic protocol. The required vars/commands are a bare minimum at every step even if it creates some implementation headaches, every additional datum sent is an vector for introducing future trust or spoofing problems.
 
 <h2>Writer Implementations</h2>
 
@@ -194,7 +194,7 @@
 		<li>Full - Supports all commands and relaying to any active .fwd filter.
 	</blockquote></ul>
 
-<p>Friendly/Full Writers need to implement seeding, keeping lines open, a basic bucketing system that tracks active Writers at different distances from themselves.
+<p>Friendly/Full Writers need to implement seeding, keeping lines open, a basic bucketing system that tracks active Writers at different distances from themselves.  A Full Writer needs to do basic duplicate detection, it should only process a unique set of signals at most once every 10 seconds (hash the sorted string sigs/values).
 
 <p>The _limbo var is important to any long-lived Writer to prevent sudden flooding and to control bandwidth rates.  For each outgoing Telex the recipient Writer would have a local limbo count for how many bytes were sent to it and how many it's sent out, and when incoming Telexes come back the incoming limbo value should be close to the local one.  The most the local value can grow over the last incoming limbo is by 10k which is the threshold preventing any more data than that from being sent without an answer.  When incoming telexes from many Writers all have a high limbo difference then it's an indicator of packet loss or backlog to the local Writer.  If there is expected to be a higher than 10k amount of bandwidth needed between two Writers, the _limbo can be intentionally set to a larger negative number to increase that allowed buffer between them.
 	
