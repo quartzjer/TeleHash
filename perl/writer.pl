@@ -50,7 +50,7 @@ while(1)
 	{
 		printf "LOOP\n";
 		$lastloop = int(time);
-		linecheck();
+		scanlines();
 		next if($newmsg == 0); # timeout loop
 	}
 	
@@ -91,6 +91,9 @@ while(1)
 	}else{
 		printf "LINE STATUS %s\n",$j->{"_line"}?"OPEN":"RINGING";
 	}
+	$line->{"seenat"} = time();
+	$line->{"limboin"} = $j->{"_limbo"};
+	$line->{"limboout"} -= length($buff);
 
 	# the only thing we can do before we have an "open" line is process any signals
 	if(grep(/^[[:alnum:]]+/,keys %$j))
@@ -193,7 +196,13 @@ sub getline
 	if(!$lines{$writer})
 	{
 		printf "LINE[%s]\n",$writer;
-		$lines{$writer} = { ipp=>$writer, ringout=>int(rand(32768)+1), seenat=>0, sentat=>0, limboout=>0, limboin=>0, lineat=>0 };
+		my($ip,$port) = split(":",$writer);
+		my $wip = gethostbyname($ip);
+		return undef unless($wip); # bad ip?
+		my $addr = sockaddr_in($port,$wip);
+		return undef unless($addr); # bad port?
+		$lines{$writer} = { ipp=>$writer, addr=>$addr, ringout=>int(rand(32768)+1), seenat=>0, sentat=>0, limboout=>0, limboin=>0, lineat=>0 };
+
 	}
 }
 
@@ -203,6 +212,8 @@ sub checkline
 	my $line = shift;
 	my $t = shift;
 	
+	return undef unless($line);
+
 	# first, if it's been more than 10 seconds after a line opened, be super strict, no more ringing allowed, _line absolutely required
 	if($line->{lineat} > 0 && time() - $line->{lineat} > 10)
 	{
@@ -242,7 +253,6 @@ sub checkline
 	return 1;
 }
 
-
 # create a new telex
 sub tnew
 {
@@ -254,32 +264,28 @@ sub tnew
 	{
 		$js->{$sig} = $clone->{$sig};
 	}
-	my $line = getline($to);
-	# if a line is open use that, else send a ring
-	if($line->{"open"})
-	{
-		$js->{"_line"} = int($line->{"open"});		
-	}else{
-		$js->{"_ring"} = int($line->{"ring"});
-	}
 	$js->{"_to"} = $to;
 	return $js;
 }
 
-# actually send a telex to it's writer
+# actually send a telex to it's writer, add/track all line vars
 sub tsend
 {
 	my $j = shift;
-	my($ip,$port) = split(":",$j->{"_to"});
-	my $wip = gethostbyname($ip);
-	return unless($wip); # bad ip?
-	my $waddr = sockaddr_in($port,$wip);
-	return unless($waddr); # bad port?
-	my $line = getline($j->{"_to"});
+	my $line = getline($j->{"_to"}) || return undef;
+	# todo: check limbo and drop if too much
+	# if a line is open use that, else send a ring
+	if($line->{"line"})
+	{
+		$j->{"_line"} = $line->{"line"};		
+	}else{
+		$j->{"_ring"} = $line->{"ringout"};
+	}
 	# update our limbo tracking and send current state
-	$j->{"_limbo"} = $line->{"limbo"};
+	$j->{"_limbo"} = $line->{"limboout"};
 	my $js = $json->to_json($j);
-	$line->{"limbo"} += length($js);
+	$line->{"limboout"} += length($js);
+	$line->{"sentat"} = time();
 	printf "SEND[%s]\t%s\n",$j->{"_to"},$js;
 	if(!defined(send(SOCKET, $js, 0, $waddr)))
 	{
@@ -289,7 +295,7 @@ sub tsend
 }
 
 # scan all known writers to keep any nat's open
-sub tscan
+sub scanlines
 {
 	my $at = time();
 	my @writers = keys %lines;
