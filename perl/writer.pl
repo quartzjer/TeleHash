@@ -132,16 +132,8 @@ while(1)
 	# to process any commands we need an open line (since we always send a ring and expect a line back)
 	next unless(!$j->{"_line"});
 	
-	# todo, should have lineto and linefrom open semantics for status checking on cmds
-	if(!$line->{"open"} && ($j->{"_line"} || $j->{"_ring"}))
-	{
-		$line->{"open"} = $j->{"_line"} if($j->{"_line"} % $line->{"ring"} == 0); # verify their line is a product of our ring
-		$line->{"open"} = int($j->{"_ring"} * $line->{"ring"}) if($j->{"_ring"}); # create a new line as a product of our ring
-	}
-
-
 	# a request to send a .nat to a writer that we should know (and only from writers we have a line to)
-	if($j->{".natr"} && $lines{$j->{".natr"}} && $j->{"_line"})
+	if($j->{".natr"} && $lines{$j->{".natr"}})
 	{
 		my $jo = tnew($j->{".natr"});
 		$jo->{".nat"} = $writer; 
@@ -149,13 +141,13 @@ while(1)
 	}
 
 	# we're asked to send something to this ip:port to open a nat
-	if($j->{".nat"} && $j->{"_line"})
+	if($j->{".nat"})
 	{
 		tsend(tnew($j->{".nat"}));
 	}
 
 	# we've been told to talk to these writers
-	if($j->{".see"} && $line->{"open"})
+	if($j->{".see"})
 	{
 		# loop through and establish lines to them (just being dumb for now and trying everyone)
 		for my $seeipp (@{$j->{".see"}})
@@ -176,7 +168,7 @@ while(1)
 	}
 
 	# handle a fwd command, must be verified
-	if($j->{".fwd"} && $j->{"_line"})
+	if($j->{".fwd"})
 	{
 		# sanitize, clean the .fwd and create a telex of just the signals and .fwd to store
 		my $fwd = $j->{".fwd"};
@@ -192,9 +184,6 @@ while(1)
 			tsend($jo);
 		}
 	}
-	
-	
-
 }
 
 # for creating and tracking lines to writers
