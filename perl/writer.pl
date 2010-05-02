@@ -32,7 +32,7 @@ my $seedip = gethostbyname($seedhost);
 my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
 
 my %lines; # static line assignments per writer
-my %forwards; # writers with active .fwd going
+my %fwds;
 my $buff;
 $|++;
 my $ipp, $ipphash;
@@ -92,8 +92,10 @@ while(1)
 		printf "LINE STATUS %s\n",$j->{"_line"}?"OPEN":"RINGING";
 	}
 	$line->{"seenat"} = time();
-	$line->{"limboin"} = $j->{"_limbo"};
-	$line->{"limboout"} -= length($buff);
+	$line->{"limboin"} = int($j->{"_limbo"});
+	$line->{"limbo"} -= length($buff);
+	
+	# todo, use limboout to stop reading if we've not asked for more
 
 	# the only thing we can do before we have an "open" line is process any signals
 	if(grep(/^[[:alnum:]]+/,keys %$j))
@@ -189,6 +191,26 @@ while(1)
 	}
 }
 
+# add a fwd rule for a writer
+sub fwdadd
+{
+	my $writer = shift;
+	my $sig = shift;
+	my $val = shift; # optional, for "has"
+	$fwds{$sig} = {} unless($fwds{$sig}); # new blank
+	$fwds{$sig}->{$writer} = ($val)?$val:[];
+}
+
+# remove all fwds for a writer
+sub fwdwipe
+{
+	my $writer = shift;
+	for my $sig (keys %fwds)
+	{
+		
+	}
+}
+
 # for creating and tracking lines to writers
 sub getline
 {
@@ -201,7 +223,7 @@ sub getline
 		return undef unless($wip); # bad ip?
 		my $addr = sockaddr_in($port,$wip);
 		return undef unless($addr); # bad port?
-		$lines{$writer} = { ipp=>$writer, addr=>$addr, ringout=>int(rand(32768)+1), seenat=>0, sentat=>0, limboout=>0, limboin=>0, lineat=>0 };
+		$lines{$writer} = { ipp=>$writer, addr=>$addr, ringout=>int(rand(32768)+1), seenat=>0, sentat=>0, lineat=>0, limbo=>0, limboout=>0, limboin=>0 };
 
 	}
 }
@@ -282,9 +304,9 @@ sub tsend
 		$j->{"_ring"} = $line->{"ringout"};
 	}
 	# update our limbo tracking and send current state
-	$j->{"_limbo"} = $line->{"limboout"};
+	$j->{"_limbo"} = $line->{"limboout"} = $line->{"limbo"};
 	my $js = $json->to_json($j);
-	$line->{"limboout"} += length($js);
+	$line->{"limbo"} += length($js);
 	$line->{"sentat"} = time();
 	printf "SEND[%s]\t%s\n",$j->{"_to"},$js;
 	if(!defined(send(SOCKET, $js, 0, $waddr)))
@@ -302,14 +324,13 @@ sub scanlines
 	for my $writer (@writers)
 	{
 		next if($writer eq $ipp); # ??
-		delete $lines{$writer}->{"open"} if($at - $lines{$writer}->{"last"} > 300); # remove open line status if older than 5min
-		if($at - $lines{$writer}->{"last"} > 600)
+		if($at - $lines{$writer}->{"last"} > 70)
 		{ # remove them if they are stale, timed out
 			printf "PURGE[%s]\n",$writer;
-			$lines{$writer} = undef;
 			delete $lines{$writer};
 			next;
 		}
+		# end ourselves to see if they know anyone closer as a ping
 		my $jo = tnew($writer);
 		$jo->{"end"} = sha1_hex($ipp);
 		tsend($jo);
