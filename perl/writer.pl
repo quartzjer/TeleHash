@@ -83,7 +83,7 @@ while(1)
 
 	# if this is a writer we know, check a few things
 	my $line = getline($writer,$j->{"_ring"});
-	my $lstat = checkline($line,$j);
+	my $lstat = checkline($line,$j,length($bytes));
 	if(!$lstat)
 	{
 		printf "LINE FAIL[%s]\n",$json->to_json($line);
@@ -91,12 +91,7 @@ while(1)
 	}else{
 		printf "LINE STATUS %s\n",$j->{"_line"}?"OPEN":"RINGING";
 	}
-	$line->{"seenat"} = time();
-	$line->{"limboin"} = int($j->{"_limbo"});
-	$line->{"limbo"} -= length($buff);
 	
-	# todo, use limboout to stop reading if we've not asked for more
-
 	# the only thing we can do before we have an "open" line is process any signals
 	if(grep(/^[[:alnum:]]+/,keys %$j))
 	{
@@ -223,7 +218,7 @@ sub getline
 		return undef unless($wip); # bad ip?
 		my $addr = sockaddr_in($port,$wip);
 		return undef unless($addr); # bad port?
-		$lines{$writer} = { ipp=>$writer, addr=>$addr, ringout=>int(rand(32768)+1), seenat=>0, sentat=>0, lineat=>0, limbo=>0, limboout=>0, limboin=>0 };
+		$lines{$writer} = { ipp=>$writer, addr=>$addr, ringout=>int(rand(32768)+1), seenat=>0, sentat=>0, lineat=>0, br=>0, brout=>0, brin=>0, bsent=>0 };
 
 	}
 }
@@ -233,6 +228,7 @@ sub checkline
 {
 	my $line = shift;
 	my $t = shift;
+	my $br = shift;
 	
 	return undef unless($line);
 
@@ -272,6 +268,12 @@ sub checkline
 		}
 	}
 
+	# we're valid at this point, line or otherwise, track bytes
+	$line->{br} += $br;
+	return undef if($line->{br} - $line->{brout} > 12000); # they can't send us that much more than what we've told them to, bad!
+
+	$line->{"seenat"} = time();
+
 	return 1;
 }
 
@@ -295,7 +297,12 @@ sub tsend
 {
 	my $j = shift;
 	my $line = getline($j->{"_to"}) || return undef;
-	# todo: check limbo and drop if too much
+	# check br and drop if too much
+	if($line->{"bsent"} - $line->{"brin"} > 10000)
+	{
+		printf "MAX SEND DROP";
+		return;
+	}
 	# if a line is open use that, else send a ring
 	if($line->{"line"})
 	{
@@ -303,10 +310,10 @@ sub tsend
 	}else{
 		$j->{"_ring"} = $line->{"ringout"};
 	}
-	# update our limbo tracking and send current state
-	$j->{"_limbo"} = $line->{"limboout"} = $line->{"limbo"};
+	# update our bytes tracking and send current state
+	$j->{"_br"} = $line->{"brout"} = $line->{"br"};
 	my $js = $json->to_json($j);
-	$line->{"limbo"} += length($js);
+	$line->{"bsent"} += length($js);
 	$line->{"sentat"} = time();
 	printf "SEND[%s]\t%s\n",$j->{"_to"},$js;
 	if(!defined(send(SOCKET, $js, 0, $waddr)))

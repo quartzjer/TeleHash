@@ -32,7 +32,7 @@ $jo->{"end"}=sha1_hex($ipp);
 tsend($jo);
 
 my $regd;
-my $limbo = 0;
+my $br = 0;
 my $line = 0;
 while(1)
 {
@@ -66,8 +66,8 @@ while(1)
 		next;
 	}
 
-	# track limbo so we can keep getting more forwards
-	$limbo -= length($buff);
+	# track bytes received so we can keep getting more forwards
+	$br += length($buff);
 
 	# first time they respond at all, send them the fwd request now that we have a _line to validate it
 	if(!$regd)
@@ -98,10 +98,9 @@ sub tsend
 	my($ip,$port) = split(":",$j->{"_to"});
 	my $wip = gethostbyname($ip);
 	my $waddr = sockaddr_in($port,$wip);
-	$j->{"_limbo"} = $limbo;
+	$j->{"_br"} = $br;
 	$j->{"_line"} = $line if($line > 0);
 	my $js = $json->to_json($j);
-	$limbo += length($js);
 	printf "SEND[%s]\t%s\n",$j->{"_to"},$js;
 	defined(send(SOCKET, $js, 0, $waddr))    or die "send $to: $!";	
 }
