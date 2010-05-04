@@ -83,7 +83,7 @@ while(1)
 
 	# if this is a writer we know, check a few things
 	my $line = getline($writer,$j->{"_ring"});
-	my $lstat = checkline($line,$j,length($bytes));
+	my $lstat = checkline($line,$j,length($buff));
 	if(!$lstat)
 	{
 		printf "LINE FAIL[%s]\n",$json->to_json($line);
@@ -102,7 +102,7 @@ while(1)
 			my $cipps = bucket_near($j->{"end"},$buckets);
 			my $jo = tnew($writer);
 			$jo->{".see"} = $cipps;
-			tsend($jo);			
+			tsend($jo);
 		}
 
 		# todo: create a sig/val hash, check for unique and cache it
@@ -212,15 +212,15 @@ sub getline
 	my $writer = shift;
 	if(!$lines{$writer})
 	{
-		printf "LINE[%s]\n",$writer;
+		printf "NEWLINE[%s]\n",$writer;
 		my($ip,$port) = split(":",$writer);
 		my $wip = gethostbyname($ip);
 		return undef unless($wip); # bad ip?
 		my $addr = sockaddr_in($port,$wip);
 		return undef unless($addr); # bad port?
 		$lines{$writer} = { ipp=>$writer, addr=>$addr, ringout=>int(rand(32768)+1), seenat=>0, sentat=>0, lineat=>0, br=>0, brout=>0, brin=>0, bsent=>0 };
-
 	}
+	return $lines{$writer};
 }
 
 # validate a telex with incoming ring/line vars
@@ -269,6 +269,7 @@ sub checkline
 	}
 
 	# we're valid at this point, line or otherwise, track bytes
+printf "BR %s [%d += %d]\n",$line->{ipp},$line->{br},$br;
 	$line->{br} += $br;
 	return undef if($line->{br} - $line->{brout} > 12000); # they can't send us that much more than what we've told them to, bad!
 
@@ -316,7 +317,7 @@ sub tsend
 	$line->{"bsent"} += length($js);
 	$line->{"sentat"} = time();
 	printf "SEND[%s]\t%s\n",$j->{"_to"},$js;
-	if(!defined(send(SOCKET, $js, 0, $waddr)))
+	if(!defined(send(SOCKET, $js, 0, $line->{"addr"})))
 	{
 		$ipp=$connected=undef;
 		printf "OFFLINE\n";	
@@ -331,7 +332,7 @@ sub scanlines
 	for my $writer (@writers)
 	{
 		next if($writer eq $ipp); # ??
-		if($at - $lines{$writer}->{"last"} > 70)
+		if($at - $lines{$writer}->{"seenat"} > 70)
 		{ # remove them if they are stale, timed out
 			printf "PURGE[%s]\n",$writer;
 			delete $lines{$writer};
