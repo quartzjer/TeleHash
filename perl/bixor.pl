@@ -63,7 +63,6 @@ sub bix_far
 	{
 		$c[$i] = $a->[$i] ^ hex 'f';
 	}
-	print "\n";
 	return \@c;
 }
 

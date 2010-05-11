@@ -41,7 +41,7 @@ my $lastloop = int(time);
 while(1)
 {
 	# if we're not online, attempt to talk to the seed
-	bootstrap($seedipp) if(!$connected);
+	bootstrap($seedipp) if(!$connected && $ipp ne $seedipp);
 
 	# wait for event or timeout loop
 	my $newmsg = scalar $sel->can_read(10);
@@ -75,6 +75,7 @@ while(1)
 		# WE are the seed, haha, remove our own line and skip
 		if($ipp eq $switch)
 		{
+			printf "\tWe're the seed!\n";
 			delete $lines{$ipp};
 			next;
 		}
@@ -92,7 +93,7 @@ while(1)
 	}
 	
 	# the only thing we can do before we have an "open" line is process any signals
-	if(grep(/^[[:alnum:]]+/,keys %$j))
+	if(grep(/^\+.+/,keys %$j))
 	{
 		# any first-hop end signal is responded to
 		if($j->{"+end"} && int($j->{"_hop"}) == 0)
@@ -217,7 +218,7 @@ sub getline
 		return undef unless($wip); # bad ip?
 		my $addr = sockaddr_in($port,$wip);
 		return undef unless($addr); # bad port?
-		$lines{$switch} = { ipp=>$switch, addr=>$addr, ringout=>int(rand(32768)+1), seenat=>0, sentat=>0, lineat=>0, br=>0, brout=>0, brin=>0, bsent=>0 };
+		$lines{$switch} = { ipp=>$switch, addr=>$addr, ringout=>int(rand(32768)+1), init=>time(), seenat=>0, sentat=>0, lineat=>0, br=>0, brout=>0, brin=>0, bsent=>0 };
 	}
 	return $lines{$switch};
 }
@@ -331,18 +332,20 @@ sub scanlines
 	for my $switch (@switches)
 	{
 		next if($switch eq $ipp); # ??
-		if($at - $lines{$switch}->{"seenat"} > 70)
-		{ # remove them if they are stale, timed out
+		my $line = $lines{$switch};
+		if(($line->{"seenat"} == 0 && $at - $line->{"init"} > 70) || $at - $line->{"seenat"} > 70)
+		{ # remove them if they never responded or haven't in a while
 			printf "\tPURGE[%s]\n",$switch;
 			delete $lines{$switch};
 			next;
 		}
 		# end ourselves to see if they know anyone closer as a ping
 		my $jo = tnew($switch);
-		$jo->{"end"} = sha1_hex($ipp);
+		$jo->{"+end"} = sha1_hex($ipp);
 		tsend($jo);
 	}
-	if(scalar keys %lines == 0)
+	# if no lines and we're not the seed
+	if(scalar keys %lines == 0 && $ipp ne $seedipp)
 	{
 		$ipp=$connected=undef;
 		printf "\tOFFLINE\n";	
@@ -360,12 +363,11 @@ sub getend
 sub bootstrap
 {
 	my $seed = shift;
+	printf "SEEDING[%s]\n",$seed;
 	my $jo = tnew($seed);
 	# make sure the hash is really far away so they .see us back a bunch
 	$jo->{"+end"} = bix_str(bix_far(bix_new(sha1_hex($seed))));
 	tsend($jo);
-	# make sure seed is in a bucket
-	bucket_see($seed,$buckets);
 }
 
 # create the array of buckets
@@ -395,14 +397,14 @@ sub bucket_near
 	while(--$pos)
 	{
 #printf "%d/%d %s",$pos,scalar @ret,Dumper($buckets->[$pos]);
-		push @ret,grep($lines{$_}->{"open"},keys %{$buckets->[$pos]}); # only push active switches
+		push @ret,grep($lines{$_}->{"lineat"},keys %{$buckets->[$pos]}); # only push active switches
 		last if(scalar @ret >= 5);
 	}
 	# the check all buckets further
 	for my $pos (($start+1) .. 159)
 	{
 #printf "%d/%d ",$pos,scalar @ret;
-		push @ret,grep($lines{$_}->{"open"},keys %{$buckets->[$pos]}); # only push active switches
+		push @ret,grep($lines{$_}->{"lineat"},keys %{$buckets->[$pos]}); # only push active switches
 		last if(scalar @ret >= 5);
 	}
 	my %hashes = map {sha1_hex($_)=>$_} @ret;
@@ -481,7 +483,6 @@ sub bix_far
 	{
 		$c[$i] = $a->[$i] ^ hex 'f';
 	}
-	print "\n";
 	return \@c;
 }
 
