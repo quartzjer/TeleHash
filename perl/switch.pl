@@ -130,7 +130,7 @@ while(1)
 	}
 	
 	# to process any commands we need an open line (since we always send a ring and expect a line back)
-	next unless(!$j->{"_line"});
+	next unless($j->{"_line"});
 	
 	# a request to send a .nat to a switch that we should know (and only from switches we have a line to)
 	if($j->{".natr"} && $lines{$j->{".natr"}})
@@ -140,7 +140,7 @@ while(1)
 		tsend($jo);
 	}
 
-	# we're asked to send something to this ip:port to open a nat
+	# we're asked to send *anything* to this ip:port to open a nat
 	if($j->{".nat"})
 	{
 		tsend(tnew($j->{".nat"}));
@@ -158,7 +158,10 @@ while(1)
 			# also check to see if we want them in a bucket
 			if(bucket_see($seeipp,$buckets))
 			{
-				tsend(tnew($seeipp)); # send direct (should open our outgoing to them)
+				# send direct (should open our outgoing to them)
+				my $jo = tnew($seeipp);
+				$jo->{"+end"} = $ipphash;
+				tsend($jo);
 				# send nat request back to the switch who .see'd us in case the new one is behind a nat
 				my $jo = tnew($switch);
 				$jo->{".natr"} = $seeipp;
@@ -273,6 +276,7 @@ printf "\tBR %s [%d += %d]\n",$line->{ipp},$line->{br},$br;
 	$line->{br} += $br;
 	return undef if($line->{br} - $line->{brout} > 12000); # they can't send us that much more than what we've told them to, bad!
 
+	# XXX if this is the first seenat, if we were dialing we might need to re-send our telex as this could be a nat open pingback
 	$line->{"seenat"} = time();
 
 	return 1;
@@ -333,7 +337,7 @@ sub scanlines
 	{
 		next if($switch eq $ipp); # ??
 		my $line = $lines{$switch};
-		if(($line->{"seenat"} == 0 && $at - $line->{"init"} > 70) || $at - $line->{"seenat"} > 70)
+		if(($line->{"seenat"} == 0 && $at - $line->{"init"} > 70) || ($line->{"seenat"} != 0 && $at - $line->{"seenat"} > 70))
 		{ # remove them if they never responded or haven't in a while
 			printf "\tPURGE[%s]\n",$switch;
 			delete $lines{$switch};
@@ -341,7 +345,7 @@ sub scanlines
 		}
 		# end ourselves to see if they know anyone closer as a ping
 		my $jo = tnew($switch);
-		$jo->{"+end"} = sha1_hex($ipp);
+		$jo->{"+end"} = $ipphash;
 		tsend($jo);
 	}
 	# if no lines and we're not the seed
