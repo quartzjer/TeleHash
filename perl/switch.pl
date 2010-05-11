@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# a prototype telehash writer
+# a prototype telehash switch
 
 # Jer 1/2010
 # big reorg 4/2010
@@ -11,7 +11,6 @@ use IO::Select;
 use Socket;
 use JSON::DWIW;
 my $json = JSON::DWIW->new;
-require "./bixor.pl"; # pardon the lame style of code reuse
 
 # defaults to listen on any ip and random port
 my $port = $ARGV[0]||0;
@@ -31,7 +30,7 @@ my($seedhost,$seedport) = split(":",$seed);
 my $seedip = gethostbyname($seedhost);
 my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
 
-my %lines; # static line assignments per writer
+my %lines; # static line assignments per switch
 my %fwds;
 my $buff;
 $|++;
@@ -60,9 +59,9 @@ while(1)
 
 	# figure out who sent it
 	($cport, $addr) = sockaddr_in($caddr);
-	my $writer = sprintf("%s:%d",inet_ntoa($addr),$cport);
+	my $switch = sprintf("%s:%d",inet_ntoa($addr),$cport);
 
-	printf "RECV[%s]\t%s\n",$writer,$buff;
+	printf "RECV[%s]\t%s\n",$switch,$buff;
 
 	# json parse check
 	my $j = $json->from_json($buff) || next;
@@ -70,37 +69,37 @@ while(1)
 	# FIRST, if we're bootstrapping, discover our own ip:port
 	if(!$ipp && $j->{"_to"})
 	{
-		printf "SELF[%s]\n",$j->{"_to"};
+		printf "\tSELF[%s]\n",$j->{"_to"};
 		$ipp = $j->{"_to"};
 		$ipphash = sha1_hex($ipp);
 		# WE are the seed, haha, remove our own line and skip
-		if($ipp eq $writer)
+		if($ipp eq $switch)
 		{
 			delete $lines{$ipp};
 			next;
 		}
 	}
 
-	# if this is a writer we know, check a few things
-	my $line = getline($writer,$j->{"_ring"});
+	# if this is a switch we know, check a few things
+	my $line = getline($switch,$j->{"_ring"});
 	my $lstat = checkline($line,$j,length($buff));
 	if(!$lstat)
 	{
-		printf "LINE FAIL[%s]\n",$json->to_json($line);
+		printf "\tLINE FAIL[%s]\n",$json->to_json($line);
 		next;
 	}else{
-		printf "LINE STATUS %s\n",$j->{"_line"}?"OPEN":"RINGING";
+		printf "\tLINE STATUS %s\n",$j->{"_line"}?"OPEN":"RINGING";
 	}
 	
 	# the only thing we can do before we have an "open" line is process any signals
 	if(grep(/^[[:alnum:]]+/,keys %$j))
 	{
 		# any first-hop end signal is responded to
-		if($j->{"end"} && int($j->{"_hop"}) == 0)
+		if($j->{"+end"} && int($j->{"_hop"}) == 0)
 		{
-			# get writers from buckets near to this end
-			my $cipps = bucket_near($j->{"end"},$buckets);
-			my $jo = tnew($writer);
+			# get switches from buckets near to this end
+			my $cipps = bucket_near($j->{"+end"},$buckets);
+			my $jo = tnew($switch);
 			$jo->{".see"} = $cipps;
 			tsend($jo);
 		}
@@ -132,11 +131,11 @@ while(1)
 	# to process any commands we need an open line (since we always send a ring and expect a line back)
 	next unless(!$j->{"_line"});
 	
-	# a request to send a .nat to a writer that we should know (and only from writers we have a line to)
+	# a request to send a .nat to a switch that we should know (and only from switches we have a line to)
 	if($j->{".natr"} && $lines{$j->{".natr"}})
 	{
 		my $jo = tnew($j->{".natr"});
-		$jo->{".nat"} = $writer; 
+		$jo->{".nat"} = $switch; 
 		tsend($jo);
 	}
 
@@ -146,7 +145,7 @@ while(1)
 		tsend(tnew($j->{".nat"}));
 	}
 
-	# we've been told to talk to these writers
+	# we've been told to talk to these switches
 	if($j->{".see"})
 	{
 		# loop through and establish lines to them (just being dumb for now and trying everyone)
@@ -159,8 +158,8 @@ while(1)
 			if(bucket_see($seeipp,$buckets))
 			{
 				tsend(tnew($seeipp)); # send direct (should open our outgoing to them)
-				# send nat request back to the writer who .see'd us in case the new one is behind a nat
-				my $jo = tnew($writer);
+				# send nat request back to the switch who .see'd us in case the new one is behind a nat
+				my $jo = tnew($switch);
 				$jo->{".natr"} = $seeipp;
 				tsend($jo);				
 			}
@@ -178,52 +177,52 @@ while(1)
 		if(scalar keys %t > 0)
 		{
 			$t{".fwd"} = \%fwds;
-			$forwards{$writer} = \%t; # always replace any existing
-			my $jo = tnew($writer);
+			$forwards{$switch} = \%t; # always replace any existing
+			my $jo = tnew($switch);
 			$jo->{"fwds"} = \%fwds; # just confirm whatever they sent for now
 			tsend($jo);
 		}
 	}
 }
 
-# add a fwd rule for a writer
+# add a fwd rule for a switch
 sub fwdadd
 {
-	my $writer = shift;
+	my $switch = shift;
 	my $sig = shift;
 	my $val = shift; # optional, for "has"
 	$fwds{$sig} = {} unless($fwds{$sig}); # new blank
-	$fwds{$sig}->{$writer} = ($val)?$val:[];
+	$fwds{$sig}->{$switch} = ($val)?$val:[];
 }
 
-# remove all fwds for a writer
+# remove all fwds for a switch
 sub fwdwipe
 {
-	my $writer = shift;
+	my $switch = shift;
 	for my $sig (keys %fwds)
 	{
 		
 	}
 }
 
-# for creating and tracking lines to writers
+# for creating and tracking lines to switches
 sub getline
 {
-	my $writer = shift;
-	if(!$lines{$writer})
+	my $switch = shift;
+	if(!$lines{$switch})
 	{
-		printf "NEWLINE[%s]\n",$writer;
-		my($ip,$port) = split(":",$writer);
+		printf "\tNEWLINE[%s]\n",$switch;
+		my($ip,$port) = split(":",$switch);
 		my $wip = gethostbyname($ip);
 		return undef unless($wip); # bad ip?
 		my $addr = sockaddr_in($port,$wip);
 		return undef unless($addr); # bad port?
-		$lines{$writer} = { ipp=>$writer, addr=>$addr, ringout=>int(rand(32768)+1), seenat=>0, sentat=>0, lineat=>0, br=>0, brout=>0, brin=>0, bsent=>0 };
+		$lines{$switch} = { ipp=>$switch, addr=>$addr, ringout=>int(rand(32768)+1), seenat=>0, sentat=>0, lineat=>0, br=>0, brout=>0, brin=>0, bsent=>0 };
 	}
-	return $lines{$writer};
+	return $lines{$switch};
 }
 
-# validate a telex with incoming ring/line vars
+# validate a telex with incoming ring/line headers
 sub checkline
 {
 	my $line = shift;
@@ -269,7 +268,7 @@ sub checkline
 	}
 
 	# we're valid at this point, line or otherwise, track bytes
-printf "BR %s [%d += %d]\n",$line->{ipp},$line->{br},$br;
+printf "\tBR %s [%d += %d]\n",$line->{ipp},$line->{br},$br;
 	$line->{br} += $br;
 	return undef if($line->{br} - $line->{brout} > 12000); # they can't send us that much more than what we've told them to, bad!
 
@@ -293,7 +292,7 @@ sub tnew
 	return $js;
 }
 
-# actually send a telex to it's writer, add/track all line vars
+# actually send a telex to it's switch, add/track all line headers
 sub tsend
 {
 	my $j = shift;
@@ -301,7 +300,7 @@ sub tsend
 	# check br and drop if too much
 	if($line->{"bsent"} - $line->{"brin"} > 10000)
 	{
-		printf "MAX SEND DROP";
+		printf "\tMAX SEND DROP";
 		return;
 	}
 	# if a line is open use that, else send a ring
@@ -316,37 +315,37 @@ sub tsend
 	my $js = $json->to_json($j);
 	$line->{"bsent"} += length($js);
 	$line->{"sentat"} = time();
-	printf "SEND[%s]\t%s\n",$j->{"_to"},$js;
+	printf "\tSEND[%s]\t%s\n",$j->{"_to"},$js;
 	if(!defined(send(SOCKET, $js, 0, $line->{"addr"})))
 	{
 		$ipp=$connected=undef;
-		printf "OFFLINE\n";	
+		printf "\tOFFLINE\n";	
 	}
 }
 
-# scan all known writers to keep any nat's open
+# scan all known switches to keep any nat's open
 sub scanlines
 {
 	my $at = time();
-	my @writers = keys %lines;
-	for my $writer (@writers)
+	my @switches = keys %lines;
+	for my $switch (@switches)
 	{
-		next if($writer eq $ipp); # ??
-		if($at - $lines{$writer}->{"seenat"} > 70)
+		next if($switch eq $ipp); # ??
+		if($at - $lines{$switch}->{"seenat"} > 70)
 		{ # remove them if they are stale, timed out
-			printf "PURGE[%s]\n",$writer;
-			delete $lines{$writer};
+			printf "\tPURGE[%s]\n",$switch;
+			delete $lines{$switch};
 			next;
 		}
 		# end ourselves to see if they know anyone closer as a ping
-		my $jo = tnew($writer);
+		my $jo = tnew($switch);
 		$jo->{"end"} = sha1_hex($ipp);
 		tsend($jo);
 	}
 	if(scalar keys %lines == 0)
 	{
 		$ipp=$connected=undef;
-		printf "OFFLINE\n";	
+		printf "\tOFFLINE\n";	
 	}
 }
 
@@ -363,7 +362,7 @@ sub bootstrap
 	my $seed = shift;
 	my $jo = tnew($seed);
 	# make sure the hash is really far away so they .see us back a bunch
-	$jo->{"end"} = bix_str(bix_far(bix_new(sha1_hex($seed))));
+	$jo->{"+end"} = bix_str(bix_far(bix_new(sha1_hex($seed))));
 	tsend($jo);
 	# make sure seed is in a bucket
 	bucket_see($seed,$buckets);
@@ -380,7 +379,7 @@ sub bucket_init
 	return \@ba;
 }
 
-# find active writers
+# find active switches
 sub bucket_near
 {
 	my $end = shift;
@@ -391,38 +390,110 @@ sub bucket_near
 	$start = 0 if($start < 0 || $start > 159); # err, this needs to be handled better or something
 	my @ret;
 	# first check all buckets closer
-	printf "NEAR[%d %s] ",$start,$end;
+	printf "\tNEAR[%d %s] ",$start,$end;
 	my $pos = $start+1;
 	while(--$pos)
 	{
 #printf "%d/%d %s",$pos,scalar @ret,Dumper($buckets->[$pos]);
-		push @ret,grep($lines{$_}->{"open"},keys %{$buckets->[$pos]}); # only push active writers
+		push @ret,grep($lines{$_}->{"open"},keys %{$buckets->[$pos]}); # only push active switches
 		last if(scalar @ret >= 5);
 	}
 	# the check all buckets further
 	for my $pos (($start+1) .. 159)
 	{
 #printf "%d/%d ",$pos,scalar @ret;
-		push @ret,grep($lines{$_}->{"open"},keys %{$buckets->[$pos]}); # only push active writers
+		push @ret,grep($lines{$_}->{"open"},keys %{$buckets->[$pos]}); # only push active switches
 		last if(scalar @ret >= 5);
 	}
 	my %hashes = map {sha1_hex($_)=>$_} @ret;
 	$hashes{$ipphash} = $ipp; # include ourselves always
 	my @bixes = map {bix_new($_)} keys %hashes; # pre-bix the array for faster sorting
 	my @ckeys = sort {bix_cmp(bix_or($bto,$a),bix_or($bto,$b))} @bixes; # sort by closest to the end
-	printf("from %d writers, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,$ckeys[0])));
+	printf("\tfrom %d switches, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,$ckeys[0])));
 	@ret = map {$hashes{bix_str($_)}} splice @ckeys, 0, 5; # convert back to ip:ports, top 5
 	return \@ret;
 }
 
-# see if we want to try this writer or not, and maybe prune the bucket
+# see if we want to try this switch or not, and maybe prune the bucket
 sub bucket_see
 {
-	my $writer = shift;
+	my $switch = shift;
 	my $buckets = shift;
-	my $pos = bix_sbit(bix_or(bix_new($writer),bix_new($ipphash)));
-	printf "BUCKET[%d %s]\n",$pos,$writer;
+	my $pos = bix_sbit(bix_or(bix_new($switch),bix_new($ipphash)));
+	printf "\tBUCKET[%d %s]\n",$pos,$switch;
 	return undef if($pos < 0 || $pos > 159); # err!?
-	$buckets->[$pos]->{$writer}++;
+	$buckets->[$pos]->{$switch}++;
 	return 1; # for now we're always taking everyone, in future need to be more selective when the bucket is "full"!
+}
+
+
+# including these here for convenience
+# takes hex string
+sub bix_new
+{
+	my @bix;
+	for my $b (split undef,shift)
+	{
+		push @bix,hex $b;
+	}
+	return \@bix;
+}
+sub bix_str
+{
+	my $br = shift;
+	my $str;
+	for (@$br)
+	{
+		$str .= sprintf "%x",$_;
+	}
+	return $str;
+}
+sub bix_or
+{
+	my $a = shift;
+	my $b = shift;
+	my @c;
+	for my $i (0..39)
+	{
+		$c[$i] = $a->[$i] ^ $b->[$i];
+	}
+	return \@c;
+}
+
+sub bix_cmp
+{
+	my $a = shift;
+	my $b = shift;
+	for my $i (0..39)
+	{
+		next if($a->[$i] == $b->[$i]);
+		return $a->[$i] <=> $b->[$i];
+	}
+	return 0;
+}
+
+# invert the bits, or make a hash as far away as possible
+sub bix_far
+{
+	my $a = shift;
+	my @c;
+	for my $i (0..39)
+	{
+		$c[$i] = $a->[$i] ^ hex 'f';
+	}
+	print "\n";
+	return \@c;
+}
+
+sub bix_sbit
+{
+	my $b = shift;
+	my @sbtab = (-1,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3); # ln(hex)/log(2)
+	my $ret = 156;
+	for my $i (0..39)
+	{
+		return $ret + $sbtab[$b->[$i]] if($b->[$i]);
+		$ret -= 4;
+	}
+	return -1;
 }

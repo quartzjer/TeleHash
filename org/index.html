@@ -135,7 +135,7 @@
 
 <p>		Every node is called a Switch, which is any process listening on an IP and UDP port both sending and receiving packets from that port.  A Switch is positioned within the DHT by the SHA1 of their IP:PORT.
 
-<p>		A Telex is any individual UDP packet sent to or by any Switch.  It's raw contents are a single plain UTF-8 JSON object that can contain anything, but keys starting with a few special characters are specially processed by the Switch: ".*" is a Command, "_*" is a Header, and "+*" is a Signal.
+<p>		A Telex is any individual UDP packet sent to or by any Switch.  It's raw contents are a single plain UTF-8 JSON object that can contain anything, but keys starting with a few special characters are processed by the Switch: ".*" is a Command, "_*" is a Header, and "+*" is a Signal.
 
 <p>	Basic makeup of a Telex
 
