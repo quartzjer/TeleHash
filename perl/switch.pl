@@ -170,33 +170,50 @@ while(1)
 		}
 	}
 
-	# handle a fwd command, must be verified
+	# handle a fwd command, add/replace rules
 	if($j->{".fwd"})
 	{
-		# sanitize, clean the .fwd and create a telex of just the signals and .fwd to store
-		my $fwd = $j->{".fwd"};
-		my %fwds = map {$_ => ($fwd->{$_}>100)?100:int($fwd->{$_})} grep(/^[[:alnum:]]+/, keys %$fwd);
-		my %t = map { $_ => $j->{$_} } grep(/^[[:alnum:]]+/, keys %$j);
-		# only accept it if there's at least one signal to filter on
-		if(scalar keys %t > 0)
+		$line->{"rules"} = [];
+		fwdwipe($switch);
+		for my $rule (@{$j->{".fwd"}})
 		{
-			$t{".fwd"} = \%fwds;
-			$forwards{$switch} = \%t; # always replace any existing
-			my $jo = tnew($switch);
-			$jo->{"fwds"} = \%fwds; # just confirm whatever they sent for now
-			tsend($jo);
+			# sanity check, we only understand "is" and "has", and signal filters
+			my $is = $rule->{"is"};
+			delete $rule->{"is"};
+			my $has = $rule->{"has"};
+			delete $rule->{"has"};
+			# outright skip rules we don't strictly know
+			next if(scalar keys %$rule > 0);
+			next if(grep(/^[^\+]/,keys %$is));
+			next if(grep(ref \$_ ne "SCALAR" || length($_) == 0,values %$is)); # validate values as best as perl allows
+			next if(grep(/^[^\+]/,@$has));
+			$rule->{"is"} = $is;
+			$rule->{"has"} = $has;
+			# any possible sigs are added to a sort of index to help in filtering incoming
+			for my $sig (keys %$is)
+			{
+				fwdadd($switch,$sig);
+			}
+			for my $sig (@$has)
+			{
+				fwdadd($switch,$sig);
+			}
+			push(@{$line->{"rules"}},$rule);
 		}
+		# notify back the rules we stored
+		my $jo = tnew($switch);
+		$jo->{".fwds"} = $line->{"rules"};
+		tsend($jo);
 	}
 }
 
-# add a fwd rule for a switch
+# add a fwd indicator for this switch/signal
 sub fwdadd
 {
 	my $switch = shift;
 	my $sig = shift;
-	my $val = shift; # optional, for "has"
 	$fwds{$sig} = {} unless($fwds{$sig}); # new blank
-	$fwds{$sig}->{$switch} = ($val)?$val:[];
+	$fwds{$sig}->{$switch}++; # just flag it exists
 }
 
 # remove all fwds for a switch
@@ -205,7 +222,7 @@ sub fwdwipe
 	my $switch = shift;
 	for my $sig (keys %fwds)
 	{
-		
+		delete $fwds{$sig}->{$switch};
 	}
 }
 

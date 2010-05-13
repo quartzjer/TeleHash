@@ -172,7 +172,7 @@
 
 <p>		<big>+end .see</big> - Dialing (routing): Whenever a Telex comes in with an End, check to see if any closer Switches are known and if so .see back to that Switch a list of closer IP:PORTs.  If none are closer or if the nearer Switches are dampened (congestion control), .see back only ourselves.
 
-<p>		<big>.fwd</big> - Listening: To observe Signals coming in around an interesting End, first try dialing it in order to discover the closest Switches we can find.  Then send a .fwd of which Signals to observe to those Switches close to the End, who if willing will respond with a .fwds to confirm that it's active.  Any Switch can process any .fwd request, and should check every incoming Signal to see if it matches any listener with an active Line.
+<p>		<big>.fwd</big> - Listening: To observe Signals coming in around an interesting End, first try dialing it in order to discover the closest Switches we can find.  Then send a .fwd of which Signals to observe to those Switches close to the End, who if willing will respond with a .fwds to confirm that it's active.  Any Switch can process any .fwd request, and should check every incoming Signal to see if it matches any listener with an active Line. Any rules in the .fwd array that contain something not strictly understood by the Switch should be ignored and not sent back in the .fwds confirmation.
 <pre>
 		// Telex with example forward request
 		{
