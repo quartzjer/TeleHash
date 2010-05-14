@@ -105,26 +105,35 @@ while(1)
 			tsend($jo);
 		}
 
-		# todo: create a sig/val hash, check for unique and cache it
 		# if not last-hop, check for any active forwards (todo: optimize the matching, this is just brute force)
 		if(int($j->{"_hop"}) < 4)
 		{
-			for my $w (keys %forwards)
+			my %switches;
+			for my $sig (grep($fwds{$_},keys %$j))
 			{
-				my $t = $forwards{$w};
-				print Dumper($t);
-				my @sigs = grep(/^[[:alnum:]]+/, keys %$t1);
-				my @match = grep {$t2->{$_} eq $t1->{$_}} @sigs;
-				return (scalar @sigs == scalar @match); 
-				print "1";
-				my $fwd = $t->{".fwd"};
-				my @sigs = grep($j->{$_},keys %$fwd);
-				next unless(scalar @sigs > 0);
-				print "3";
-				# send them a copy
-				my $jo = tnew($w,$j);
-				$jo->{"_hop"} = int($t->{"_hop"})+1;
-				tsend($jo);
+				for my $sw (@{$fwds{$sig}})
+				{
+					$switches{$sw}++;
+				}
+			}
+			for my $sw (keys %switches)
+			{
+				my $pass=false;
+				for my $rule (@{$lines{$sw}->{"rules"}})
+				{
+					
+				}
+				# forward this switch a copy
+				if($pass)
+				{
+					my $jo = tnew($w,$j);
+					for my $sig (grep(/^[^\+]/, keys %$j))
+					{
+						$jo->{$sig} = $j->{$sig};
+					}
+					$jo->{"_hop"} = int($t->{"_hop"})+1;
+					tsend($jo);
+				}
 			}
 		}
 	}
@@ -303,13 +312,7 @@ printf "\tBR %s [%d += %d]\n",$line->{ipp},$line->{br},$br;
 sub tnew
 {
 	my $to = shift;
-	my $clone = shift;
 	my $js = {};
-	# if there's a telex sent, clone all signals from it
-	for my $sig (grep(/^[[:alnum:]]+/, keys %$clone))
-	{
-		$js->{$sig} = $clone->{$sig};
-	}
 	$js->{"_to"} = $to;
 	return $js;
 }
