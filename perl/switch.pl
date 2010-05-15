@@ -119,27 +119,32 @@ while(1)
 			}
 			for my $sw (keys %switches)
 			{
-				my $pass=false;
+				my $pass=0;
 				for my $rule (@{$lines{$sw}->{"rules"}})
 				{
-					printf "\tFWD CHECK %s\t%s\n",$sw,$json->to_json($rule);
+					printf "\tFWD CHECK IS %s\t%s\n",$sw,$json->to_json($rule);
 					# all the "is" are in this telex and match exactly
 					next unless(scalar grep {$j->{$_} eq $rule->{"is"}->{$_}} keys %{$rule->{"is"}} == scalar keys %{$rule->{"is"}});
-					# all the "has" are at least here
-					next unless(scalar grep {$j->{$_}} @{$rule->{"has"}} == scalar @{$rule->{"has"}});
+					# pass fail if any has doesn't exist
 					$pass++;
+					for my $sig (@{$rule->{"has"}})
+					{
+						$pass = 0 unless($j->{$sig});
+					}
 					last;
 				}
 				# forward this switch a copy
 				if($pass)
 				{
-					my $jo = tnew($w,$j);
-					for my $sig (grep(/^[^\+]/, keys %$j))
+					my $jo = tnew($sw);
+					for my $sig (grep(/^\+.+/, keys %$j))
 					{
 						$jo->{$sig} = $j->{$sig};
 					}
 					$jo->{"_hop"} = int($t->{"_hop"})+1;
 					tsend($jo);
+				}else{
+					printf "\tCHECK MISS\n";
 				}
 			}
 		}
@@ -254,7 +259,7 @@ sub getline
 		return undef unless($wip); # bad ip?
 		my $addr = sockaddr_in($port,$wip);
 		return undef unless($addr); # bad port?
-		$lines{$switch} = { ipp=>$switch, addr=>$addr, ringout=>int(rand(32768)+1), init=>time(), seenat=>0, sentat=>0, lineat=>0, br=>0, brout=>0, brin=>0, bsent=>0 };
+		$lines{$switch} = { ipp=>$switch, addr=>$addr, ringout=>int(rand(32768))+1, init=>time(), seenat=>0, sentat=>0, lineat=>0, br=>0, brout=>0, brin=>0, bsent=>0 };
 	}
 	return $lines{$switch};
 }
