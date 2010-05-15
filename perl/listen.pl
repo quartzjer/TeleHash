@@ -14,9 +14,15 @@ my $ipp = $ARGV[0] || die("./listen.pl ip:port [signal] [endhash]");
 my $sig = $ARGV[1];
 my $end = $ARGV[2];
 
+# reset just in case it was a hostname
+my($ippi,$ippp) = split(":",$ipp);
+$ipp = sprintf("%s:%d",inet_ntoa(scalar gethostbyname($ippi)),$ippp);
+
 # defaults to listen on any ip and random port
 my $port = 0;
 my $ip = "0.0.0.0"; 
+my $br = 0;
+my $line = 0;
 
 $iaddr = gethostbyname($ip);
 $proto = getprotobyname('udp');
@@ -28,12 +34,10 @@ $sel->add(\*SOCKET);
 
 # send initial hello to open line
 my $jo = telex($ipp);
-$jo->{"end"}=sha1_hex($ipp);
+$jo->{"+end"}=sha1_hex($ipp);
 tsend($jo);
 
 my $regd;
-my $br = 0;
-my $line = 0;
 while(1)
 {
 	# wait for event or timeout loop
@@ -74,9 +78,10 @@ while(1)
 	{
 		$regd++;
 		my $jo = telex($ipp);
-		$jo->{".fwd"} = {"has"=>[$sig]};
-		$jo->{".fwd"}->{"is"} = {"end"=>$end} if($end);
-		$line = $j->{"_ring"};
+		$jo->{".fwd"} = ();
+		$jo->{".fwd"}->[0] = {"has"=>[$sig]};
+		$jo->{".fwd"}->[0]->{"is"} = {"+end"=>$end} if($end);
+		$line = int($j->{"_ring"});
 		tsend($jo);
 	}
 

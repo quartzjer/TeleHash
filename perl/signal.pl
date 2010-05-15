@@ -12,6 +12,10 @@ my $end = $ARGV[1];
 my $sig = $ARGV[2];
 my $val = $ARGV[3] || die("./signal.pl ip:port endhash signame sigvalue");
 
+# reset just in case it was a hostname
+my($ippi,$ippp) = split(":",$ipp);
+$ipp = sprintf("%s:%d",inet_ntoa(scalar gethostbyname($ippi)),$ippp);
+
 # defaults to listen on any ip and random port
 my $port = 0;
 my $ip = "0.0.0.0"; 
@@ -24,7 +28,7 @@ bind(SOCKET, $paddr)                          or die "bind: $!";
 $sel = IO::Select->new();
 $sel->add(\*SOCKET);
 
-my $j = {"_to"=>$ipp, "end"=>$end, $sig=>$val};
+my $j = {"_to"=>$ipp, "+end"=>$end, $sig=>$val};
 my($ip,$port) = split(":",$ipp);
 my $wip = gethostbyname($ip);
 my $waddr = sockaddr_in($port,$wip);

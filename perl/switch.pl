@@ -101,6 +101,7 @@ while(1)
 			# get switches from buckets near to this end
 			my $cipps = bucket_near($j->{"+end"},$buckets);
 			my $jo = tnew($switch);
+			# TODO: this is where dampening should happen to not advertise switches that might be too busy
 			$jo->{".see"} = $cipps;
 			tsend($jo);
 		}
@@ -111,7 +112,7 @@ while(1)
 			my %switches;
 			for my $sig (grep($fwds{$_},keys %$j))
 			{
-				for my $sw (@{$fwds{$sig}})
+				for my $sw (keys %{$fwds{$sig}})
 				{
 					$switches{$sw}++;
 				}
@@ -121,7 +122,13 @@ while(1)
 				my $pass=false;
 				for my $rule (@{$lines{$sw}->{"rules"}})
 				{
-					
+					printf "\tFWD CHECK %s\t%s\n",$sw,$json->to_json($rule);
+					# all the "is" are in this telex and match exactly
+					next unless(scalar grep {$j->{$_} eq $rule->{"is"}->{$_}} keys %{$rule->{"is"}} == scalar keys %{$rule->{"is"}});
+					# all the "has" are at least here
+					next unless(scalar grep {$j->{$_}} @{$rule->{"has"}} == scalar @{$rule->{"has"}});
+					$pass++;
+					last;
 				}
 				# forward this switch a copy
 				if($pass)
@@ -180,7 +187,7 @@ while(1)
 	}
 
 	# handle a fwd command, add/replace rules
-	if($j->{".fwd"})
+	if($j->{".fwd"} && ref $j->{".fwd"} eq "ARRAY")
 	{
 		$line->{"rules"} = [];
 		fwdwipe($switch);
@@ -270,6 +277,7 @@ sub checkline
 	# second, process incoming _line
 	if($t->{_line})
 	{
+		$t->{_line} = int($t->{_line}); # be nice in what we accept, strict in what we send
 		return undef if($line->{line} && $t->{_line} != $line->{line}); # must match if exist
 		return undef if($t->{_line} % $line->{ringout} != 0); # must be a product of our sent ring!!
 		# we can set up the line now if needed
@@ -298,8 +306,9 @@ sub checkline
 	}
 
 	# we're valid at this point, line or otherwise, track bytes
-printf "\tBR %s [%d += %d]\n",$line->{ipp},$line->{br},$br;
+printf "\tBR %s [%d += %d] DIFF %d\n",$line->{ipp},$line->{br},$br,$line->{bsent} - $t->{_br};
 	$line->{br} += $br;
+	$line->{brin} = $t->{_br};
 	return undef if($line->{br} - $line->{brout} > 12000); # they can't send us that much more than what we've told them to, bad!
 
 	# XXX if this is the first seenat, if we were dialing we might need to re-send our telex as this could be a nat open pingback
@@ -325,15 +334,15 @@ sub tsend
 	# check br and drop if too much
 	if($line->{"bsent"} - $line->{"brin"} > 10000)
 	{
-		printf "\tMAX SEND DROP";
+		printf "\tMAX SEND DROP\n";
 		return;
 	}
 	# if a line is open use that, else send a ring
 	if($line->{"line"})
 	{
-		$j->{"_line"} = $line->{"line"};		
+		$j->{"_line"} = int($line->{"line"});		
 	}else{
-		$j->{"_ring"} = $line->{"ringout"};
+		$j->{"_ring"} = int($line->{"ringout"});
 	}
 	# update our bytes tracking and send current state
 	$j->{"_br"} = $line->{"brout"} = $line->{"br"};
@@ -360,7 +369,7 @@ sub scanlines
 		if(($line->{"seenat"} == 0 && $at - $line->{"init"} > 70) || ($line->{"seenat"} != 0 && $at - $line->{"seenat"} > 70))
 		{ # remove them if they never responded or haven't in a while
 			printf "\tPURGE[%s]\n",$switch;
-			delete $lines{$switch};
+			delete @lines{$switch};
 			next;
 		}
 		# end ourselves to see if they know anyone closer as a ping
