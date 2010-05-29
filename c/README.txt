@@ -1,0 +1,1 @@
+After glancing through some of the C JSON parsers, and given the context that all of our parsing will be in a fixed size and of relatively limited domain, I'm leaning towards just doing a simple parser that returns pointers into the original memory of the necessary bits... seems like overkill, but not found anything that is a great fit yet (YAJL is the closest I think).

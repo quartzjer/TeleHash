@@ -11,3 +11,5 @@ Goals:
 		- memcached get/set protocol support
 		- AMQP queue
 	- admin interface for monitoring/debugging
+
+Undecided if this is best done in C or Ruby, both have their merits/tradeoffs :)

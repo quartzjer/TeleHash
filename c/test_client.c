@@ -13,7 +13,7 @@ main(int argc, char *argv[])
 	struct hostent *ptrh;
 	char *host = "telehash.org";
 	int port = 42424;
-	char *hello = "{}";
+	char *hello = "{'+end':'0eb2ad19a7b508cc09b2d52b4a506845db39fae2'}";
 	char buff[2048];
 	int n;
   
