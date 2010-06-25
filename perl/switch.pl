@@ -31,7 +31,7 @@ my $seedip = gethostbyname($seedhost);
 my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
 
 my %lines; # static line assignments per switch
-my %fwds;
+my %taps;
 my $buff;
 $|++;
 my $ipp, $ipphash;
@@ -110,9 +110,9 @@ while(1)
 		if(int($j->{"_hop"}) < 4)
 		{
 			my %switches;
-			for my $sig (grep($fwds{$_},keys %$j))
+			for my $sig (grep($taps{$_},keys %$j))
 			{
-				for my $sw (keys %{$fwds{$sig}})
+				for my $sw (keys %{$taps{$sig}})
 				{
 					$switches{$sw}++;
 				}
@@ -191,12 +191,12 @@ while(1)
 		}
 	}
 
-	# handle a fwd command, add/replace rules
-	if($j->{".fwd"} && ref $j->{".fwd"} eq "ARRAY")
+	# handle a tap command, add/replace rules
+	if($j->{".tap"} && ref $j->{".tap"} eq "ARRAY")
 	{
 		$line->{"rules"} = [];
-		fwdwipe($switch);
-		for my $rule (@{$j->{".fwd"}})
+		tapwipe($switch);
+		for my $rule (@{$j->{".tap"}})
 		{
 			# sanity check, we only understand "is" and "has", and signal filters
 			my $is = $rule->{"is"};
@@ -213,37 +213,37 @@ while(1)
 			# any possible sigs are added to a sort of index to help in filtering incoming
 			for my $sig (keys %$is)
 			{
-				fwdadd($switch,$sig);
+				tapadd($switch,$sig);
 			}
 			for my $sig (@$has)
 			{
-				fwdadd($switch,$sig);
+				tapadd($switch,$sig);
 			}
 			push(@{$line->{"rules"}},$rule);
 		}
 		# notify back the rules we stored
 		my $jo = tnew($switch);
-		$jo->{".fwds"} = $line->{"rules"};
+		$jo->{".tapt"} = $line->{"rules"};
 		tsend($jo);
 	}
 }
 
-# add a fwd indicator for this switch/signal
-sub fwdadd
+# add a tap indicator for this switch/signal
+sub tapadd
 {
 	my $switch = shift;
 	my $sig = shift;
-	$fwds{$sig} = {} unless($fwds{$sig}); # new blank
-	$fwds{$sig}->{$switch}++; # just flag it exists
+	$taps{$sig} = {} unless($taps{$sig}); # new blank
+	$taps{$sig}->{$switch}++; # just flag it exists
 }
 
-# remove all fwds for a switch
-sub fwdwipe
+# remove all taps for a switch
+sub tapwipe
 {
 	my $switch = shift;
-	for my $sig (keys %fwds)
+	for my $sig (keys %taps)
 	{
-		delete $fwds{$sig}->{$switch};
+		delete $taps{$sig}->{$switch};
 	}
 }
 
@@ -394,7 +394,7 @@ sub getend
 {
 	my $hash = shift;
 	return $ends{$hash} if($ends{$hash});
-	return $ends{$hash} = {"fwds"=>{}};
+	return $ends{$hash} = {"taps"=>{}};
 }
 
 # send a hello to the seed

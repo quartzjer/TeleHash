@@ -73,14 +73,14 @@ while(1)
 	# track bytes received so we can keep getting more forwards
 	$br += length($buff);
 
-	# first time they respond at all, send them the fwd request now that we have a _line to validate it
+	# first time they respond at all, send them the tap request now that we have a _line to validate it
 	if(!$regd)
 	{
 		$regd++;
 		my $jo = telex($ipp);
-		$jo->{".fwd"} = ();
-		$jo->{".fwd"}->[0] = {"has"=>[$sig]};
-		$jo->{".fwd"}->[0]->{"is"} = {"+end"=>$end} if($end);
+		$jo->{".tap"} = ();
+		$jo->{".tap"}->[0] = {"has"=>[$sig]};
+		$jo->{".tap"}->[0]->{"is"} = {"+end"=>$end} if($end);
 		$line = int($j->{"_ring"});
 		tsend($jo);
 	}
