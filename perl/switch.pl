@@ -282,6 +282,7 @@ sub checkline
 	# second, process incoming _line
 	if($t->{_line})
 	{
+		return undef unless($line->{ringout} > 0);
 		$t->{_line} = int($t->{_line}); # be nice in what we accept, strict in what we send
 		return undef if($line->{line} && $t->{_line} != $line->{line}); # must match if exist
 		return undef if($t->{_line} % $line->{ringout} != 0); # must be a product of our sent ring!!
@@ -375,6 +376,7 @@ sub scanlines
 		{ # remove them if they never responded or haven't in a while
 			printf "\tPURGE[%s]\n",$switch;
 			delete @lines{$switch};
+			delete $lines{$switch};
 			next;
 		}
 		# end ourselves to see if they know anyone closer as a ping
