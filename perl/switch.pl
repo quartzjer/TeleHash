@@ -92,7 +92,55 @@ while(1)
 		printf "\tLINE STATUS %s\n",$j->{"_line"}?"OPEN":"RINGING";
 	}
 	
-	# the only thing we can do before we have an "open" line is process any signals
+	# if there's an open line, we can process commands, yay
+	if($j->{"_line"})
+	{
+		# we've been told to talk to these switches
+		if($j->{".see"})
+		{
+			# loop through and establish lines to them (just being dumb for now and trying everyone)
+			for my $seeipp (@{$j->{".see"}})
+			{
+				next if($seeipp eq $ipp); # skip ourselves :)
+				next if($lines{$seeipp}); # skip if we know them already
+				# XXX if we're dialing we'd want to use any of these closer to that end
+				# also check to see if we want them in a bucket
+				if(bucket_see($seeipp,$buckets))
+				{
+					# send direct (should open our outgoing to them)
+					my $jo = tnew($seeipp);
+					$jo->{"+end"} = $ipphash;
+					tsend($jo);
+					# send pop signal back to the switch who .see'd us in case the new one is behind a nat
+					my $jo = tnew($switch);
+					$jo->{"+end"} = sha1_hex($seeipp);
+					$jo->{"+pop"} = "th:$ipp";
+					tsend($jo);
+				}
+			}
+		}
+
+		# handle a tap command, add/replace rules
+		if($j->{".tap"} && ref $j->{".tap"} eq "ARRAY")
+		{
+			$line->{"rules"} = $j->{".tap"};
+			tapwipe($switch);
+			# walk every rule, any possible sigs are added to a sort of index to help in filtering incoming
+			for my $rule (@{$line->{"rules"}})
+			{
+				for my $sig (keys %{$rule->{is}})
+				{
+					tapadd($switch,$sig);
+				}
+				for my $sig (@{$rule->{has}})
+				{
+					tapadd($switch,$sig);
+				}
+			}
+		}
+	}
+
+	# no open line, or after we processed commands, we can process any signals
 	if(grep(/^\+.+/,keys %$j))
 	{
 		# any first-hop end signal is responded to
@@ -149,83 +197,6 @@ while(1)
 			}
 		}
 	}
-	
-	# to process any commands we need an open line (since we always send a ring and expect a line back)
-	next unless($j->{"_line"});
-	
-	# a request to send a .nat to a switch that we should know (and only from switches we have a line to)
-	if($j->{".natr"} && $lines{$j->{".natr"}})
-	{
-		my $jo = tnew($j->{".natr"});
-		$jo->{".nat"} = $switch; 
-		tsend($jo);
-	}
-
-	# we're asked to send *anything* to this ip:port to open a nat
-	if($j->{".nat"})
-	{
-		tsend(tnew($j->{".nat"}));
-	}
-
-	# we've been told to talk to these switches
-	if($j->{".see"})
-	{
-		# loop through and establish lines to them (just being dumb for now and trying everyone)
-		for my $seeipp (@{$j->{".see"}})
-		{
-			next if($seeipp eq $ipp); # skip ourselves :)
-			next if($lines{$seeipp}); # skip if we know them already
-			# XXX if we're dialing we'd want to use any of these closer to that end
-			# also check to see if we want them in a bucket
-			if(bucket_see($seeipp,$buckets))
-			{
-				# send direct (should open our outgoing to them)
-				my $jo = tnew($seeipp);
-				$jo->{"+end"} = $ipphash;
-				tsend($jo);
-				# send nat request back to the switch who .see'd us in case the new one is behind a nat
-				my $jo = tnew($switch);
-				$jo->{".natr"} = $seeipp;
-				tsend($jo);				
-			}
-		}
-	}
-
-	# handle a tap command, add/replace rules
-	if($j->{".tap"} && ref $j->{".tap"} eq "ARRAY")
-	{
-		$line->{"rules"} = [];
-		tapwipe($switch);
-		for my $rule (@{$j->{".tap"}})
-		{
-			# sanity check, we only understand "is" and "has", and signal filters
-			my $is = $rule->{"is"};
-			delete $rule->{"is"};
-			my $has = $rule->{"has"};
-			delete $rule->{"has"};
-			# outright skip rules we don't strictly know
-			next if(scalar keys %$rule > 0);
-			next if(grep(/^[^\+]/,keys %$is));
-			next if(grep(ref \$_ ne "SCALAR" || length($_) == 0,values %$is)); # validate values as best as perl allows
-			next if(grep(/^[^\+]/,@$has));
-			$rule->{"is"} = $is;
-			$rule->{"has"} = $has;
-			# any possible sigs are added to a sort of index to help in filtering incoming
-			for my $sig (keys %$is)
-			{
-				tapadd($switch,$sig);
-			}
-			for my $sig (@$has)
-			{
-				tapadd($switch,$sig);
-			}
-			push(@{$line->{"rules"}},$rule);
-		}
-		# notify back the rules we stored
-		my $jo = tnew($switch);
-		$jo->{".tapt"} = $line->{"rules"};
-		tsend($jo);
-	}
 }
 
 # add a tap indicator for this switch/signal
@@ -251,7 +222,7 @@ sub tapwipe
 sub getline
 {
 	my $switch = shift;
-	if(!$lines{$switch})
+	if(!$lines{$switch} || $lines{$switch}->{ipp} ne $switch)
 	{
 		printf "\tNEWLINE[%s]\n",$switch;
 		my($ip,$port) = split(":",$switch);
@@ -375,13 +346,14 @@ sub scanlines
 		if(($line->{"seenat"} == 0 && $at - $line->{"init"} > 70) || ($line->{"seenat"} != 0 && $at - $line->{"seenat"} > 70))
 		{ # remove them if they never responded or haven't in a while
 			printf "\tPURGE[%s]\n",$switch;
-			delete @lines{$switch};
-			delete $lines{$switch};
+			$lines{$switch} = {};
 			next;
 		}
 		# end ourselves to see if they know anyone closer as a ping
 		my $jo = tnew($switch);
 		$jo->{"+end"} = $ipphash;
+		# also .see ourselves, default for now is to participate in the DHT
+		$jo->{".see"} = [$ipp];
 		tsend($jo);
 	}
 	# if no lines and we're not the seed
