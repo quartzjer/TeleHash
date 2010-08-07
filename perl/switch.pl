@@ -153,8 +153,16 @@ while(1)
 			$jo->{".see"} = $cipps;
 			tsend($jo);
 		}
+		
+		# this is our .tap, requests to +pop for NATs
+		if($j->{"_hop"} == 1 && $j->{"+end"} eq $ipphash && $j->{"+pop"} =~ /th\:([\d\.]+)\:(\d+)/)
+		{
+			my $ip = $1;
+			my $port = $2;
+			tsend(tnew("$ip:$port"));
+		}
 
-		# if not last-hop, check for any active forwards (todo: optimize the matching, this is just brute force)
+		# if not last-hop, check for any active taps (todo: optimize the matching, this is just brute force)
 		if(int($j->{"_hop"}) < 4)
 		{
 			my %switches;
@@ -165,12 +173,13 @@ while(1)
 					$switches{$sw}++;
 				}
 			}
+			printf "\tTAP POSSIBLE SWITCHES %d\n",scalar keys %switches;
 			for my $sw (keys %switches)
 			{
 				my $pass=0;
 				for my $rule (@{$lines{$sw}->{"rules"}})
 				{
-					printf "\tFWD CHECK IS %s\t%s\n",$sw,$json->to_json($rule);
+					printf "\tTAP CHECK IS %s\t%s\n",$sw,$json->to_json($rule);
 					# all the "is" are in this telex and match exactly
 					next unless(scalar grep {$j->{$_} eq $rule->{"is"}->{$_}} keys %{$rule->{"is"}} == scalar keys %{$rule->{"is"}});
 					# pass fail if any has doesn't exist
@@ -354,6 +363,8 @@ sub scanlines
 		$jo->{"+end"} = $ipphash;
 		# also .see ourselves, default for now is to participate in the DHT
 		$jo->{".see"} = [$ipp];
+		# also .tap our hash for +pop requests for NATs
+		$jo->{".tap"} = [{"is"=>{"+end"=>$ipphash},"has"=>["+pop"]}];
 		tsend($jo);
 	}
 	# if no lines and we're not the seed
