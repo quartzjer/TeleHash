@@ -61,7 +61,7 @@ while(1)
 	($cport, $addr) = sockaddr_in($caddr);
 	my $switch = sprintf("%s:%d",inet_ntoa($addr),$cport);
 
-	printf "RECV[%s]\t%s\n",$switch,$buff;
+	printf "\nRECV[%s]\t%s\n",$switch,$buff;
 
 	# json parse check
 	my $j = $json->from_json($buff) || next;
@@ -124,19 +124,6 @@ while(1)
 		if($j->{".tap"} && ref $j->{".tap"} eq "ARRAY")
 		{
 			$line->{"rules"} = $j->{".tap"};
-			tapwipe($switch);
-			# walk every rule, any possible sigs are added to a sort of index to help in filtering incoming
-			for my $rule (@{$line->{"rules"}})
-			{
-				for my $sig (keys %{$rule->{is}})
-				{
-					tapadd($switch,$sig);
-				}
-				for my $sig (@{$rule->{has}})
-				{
-					tapadd($switch,$sig);
-				}
-			}
 		}
 	}
 
@@ -159,29 +146,21 @@ while(1)
 		{
 			my $ip = $1;
 			my $port = $2;
+			printf "POP to $ip:$port\n";
 			tsend(tnew("$ip:$port"));
 		}
 
 		# if not last-hop, check for any active taps (todo: optimize the matching, this is just brute force)
 		if(int($j->{"_hop"}) < 4)
 		{
-			my %switches;
-			for my $sig (grep($taps{$_},keys %$j))
-			{
-				for my $sw (keys %{$taps{$sig}})
-				{
-					$switches{$sw}++;
-				}
-			}
-			printf "\tTAP POSSIBLE SWITCHES %d\n",scalar keys %switches;
-			for my $sw (keys %switches)
+			for my $sw (grep($lines{$_}->{rules},keys %lines))
 			{
 				my $pass=0;
 				for my $rule (@{$lines{$sw}->{"rules"}})
 				{
 					printf "\tTAP CHECK IS %s\t%s\n",$sw,$json->to_json($rule);
 					# all the "is" are in this telex and match exactly
-					next unless(scalar grep {$j->{$_} eq $rule->{"is"}->{$_}} keys %{$rule->{"is"}} == scalar keys %{$rule->{"is"}});
+					next unless(scalar grep($j->{$_} eq $rule->{"is"}->{$_}, keys %{$rule->{"is"}}) == scalar keys %{$rule->{"is"}});
 					# pass fail if any has doesn't exist
 					$pass++;
 					for my $sig (@{$rule->{"has"}})
@@ -198,32 +177,13 @@ while(1)
 					{
 						$jo->{$sig} = $j->{$sig};
 					}
-					$jo->{"_hop"} = int($t->{"_hop"})+1;
+					$jo->{"_hop"} = int($j->{"_hop"})+1;
 					tsend($jo);
 				}else{
 					printf "\tCHECK MISS\n";
 				}
 			}
 		}
-	}
-}
-
-# add a tap indicator for this switch/signal
-sub tapadd
-{
-	my $switch = shift;
-	my $sig = shift;
-	$taps{$sig} = {} unless($taps{$sig}); # new blank
-	$taps{$sig}->{$switch}++; # just flag it exists
-}
-
-# remove all taps for a switch
-sub tapwipe
-{
-	my $switch = shift;
-	for my $sig (keys %taps)
-	{
-		delete $taps{$sig}->{$switch};
 	}
 }
 
@@ -335,7 +295,7 @@ sub tsend
 	my $js = $json->to_json($j);
 	$line->{"bsent"} += length($js);
 	$line->{"sentat"} = time();
-	printf "\tSEND[%s]\t%s\n",$j->{"_to"},$js;
+	printf "SEND[%s]\t%s\n",$j->{"_to"},$js;
 	if(!defined(send(SOCKET, $js, 0, $line->{"addr"})))
 	{
 		$ipp=$connected=undef;
