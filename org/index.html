@@ -156,14 +156,12 @@
 		.* - Commands
 <blockquote>
 <li>			<big>.see</big> - An array of other Switches (IP:PORT) that the recipient may find useful
-<li>			<big>.natr</big> - An IP:PORT value, requesting the recipient to send a .nat command to that IP:PORT with senders IP:PORT (poke holes in NATs)
-<li>			<big>.nat</big> - An IP:PORT to send a telex to, in order to open up a tunnel between them through any NAT devices
 <li>			<big>.tap</big> - An array of filters that describe which telexes to match and forward back to the requesting Switch
-<li>			<big>.tapt</big> - A response array mirroring the accepted .tap filters
 </blockquote>
 		+* - Example Signals (most signals are app/content specific)
 <blockquote>
 <li>			<big>+end</big> - [primary] The SHA1 hash value that the Telex is directed towards
+<li>			<big>+pop</big> - [primary] Ping-Open-Port, a URI for UDP based protocols, the primary one being "th:IP:PORT" to signal a request to open a line to that Switch (and poke holes in NATs)
 <li>			<big>+self</big> - [general] The IP:PORT of the sender, to announce own identity
 <li>			<big>+sig</big> - [general] The RSA signature of the other signals
 <li>			<big>+href</big> - [browser "click" event] The SHA1 of the HREF clicked on (End is SHA1 of current page)
@@ -177,7 +175,7 @@
 
 <p>		<big>+end .see</big> - Dialing (routing): Whenever a Telex comes in with an End, check to see if any closer Switches are known and if so .see back to that Switch a list of closer IP:PORTs.  If none are closer or if the nearer Switches are dampened (congestion control), .see back only ourselves.
 
-<p>		<big>.tap</big> - To externally observe Signals coming in around an interesting End, first try dialing the End in order to discover the closest Switches we can find.  Then send a .tap of which Signals to observe to those Switches close to the End, who if willing will respond with a .tapt to confirm that it's active.  Any Switch can process any .tap request, and should check every incoming Signal to see if it matches any .tap with an active Line. Any items in the .tap array that contain something not strictly understood by the Switch should be ignored and not sent back in the .tapt confirmation.
+<p>		<big>.tap</big> - To externally observe Signals coming in around an interesting End, first try dialing the End in order to discover the closest Switches we can find.  Then send a .tap of which Signals to observe to those Switches close to the End along with some test Signals, who if willing will respond with process the .tap and immediately send the matching Signals back to confirm that it's active.  Any Switch can process any .tap request, and should check every incoming Signal to see if it matches any .tap with an active Line.
 <pre>
 		// Telex with example .tap request
 		{
@@ -196,7 +194,7 @@
 
 <p>		<big>_ring _line</big> - Lines: Any Switches that want to have an ongoing relationship (proximity, listening, keeping a NAT open, etc) or for validating the other Switch's IP:PORT should establish a Line with them.  Both Switches at any point can send a _ring with a random number it assigns and stores for the other Switch. When either one receives a _ring it then starts sending a _line that is a product of the _ring it assigned and the one it received.  Any incoming _line can then be verified as being divisible by the assigned _ring to validate the other Switch.
 
-<p>		<big>.nat .natr</big> - NATs: Whenever any Switch .see's new IP:PORT's to us, remember that it was them so that when trying to initiate the first Telex to that NEWIP:PORT we also send a ".natr":"NEWIP:PORT" (and _line) to the originating Switch.  That Switch then sends a ".nat":"OURIP:PORT" to them in case they are behind a NAT so that they will send a Telex out to us to ensure an open path of communication through any NATs.
+<p>		<big>+pop</big> - NATs: Whenever any Switch .see's new IP:PORT's to us, remember that it was them so that when trying to initiate the first Telex to that NEWIP:PORT we also send a "+end":sha1("NEWIP:PORT") and "+pop":"th:OURIP:OURPORT" to the originating Switch.  If the Switch we're trying to connect to is behind a NAT it should have .tap'd itself to receive the +pop requests and would then receive it and send an opening Telex, opening a path through any NATs.
 
 <h2>Notes</h2>
 
@@ -218,11 +216,10 @@
 	<ul><blockquote>
 		<li>Announcer - Only dials and sends signals, doesn't process any commands other than .see and doesn't send any _ring, possibly short-lived, can send signals.
 		<li>Listener - Stays running, also supports returning basic _ring/_line/_br so that it can send .tap commands in order to receive new signals, but processes no other commands.
-		<li>Friendly - Will send a _to and seed itself and track other Switches in order to respond to end signals, also supports .nat[r] commands, but doesn't process any signals or any .tap commands.
 		<li>Full - Supports all commands and relaying to any active .tap.
 	</blockquote></ul>
 
-<p>Friendly/Full Switches need to implement seeding, keeping lines open, a basic bucketing system that tracks active Switches at different distances from themselves.  A Full Switch needs to do basic duplicate detection, it should only process a unique set of signals at most once every 10 seconds (hash the sorted string sigs/values).
+<p>Full Switches need to implement seeding, keeping lines open, a basic bucketing system that tracks active Switches at different distances from themselves.  A Full Switch needs to do basic duplicate detection, it should only process a unique set of signals at most once every 10 seconds (hash the sorted string sigs/values).
 
 <p>The _br header is important to any long-lived Switch to prevent sudden flooding and to control bandwidth rates.  Every incoming Telex's raw byte size should be totaled for it's sender, and any outgoing Telex sent back to them should contain a _br header with the current total received from them.  The raw bytes sent out to any other Switch should also be tracked, so that the two can be compared.  If the bytes sent out grows to more than 10k over the last _br reported back from the recipient, no more should be sent until an updated _br is received.  This also works in reverse, if more than 10k is received beyond the last _br sent out, incoming Telexes can be dropped.  An artificially higher _br can always be sent to allow a bigger than 10k window.
 	
