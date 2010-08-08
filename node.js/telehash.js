@@ -16,6 +16,14 @@ server.on("message", function (msg, rinfo) {
 	    own_port = _to_ip_port.port;
 	    own_end = func.sha1(own_ip_port);
 	}
+	var switch_end = func.sha1(rinfo.address + ":" + rinfo.port);
+	var switch_distance = func.bit_diff(own_end, switch_end);
+	if (_distance < 0) return; // own IP:PORT
+	if (telex["+end"]) {
+	    var plus_end = telex["+end"];
+	    var end_distance = func.bit_diff(own_end, plus_end);
+	    
+	}
     });
 
 server.bind(42424);
