@@ -1,5 +1,6 @@
 var assert = require("assert");
 var crypto = require("crypto");
+//var dgram = require("dgram");
 
 var sha1 = function(data) {
     return crypto.createHash("sha1").update(data).digest("hex");
@@ -95,3 +96,50 @@ assert.equal(7, bit_diff('F7', 'FF'));
 assert.equal(16, bit_diff('FFFF0', 'FFFF1'));
 
 exports.bit_diff = bit_diff;
+
+var to_int = function (n) {
+    if (!n) return 0;
+    if (typeof(n) == "string") return parseInt(n);
+    return n;
+};
+
+assert.equal(0, to_int(null));
+assert.equal(1, to_int(1));
+assert.equal(2, to_int("2"));
+
+exports.to_int = to_int;
+
+var send_line = function(client, telex, _switch) {
+    var ip = _switch.ip;
+    var port = _switch.port;
+    telex["_to"] = ip + ":" + port;
+    var _br_received = _switch.br_received;
+    telex["_br"] = _br_received;
+    var my_ring = _switch.my_ring;
+    var other_ring = _switch.other_ring;
+    if (other_ring == 0) {
+	telex["_ring"] = my_ring;
+    } else {
+	telex["_line"] = my_ring * other_ring;
+    }
+    var msg = JSON.stringify(telex);
+    client.send(new Buffer(msg), 0, msg.length, port, ip, function (err) {
+	    if (err) throw err;
+	    _switch.br_sent += msg.length;
+	});
+};
+
+exports.send_line = send_line;
+
+var rand_int = function() {
+    var result = Math.floor(Math.random()*32000);
+    while (result <= 1000) {
+	result = Math.floor(Math.random()*32000);
+    }
+    return result;
+};
+
+var rand_int_1 = rand_int();
+assert.ok(rand_int_1 > 1000 && rand_int_1 <= 32000);
+
+exports.rand_int = rand_int;
