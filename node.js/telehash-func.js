@@ -118,12 +118,13 @@ var send_line = function(client, telex, _switch) {
     var my_ring = _switch.my_ring;
     var other_ring = _switch.other_ring;
     if (other_ring == 0) {
-	telex["_ring"] = my_ring;
+		telex["_ring"] = my_ring;
     } else {
-	telex["_line"] = my_ring * other_ring;
+		telex["_line"] = my_ring * other_ring;
     }
     var msg = JSON.stringify(telex);
     client.send(new Buffer(msg), 0, msg.length, port, ip, function (err) {
+		console.log("SEND\t"+msg);
 	    if (err) throw err;
 	    _switch.br_sent += msg.length;
 	});
@@ -131,15 +132,31 @@ var send_line = function(client, telex, _switch) {
 
 exports.send_line = send_line;
 
+var new_switch = function(ip_port,ring) {
+    var ipp = parse_ip_port(ip_port);
+ 	return {
+		ipp: ipp,
+		ip: ipp.ip,
+		port: ipp.port,
+		end: sha1(ipp),
+		br_received: 0,
+		br_sent: 0,
+		my_ring: rand_int(),
+		other_ring: (ring ? ring : 0)
+	    };
+};
+
+exports.new_switch = new_switch;
+
 var rand_int = function() {
-    var result = Math.floor(Math.random()*32000);
+    var result = Math.floor(Math.random()*32768);
     while (result <= 1000) {
-	result = Math.floor(Math.random()*32000);
+	result = Math.floor(Math.random()*32768);
     }
     return result;
 };
 
 var rand_int_1 = rand_int();
-assert.ok(rand_int_1 > 1000 && rand_int_1 <= 32000);
+assert.ok(rand_int_1 > 1000 && rand_int_1 < 32768);
 
 exports.rand_int = rand_int;
