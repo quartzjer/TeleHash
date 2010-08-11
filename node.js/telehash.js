@@ -5,9 +5,10 @@ var server = dgram.createSocket("udp4");
 var own_ip_port, own_ip, own_port, own_end = null;
 var kbuckets = func.create_kbuckets();
 var switch_masterlist = [];
+var taps_brute = [];
 
 server.on("message", function (msg, rinfo) {
-	console.log("RECV\t"+msg);
+	console.log("RECV\t"+rinfo.address+":"+rinfo.port+"\t"+msg);
 	var timestamp = new Date().getTime();
 	var telex = JSON.parse(msg);
 	if (!own_ip_port && telex._to) {
@@ -49,9 +50,13 @@ server.on("message", function (msg, rinfo) {
 			if(sw.seen) continue;
 			sw.seen=true;
 			func.send_line(server,{"+end":own_end},sw);
-			func.send_line(server,{"+end":sw.end, "+pop":"th:"+own_ip_port},_switch);
+			func.send_line(server,{"+end":sw.end, "+pop":"th:"+own_ip_port, "_hop":1},_switch);
 		}
 		// .tap
+		if(telex[".tap"] && telex[".tap"].length > 0)
+		{
+			taps_brute[_switch] = telex[".tap"];
+		}
 	}
 	
 	// process signals now
@@ -62,7 +67,31 @@ server.on("message", function (msg, rinfo) {
 	    var end_distance = func.bit_diff(own_end, plus_end);
 	    func.send_line(server, {".see": [own_ip_port]}, _switch); // debug
 	}
+	
+	// look for our own .tap for +pop
+	if(telex["+end"] == own_ip_port && telex["+pop"])
+	{
+		var pop = telex["+pop"].match(/^th\:([\d\:\.]+)$/);
+		if(!pop || switch_masterlist[pop[1]]) continue; // for now just skip if we've already seen this ipp
+		var sw = switch_masterlist[pop[1]] = func.new_switch(pop[1]);
+		func.send_line(server,{},sw); // smallest hello possible to ping open port
+	}
+
 	// TODO any signals are checked against taps
+	if(func.to_int(telex._hop) < 4)
+	{
+		// brute force :(
+		for(var i=0;i<taps_brute.length;i++)
+		{
+			var pass=0;
+			for(var j=0;j<taps_brute[i].length;j++)
+			{
+				var rule = taps_brute[i][j];
+				// todo
+			}
+		}
+	}
+
     });
 
 //server.bind(42424);
