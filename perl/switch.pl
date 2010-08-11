@@ -142,8 +142,8 @@ while(1)
 		}
 		
 		# this is our .tap, requests to +pop for NATs
-		if($j->{"_hop"} == 1 && $j->{"+end"} eq $ipphash && $j->{"+pop"} =~ /th\:([\d\.]+)\:(\d+)/)
-		{
+		if($j->{"+end"} eq $ipphash && $j->{"+pop"} =~ /th\:([\d\.]+)\:(\d+)/)
+		{ # should we verify that this came from a switch we actually have a tap on?
 			my $ip = $1;
 			my $port = $2;
 			printf "POP to $ip:$port\n";
@@ -161,13 +161,13 @@ while(1)
 					printf "\tTAP CHECK IS %s\t%s\n",$sw,$json->to_json($rule);
 					# all the "is" are in this telex and match exactly
 					next unless(scalar grep($j->{$_} eq $rule->{"is"}->{$_}, keys %{$rule->{"is"}}) == scalar keys %{$rule->{"is"}});
-					# pass fail if any has doesn't exist
-					$pass++;
+					# pass only if all has exist
+					my $haspass=1;
 					for my $sig (@{$rule->{"has"}})
 					{
-						$pass = 0 unless($j->{$sig});
+						$haspass=0 unless($j->{$sig});
 					}
-					last;
+					$pass++ if($haspass);
 				}
 				# forward this switch a copy
 				if($pass)
