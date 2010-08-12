@@ -4,8 +4,8 @@ var func = require("./telehash-func");
 var server = dgram.createSocket("udp4");
 var own_ip_port, own_ip, own_port, own_end = null;
 var kbuckets = func.create_kbuckets();
-var switch_masterlist = [];
-var taps_brute = [];
+var switch_masterlist = {};
+var taps_brute = {};
 
 server.on("message", function (msg, rinfo) {
 	console.log("RECV\t"+rinfo.address+":"+rinfo.port+"\t"+msg);
@@ -81,13 +81,26 @@ server.on("message", function (msg, rinfo) {
 	if(func.to_int(telex._hop) < 4)
 	{
 		// brute force :(
-		for(var i=0;i<taps_brute.length;i++)
+		for(var sw in taps_brute)
 		{
 			var pass=0;
-			for(var j=0;j<taps_brute[i].length;j++)
+			for(var i=0;i<taps_brute[sw].length;i++)
 			{
-				var rule = taps_brute[i][j];
-				// todo
+				var rule = taps_brute[sw][i];
+				var cont = false;
+				for(var is in rule.is)
+				{
+					if(rule.is[is] != telex[is]) cont = true;
+				}
+				if(cont) continue;
+				for(var j=0;j<rule.has.length;j++)
+				{
+					if(!telex[rule.has[j]]) cont = true;
+				}
+				if(cont) continue;
+				console.log("tap matched for "+sw);
+				var fw = {};
+				// todo get sigs
 			}
 		}
 	}
