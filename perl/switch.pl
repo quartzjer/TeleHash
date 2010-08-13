@@ -308,16 +308,19 @@ sub scanlines
 {
 	my $at = time();
 	my @switches = keys %lines;
+	my $valid=0;
 	for my $switch (@switches)
 	{
 		next if($switch eq $ipp); # ??
 		my $line = $lines{$switch};
+		next if($line{$switch}->{"ipp"} ne $switch); # empty/dead line
 		if(($line->{"seenat"} == 0 && $at - $line->{"init"} > 70) || ($line->{"seenat"} != 0 && $at - $line->{"seenat"} > 70))
 		{ # remove them if they never responded or haven't in a while
 			printf "\tPURGE[%s]\n",$switch;
 			$lines{$switch} = {};
 			next;
 		}
+		$valid++;
 		# end ourselves to see if they know anyone closer as a ping
 		my $jo = tnew($switch);
 		$jo->{"+end"} = $ipphash;
@@ -328,7 +331,7 @@ sub scanlines
 		tsend($jo);
 	}
 	# if no lines and we're not the seed
-	if(scalar keys %lines == 0 && $ipp ne $seedipp)
+	if($valid == 0 && $ipp ne $seedipp)
 	{
 		$ipp=$connected=undef;
 		printf "\tOFFLINE\n";	

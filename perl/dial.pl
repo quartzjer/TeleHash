@@ -83,13 +83,13 @@ while(1)
 			next if($seeipp eq $writer); # if they think they're close, they may have sent themselves
 
 			my $jo = telex($seeipp); # send direct (should open our outgoing to them)
-			$jo->{"end"} = $hash;
+			$jo->{"+end"} = $hash;
 			tsend($jo);
 
 			# send nat request back to the writer who .see'd us in case the new one is behind a nat
 			my $jo = telex($writer);
-			$jo->{".natr"} = $seeipp;
-			$jo->{"_line"} = int($j->{"_ring"}||$j->{"_line"}); # need to validate our request to them to natr for us
+			$jo->{"+pop"} = "th:$seeipp";
+			$jo->{"+end"} = sha1_hex($seeipp);
 			tsend($jo);
 		}
 	}else{ # incoming telex with no .see? prolly nat hole punch, dial them again regardless
@@ -97,7 +97,7 @@ while(1)
 		{
 			$resend{$writer}++;
 			my $jo = telex($writer);
-			$jo->{"end"} = $hash;
+			$jo->{"+end"} = $hash;
 			tsend($jo);
 		}
 	}
