@@ -199,9 +199,42 @@ sub getline
 		return undef unless($wip); # bad ip?
 		my $addr = sockaddr_in($port,$wip);
 		return undef unless($addr); # bad port?
-		$lines{$switch} = { ipp=>$switch, addr=>$addr, ringout=>int(rand(32768))+1, init=>time(), seenat=>0, sentat=>0, lineat=>0, br=>0, brout=>0, brin=>0, bsent=>0 };
+		$lines{$switch} = { ipp=>$switch, addr=>$addr, ringout=>int(rand(32768))+1, init=>time(), seenat=>0, sentat=>0, lineat=>0, br=>0, brout=>0, brin=>0, bsent=>0, see=>{$switch=>1} };
 	}
 	return $lines{$switch};
+}
+
+# generate a .see for an +end, using a switch as a hint
+sub endseeswitch
+{
+	my $end = shift;
+	my $sw = shift||$seedipp; # use seed as default if none
+	my $line = getline($sw);
+	
+	# sort the cached see
+	my %hashes = map {sha1_hex($_)=>$_} keys %{$line->{see}};
+	my @bixes = map {bix_new($_)} keys %hashes; # pre-bix the array for faster sorting
+	my $bend = bix_new($end);
+	my @ckeys = sort {bix_cmp(bix_or($bend,$a),bix_or($bend,$b))} @bixes; # sort by closest to the end
+	my $tophash = bix_str($ckeys[0]);
+
+	# if this switch is the closest return these results
+	if($hashes{$tophash} eq $sw)
+	{
+		# this +end == this line then replace the see cache with this result and each in the result walk and insert self into their see cache
+		if($tophash eq $end)
+		{
+			$line->{see} = map {$hashes{bix_str($_)} => 1} splice @ckeys, 0, 5;
+			for my $seesw (keys %{$line->{see}})
+			{
+				my $seeline = getline($seesw); # should always be one right? error if not
+				$seeline->{see}->{$sw}++ if($seeline);
+			}
+		}
+		return @ckeys;
+	}
+	
+	# if anyone is closer, tail recurse endseeswitch them
 }
 
 # validate a telex with incoming ring/line headers
