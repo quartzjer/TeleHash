@@ -102,6 +102,7 @@ while(1)
 			for my $seeipp (@{$j->{".see"}})
 			{
 				next if($seeipp eq $ipp); # skip ourselves :)
+				endseeswitch(sha1_hex($seeipp),$seeipp) if($seeipp eq $switch); # this bootstraps a switch to be visible, should we only do this once?
 				next if($lines{$seeipp}); # skip if we know them already
 				# XXX if we're dialing we'd want to use any of these closer to that end
 				# also check to see if we want them in a bucket
@@ -209,8 +210,15 @@ sub endseeswitch
 {
 	my $end = shift;
 	my $sw = shift||$seedipp; # use seed as default if none
+	my $swend = sha1_hex($sw);
 	my $line = getline($sw);
 	
+	# get the cached see
+	my @csee = keys %{$line->{see}};
+	
+	# if it's too small, go find some more! (bootstraps a new switch too, nifty)
+	push(@csee,endseeswitch($swend,$seedipp)) if(scalar @csee < 5 && $sw ne $seedipp);
+
 	# sort the cached see
 	my %hashes = map {sha1_hex($_)=>$_} keys %{$line->{see}};
 	my @bixes = map {bix_new($_)} keys %hashes; # pre-bix the array for faster sorting
@@ -227,14 +235,15 @@ sub endseeswitch
 			$line->{see} = map {$hashes{bix_str($_)} => 1} splice @ckeys, 0, 5;
 			for my $seesw (keys %{$line->{see}})
 			{
-				my $seeline = getline($seesw); # should always be one right? error if not
+				my $seeline = getline($seesw); # should always be one right? error if not?
 				$seeline->{see}->{$sw}++ if($seeline);
 			}
 		}
 		return @ckeys;
 	}
-	
-	# if anyone is closer, tail recurse endseeswitch them
+
+	# whomever is closer, tail recurse endseeswitch them
+	return endseeswitch($end,$hashes{$tophash});
 }
 
 # validate a telex with incoming ring/line headers
@@ -332,7 +341,7 @@ sub tsend
 	if(!defined(send(SOCKET, $js, 0, $line->{"addr"})))
 	{
 		$ipp=$connected=undef;
-		printf "\tOFFLINE\n";	
+		printf "\tTOFFLINE\n";	
 	}
 }
 
@@ -367,7 +376,7 @@ sub scanlines
 	if($valid == 0 && $ipp ne $seedipp)
 	{
 		$ipp=$connected=undef;
-		printf "\tOFFLINE\n";	
+		printf "\tLOFFLINE\n";	
 	}
 }
 
