@@ -102,7 +102,7 @@ while(1)
 			for my $seeipp (@{$j->{".see"}})
 			{
 				next if($seeipp eq $ipp); # skip ourselves :)
-				endseeswitch(sha1_hex($seeipp),$seeipp) if($seeipp eq $switch); # this bootstraps a switch to be visible, should we only do this once?
+#				endseeswitch(sha1_hex($seeipp),$seeipp) if($seeipp eq $switch); # this bootstraps a switch to be visible, should we only do this once?
 				next if($lines{$seeipp}); # skip if we know them already
 				# XXX if we're dialing we'd want to use any of these closer to that end
 				# also check to see if we want them in a bucket

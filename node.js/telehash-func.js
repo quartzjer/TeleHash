@@ -149,13 +149,14 @@ var new_switch = function(ip_port,ring) {
 
 exports.new_switch = new_switch;
 
-var near_to = function(end, sw) {
-	see = sw.see;
+// returns array of nearest known switch IPPs to an end hash, starting from a given switch (closer starting point the better)
+//		- to seed a new switch: newswitch.see.concat(near_to(newswitch.end,seedswitch)); near_to(newswitch.end,newswitch);
+var near_to = function(end, sw, masterlist) {
+	// get array of cached IPPs sorted by distance from given end
+	sorted = sw.see.keys.sort(function(a,b){return bit_diff(end,a) - bit_diff(end,b)});
 
-	// if(see.keys.length < 5) need to see.push(near_to(sw.end,seedswitch)) but how to get seedswitch?
-	
-	sorted = see.sort(); // need to sort by distance from end
-	
+	// TODO remove any from sorted that aren't in masterlist any more, cleanup
+
 	// if the given switch is the closest we can return this result
 	if(sorted[0] == sw.ipp)
 	{
@@ -163,13 +164,17 @@ var near_to = function(end, sw) {
 		if(end == sw.end)
 		{
 			sw.see = sorted; // should we slice out just top 5?
-			// TODO seed the caches, loop through each and insert sw.ipp into their .see
+			// seed the nearby caches, loop through each and insert this sw.ipp into their .see
+			for(var i=0;i<sw.see.length;i++)
+			{
+				masterlist[sw.see[i]].see[sw.ipp];
+			}
 		}
 		return sorted;
 	}
 	
 	// recurse to closest switch
-	return near_to(end,sorted[0]);
+	return near_to(end,masterlist[sorted[0]]);
 }
 
 exports.near_to = near_to;
