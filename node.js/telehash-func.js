@@ -142,11 +142,37 @@ var new_switch = function(ip_port,ring) {
 		br_received: 0,
 		br_sent: 0,
 		my_ring: rand_int(),
+		see: {},
 		other_ring: (ring ? ring : 0)
 	    };
 };
 
 exports.new_switch = new_switch;
+
+var near_to = function(end, sw) {
+	see = sw.see;
+
+	// if(see.keys.length < 5) need to see.push(near_to(sw.end,seedswitch)) but how to get seedswitch?
+	
+	sorted = see.sort(); // need to sort by distance from end
+	
+	// if the given switch is the closest we can return this result
+	if(sorted[0] == sw.ipp)
+	{
+		// if this end *is* for this switch, update it's cache
+		if(end == sw.end)
+		{
+			sw.see = sorted; // should we slice out just top 5?
+			// TODO seed the caches, loop through each and insert sw.ipp into their .see
+		}
+		return sorted;
+	}
+	
+	// recurse to closest switch
+	return near_to(end,sorted[0]);
+}
+
+exports.near_to = near_to;
 
 var rand_int = function() {
     var result = Math.floor(Math.random()*32768);
