@@ -102,11 +102,18 @@ while(1)
 			for my $seeipp (@{$j->{".see"}})
 			{
 				next if($seeipp eq $ipp); # skip ourselves :)
-#				endseeswitch(sha1_hex($seeipp),$seeipp) if($seeipp eq $switch); # this bootstraps a switch to be visible, should we only do this once?
+				# they're making themselves visible now, awesome
+				if($seeipp eq $switch)
+				{
+					printf "\t\tVISIBLE %s\n",$seeipp unless($lines{$switch}->{visible});
+					$lines{$switch}->{visible}=1;
+					map {$lines{$switch}->{see}->{$_}=1} near_to($lines{$switch}->{end},$seedipp); # load values into this switch's neighbors list
+					near_to($lines{$switch}->{end},$switch); # injects this switch as hints into it's neighbors, fully seeded now
+				}
 				next if($lines{$seeipp}); # skip if we know them already
-				# XXX if we're dialing we'd want to use any of these closer to that end
+				# XXX if we're dialing we'd want to reach out to any of these closer to that end
 				# also check to see if we want them in a bucket
-				if(bucket_see($seeipp,$buckets))
+				if(bucket_want($seeipp,$buckets))
 				{
 					# send direct (should open our outgoing to them)
 					my $jo = tnew($seeipp);
@@ -116,6 +123,7 @@ while(1)
 					my $jo = tnew($switch);
 					$jo->{"+end"} = sha1_hex($seeipp);
 					$jo->{"+pop"} = "th:$ipp";
+					$jo->{"_hop"} = 1;
 					tsend($jo);
 				}
 			}
@@ -135,7 +143,9 @@ while(1)
 		if($j->{"+end"} && int($j->{"_hop"}) == 0)
 		{
 			# get switches from buckets near to this end
-			my $cipps = bucket_near($j->{"+end"},$buckets);
+			# start from a visible switch (should use cached result someday)
+			my $vis = $lines{$switch}->{visible} ? $switch : $seedipp;
+			my $cipps = near_to($j->{"+end"},$vis);
 			my $jo = tnew($switch);
 			# TODO: this is where dampening should happen to not advertise switches that might be too busy
 			$jo->{".see"} = $cipps;
@@ -197,53 +207,46 @@ sub getline
 		printf "\tNEWLINE[%s]\n",$switch;
 		my($ip,$port) = split(":",$switch);
 		my $wip = gethostbyname($ip);
-		return undef unless($wip); # bad ip?
+		return undef unless($ip && $wip); # bad ip?
 		my $addr = sockaddr_in($port,$wip);
-		return undef unless($addr); # bad port?
-		$lines{$switch} = { ipp=>$switch, addr=>$addr, ringout=>int(rand(32768))+1, init=>time(), seenat=>0, sentat=>0, lineat=>0, br=>0, brout=>0, brin=>0, bsent=>0, see=>{$switch=>1} };
+		return undef unless($port && $addr); # bad port?
+		$lines{$switch} = { ipp=>$switch, end=>sha1_hex($switch), addr=>$addr, ringout=>int(rand(32768))+1, init=>time(), seenat=>0, sentat=>0, lineat=>0, br=>0, brout=>0, brin=>0, bsent=>0, see=>{$switch=>1}, visible=>0 };
 	}
 	return $lines{$switch};
 }
 
 # generate a .see for an +end, using a switch as a hint
-sub endseeswitch
+sub near_to
 {
 	my $end = shift;
-	my $sw = shift||$seedipp; # use seed as default if none
-	my $swend = sha1_hex($sw);
-	my $line = getline($sw);
-	
-	# get the cached see
-	my @csee = keys %{$line->{see}};
-	
-	# if it's too small, go find some more! (bootstraps a new switch too, nifty)
-	push(@csee,endseeswitch($swend,$seedipp)) if(scalar @csee < 5 && $sw ne $seedipp);
+	my $sw = shift;
+	my $line = $lines{$sw};
 
-	# sort the cached see
-	my %hashes = map {sha1_hex($_)=>$_} keys %{$line->{see}};
+	# sort the cached see, this has to be cleaned up, ughly
+	my %hashes = map {sha1_hex($_)=>$_} grep {$lines{$_}->{visible}} keys %{$line->{see}}; # hashes of only the visible switches
 	my @bixes = map {bix_new($_)} keys %hashes; # pre-bix the array for faster sorting
 	my $bend = bix_new($end);
-	my @ckeys = sort {bix_cmp(bix_or($bend,$a),bix_or($bend,$b))} @bixes; # sort by closest to the end
-	my $tophash = bix_str($ckeys[0]);
+	my @see = map {$hashes{bix_str($_)}} sort {bix_cmp(bix_or($bend,$a),bix_or($bend,$b))} @bixes; # sort by closest to the end
+
+	printf "\t\tNEARTO %s\t%s\t%d>%d\n",$end,$sw,scalar keys %{$line->{see}},scalar @see;
 
 	# if this switch is the closest return these results
-	if($hashes{$tophash} eq $sw)
+	if($see[0] eq $sw)
 	{
 		# this +end == this line then replace the see cache with this result and each in the result walk and insert self into their see cache
-		if($tophash eq $end)
+		if($line->{end} eq $end)
 		{
-			$line->{see} = map {$hashes{bix_str($_)} => 1} splice @ckeys, 0, 5;
+			$line->{see} = map {$_=>1} @see[0..4];
 			for my $seesw (keys %{$line->{see}})
 			{
-				my $seeline = getline($seesw); # should always be one right? error if not?
-				$seeline->{see}->{$sw}++ if($seeline);
+				$lines{$seesw}->{see}->{$sw}=1;
 			}
 		}
-		return @ckeys;
+		return @see;
 	}
 
-	# whomever is closer, tail recurse endseeswitch them
-	return endseeswitch($end,$hashes{$tophash});
+	# whomever is closer, if any, tail recurse endseeswitch them
+	return $see[0] ? near_to($end,$see[0]) : $see;
 }
 
 # validate a telex with incoming ring/line headers
@@ -274,7 +277,6 @@ sub checkline
 			$line->{ringin} = $t->{_line} / $line->{ringout}; # will be valid if the % = 0 above
 			$line->{line} = $t->{_line};
 			$line->{lineat} = time();
-			bucket_see($line->{ipp},$buckets); # make sure they get added to a bucket too
 		}
 	}
 
@@ -289,7 +291,6 @@ sub checkline
 			$line->{ringin} = $t->{_ring};
 			$line->{line} = $line->{ringin} * $line->{ringout};
 			$line->{lineat} = time();
-			bucket_see($line->{ipp},$buckets); # make sure they get added to a bucket too
 		}
 	}
 
@@ -351,11 +352,12 @@ sub scanlines
 	my $at = time();
 	my @switches = keys %lines;
 	my $valid=0;
+	printf "SCAN\t%d\n",scalar @switches;
 	for my $switch (@switches)
 	{
 		next if($switch eq $ipp); # ??
 		my $line = $lines{$switch};
-		next if($line{$switch}->{"ipp"} ne $switch); # empty/dead line
+		next if($line->{"ipp"} ne $switch); # empty/dead line
 		if(($line->{"seenat"} == 0 && $at - $line->{"init"} > 70) || ($line->{"seenat"} != 0 && $at - $line->{"seenat"} > 70))
 		{ # remove them if they never responded or haven't in a while
 			printf "\tPURGE[%s]\n",$switch;
@@ -445,14 +447,14 @@ sub bucket_near
 }
 
 # see if we want to try this switch or not, and maybe prune the bucket
-sub bucket_see
+sub bucket_want
 {
 	my $switch = shift;
 	my $buckets = shift;
 	my $pos = bix_sbit(bix_or(bix_new($switch),bix_new($ipphash)));
-	printf "\tBUCKET[%d %s]\n",$pos,$switch;
+	printf "\tBUCKET WANT[%d %s]\n",$pos,$switch;
 	return undef if($pos < 0 || $pos > 159); # err!?
-	$buckets->[$pos]->{$switch}++;
+#	$buckets->[$pos]->{$switch}++;
 	return 1; # for now we're always taking everyone, in future need to be more selective when the bucket is "full"!
 }
 
