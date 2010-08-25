@@ -30,18 +30,18 @@ my($seedhost,$seedport) = split(":",$seed);
 my $seedip = gethostbyname($seedhost);
 my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
 
-my %lines; # static line assignments per switch
+my %master; # all known switches, key is sha1 hex
 my %taps;
 my $buff;
 $|++;
-my $ipp, $ipphash;
+my $selfipp, $selfhash;
 my $connected=undef;
-my $buckets = bucket_init(); # big array of buckets 
+my $buckets;
 my $lastloop = int(time);
 while(1)
 {
 	# if we're not online, attempt to talk to the seed
-	bootstrap($seedipp) if(!$connected && $ipp ne $seedipp);
+	bootstrap($seedipp) if(!$connected && $selfipp ne $seedipp);
 
 	# wait for event or timeout loop
 	my $newmsg = scalar $sel->can_read(10);
@@ -59,30 +59,30 @@ while(1)
 
 	# figure out who sent it
 	($cport, $addr) = sockaddr_in($caddr);
-	my $switch = sprintf("%s:%d",inet_ntoa($addr),$cport);
+	my $remoteipp = sprintf("%s:%d",inet_ntoa($addr),$cport);
 
-	printf "\nRECV[%s]\t%s\n",$switch,$buff;
+	printf "\nRECV[%s]\t%s\n",$remoteipp,$buff;
 
 	# json parse check
 	my $j = $json->from_json($buff) || next;
 
 	# FIRST, if we're bootstrapping, discover our own ip:port
-	if(!$ipp && $j->{"_to"})
+	if(!$selfipp && $j->{"_to"})
 	{
 		printf "\tSELF[%s]\n",$j->{"_to"};
-		$ipp = $j->{"_to"};
-		$ipphash = sha1_hex($ipp);
+		$selfipp = $j->{"_to"};
+		$selfhash = sha1_hex($selfipp);
 		# WE are the seed, haha, remove our own line and skip
-		if($ipp eq $switch)
+		if($selfipp eq $remoteipp)
 		{
 			printf "\tWe're the seed!\n";
-			delete $lines{$ipp};
+			delete $master{$selfhash};
 			next;
 		}
 	}
 
 	# if this is a switch we know, check a few things
-	my $line = getline($switch,$j->{"_ring"});
+	my $line = getline($remoteipp,$j->{"_ring"});
 	my $lstat = checkline($line,$j,length($buff));
 	if(!$lstat)
 	{
@@ -101,28 +101,28 @@ while(1)
 			# loop through and establish lines to them (just being dumb for now and trying everyone)
 			for my $seeipp (@{$j->{".see"}})
 			{
-				next if($seeipp eq $ipp); # skip ourselves :)
+				next if($seeipp eq $selfipp); # skip ourselves :)
 				# they're making themselves visible now, awesome
-				if($seeipp eq $switch)
+				if($seeipp eq $remoteipp && !$line->{visible})
 				{
-					printf "\t\tVISIBLE %s\n",$seeipp unless($lines{$switch}->{visible});
-					$lines{$switch}->{visible}=1;
-					map {$lines{$switch}->{see}->{$_}=1} near_to($lines{$switch}->{end},$seedipp); # load values into this switch's neighbors list
-					near_to($lines{$switch}->{end},$switch); # injects this switch as hints into it's neighbors, fully seeded now
+					printf "\t\tVISIBLE %s\n",$remoteipp;
+					$line->{visible}=1;
+					map {$line->{see}->{$_}=1} near_to($line->{end},$seedipp); # load values into this switch's neighbors list, seed is always visible
+					near_to($line->{end},$remoteipp); # injects this switch as hints into it's neighbors, fully seeded now
 				}
-				next if($lines{$seeipp}); # skip if we know them already
+				next if($master{sha1_hex($seeipp)}); # skip if we know them already
 				# XXX if we're dialing we'd want to reach out to any of these closer to that end
 				# also check to see if we want them in a bucket
 				if(bucket_want($seeipp,$buckets))
 				{
 					# send direct (should open our outgoing to them)
 					my $jo = tnew($seeipp);
-					$jo->{"+end"} = $ipphash;
+					$jo->{"+end"} = $selfhash;
 					tsend($jo);
 					# send pop signal back to the switch who .see'd us in case the new one is behind a nat
-					my $jo = tnew($switch);
+					my $jo = tnew($remoteipp);
 					$jo->{"+end"} = sha1_hex($seeipp);
-					$jo->{"+pop"} = "th:$ipp";
+					$jo->{"+pop"} = "th:$selfipp";
 					$jo->{"_hop"} = 1;
 					tsend($jo);
 				}
@@ -144,16 +144,19 @@ while(1)
 		{
 			# get switches from buckets near to this end
 			# start from a visible switch (should use cached result someday)
-			my $vis = $lines{$switch}->{visible} ? $switch : $seedipp;
-			my $cipps = near_to($j->{"+end"},$vis);
-			my $jo = tnew($switch);
-			# TODO: this is where dampening should happen to not advertise switches that might be too busy
-			$jo->{".see"} = $cipps;
-			tsend($jo);
+			my $vis = $line->{visible} ? $remoteipp : $seedipp;
+			my @cipps = near_to($j->{"+end"},$vis);
+			if(scalar @cipps > 0)
+			{
+				my $jo = tnew($remoteipp);
+				# TODO: this is where dampening should happen to not advertise switches that might be too busy
+				$jo->{".see"} = \@cipps;
+				tsend($jo);
+			}
 		}
 		
 		# this is our .tap, requests to +pop for NATs
-		if($j->{"+end"} eq $ipphash && $j->{"+pop"} =~ /th\:([\d\.]+)\:(\d+)/)
+		if($j->{"+end"} eq $selfhash && $j->{"+pop"} =~ /th\:([\d\.]+)\:(\d+)/)
 		{ # should we verify that this came from a switch we actually have a tap on?
 			my $ip = $1;
 			my $port = $2;
@@ -164,10 +167,10 @@ while(1)
 		# if not last-hop, check for any active taps (todo: optimize the matching, this is just brute force)
 		if(int($j->{"_hop"}) < 4)
 		{
-			for my $sw (grep($lines{$_}->{rules},keys %lines))
+			for my $hash (grep($master{$_}->{rules},keys %master))
 			{
 				my $pass=0;
-				for my $rule (@{$lines{$sw}->{"rules"}})
+				for my $rule (@{$master{$hash}->{"rules"}})
 				{
 					printf "\tTAP CHECK IS %s\t%s\n",$sw,$json->to_json($rule);
 					# all the "is" are in this telex and match exactly
@@ -202,7 +205,8 @@ while(1)
 sub getline
 {
 	my $switch = shift;
-	if(!$lines{$switch} || $lines{$switch}->{ipp} ne $switch)
+	my $hash = sha1_hex($switch);
+	if(!$master{$hash} || $master{$hash}->{ipp} ne $switch)
 	{
 		printf "\tNEWLINE[%s]\n",$switch;
 		my($ip,$port) = split(":",$switch);
@@ -210,43 +214,40 @@ sub getline
 		return undef unless($ip && $wip); # bad ip?
 		my $addr = sockaddr_in($port,$wip);
 		return undef unless($port && $addr); # bad port?
-		$lines{$switch} = { ipp=>$switch, end=>sha1_hex($switch), addr=>$addr, ringout=>int(rand(32768))+1, init=>time(), seenat=>0, sentat=>0, lineat=>0, br=>0, brout=>0, brin=>0, bsent=>0, see=>{$switch=>1}, visible=>0 };
+		$master{$hash} = { ipp=>$switch, end=>$hash, addr=>$addr, ringout=>int(rand(32768))+1, init=>time(), seenat=>0, sentat=>0, lineat=>0, br=>0, brout=>0, brin=>0, bsent=>0, neighbors=>{$hash=>1}, visible=>0 };
 	}
-	return $lines{$switch};
+	return $master{$hash};
 }
 
 # generate a .see for an +end, using a switch as a hint
 sub near_to
 {
 	my $end = shift;
-	my $sw = shift;
-	my $line = $lines{$sw};
+	my $ipp = shift;
+	my $line = getline($ipp); # should always exist
 
-	# sort the cached see, this has to be cleaned up, ughly
-	my %hashes = map {sha1_hex($_)=>$_} grep {$lines{$_}->{visible}} keys %{$line->{see}}; # hashes of only the visible switches
-	my @bixes = map {bix_new($_)} keys %hashes; # pre-bix the array for faster sorting
-	my $bend = bix_new($end);
-	my @see = map {$hashes{bix_str($_)}} sort {bix_cmp(bix_or($bend,$a),bix_or($bend,$b))} @bixes; # sort by closest to the end
+	# of the existing and visible cached neighbors, sort by distance to this end
+	my @see = sort {hash_distance($end,$a)<=>hash_distance($end,$b)} grep {$master{$_} && $master{$_}->{visible}} keys %{$line->{neighbors}};
 
-	printf "\t\tNEARTO %s\t%s\t%d>%d\n",$end,$sw,scalar keys %{$line->{see}},scalar @see;
+	printf "\t\tNEARTO %s\t%s\t%d>%d\n",$end,$ipp,scalar keys %{$line->{neighbors}},scalar @see;
 
 	# if this switch is the closest return these results
-	if($see[0] eq $sw)
+	if($see[0] eq $line->{end})
 	{
-		# this +end == this line then replace the see cache with this result and each in the result walk and insert self into their see cache
-		if($line->{end} eq $end)
+		# this +end == this line then replace the neighbors cache with this result and each in the result walk and insert self into their neighbors
+		if($see[0] eq $end)
 		{
-			$line->{see} = map {$_=>1} @see[0..4];
-			for my $seesw (keys %{$line->{see}})
+			$line->{neighbors} = map {$_=>1 if($_)} @see[0..4];
+			for my $hash (keys %{$line->{neighbors}})
 			{
-				$lines{$seesw}->{see}->{$sw}=1;
+				$master{$hash}->{neighbors}->{$line->{end}}=1;
 			}
 		}
 		return @see;
 	}
 
 	# whomever is closer, if any, tail recurse endseeswitch them
-	return $see[0] ? near_to($end,$see[0]) : $see;
+	return $see[0] ? near_to($end,$see[0]) : undef;
 }
 
 # validate a telex with incoming ring/line headers
@@ -341,7 +342,7 @@ sub tsend
 	printf "SEND[%s]\t%s\n",$j->{"_to"},$js;
 	if(!defined(send(SOCKET, $js, 0, $line->{"addr"})))
 	{
-		$ipp=$connected=undef;
+		$selfipp=$connected=undef;
 		printf "\tTOFFLINE\n";	
 	}
 }
@@ -350,34 +351,34 @@ sub tsend
 sub scanlines
 {
 	my $at = time();
-	my @switches = keys %lines;
+	my @switches = keys %master;
 	my $valid=0;
 	printf "SCAN\t%d\n",scalar @switches;
-	for my $switch (@switches)
+	for my $hash (@switches)
 	{
-		next if($switch eq $ipp); # ??
-		my $line = $lines{$switch};
-		next if($line->{"ipp"} ne $switch); # empty/dead line
+		next if($hash eq $selfhash); # ??
+		my $line = $master{$hash};
+		next if($line->{"end"} ne $hash); # empty/dead line
 		if(($line->{"seenat"} == 0 && $at - $line->{"init"} > 70) || ($line->{"seenat"} != 0 && $at - $line->{"seenat"} > 70))
 		{ # remove them if they never responded or haven't in a while
-			printf "\tPURGE[%s]\n",$switch;
-			$lines{$switch} = {};
+			printf "\tPURGE[%s]\n",$line->{ipp};
+			$master{$hash} = {};
 			next;
 		}
 		$valid++;
 		# end ourselves to see if they know anyone closer as a ping
-		my $jo = tnew($switch);
-		$jo->{"+end"} = $ipphash;
+		my $jo = tnew($line->{ipp});
+		$jo->{"+end"} = $selfhash;
 		# also .see ourselves, default for now is to participate in the DHT
-		$jo->{".see"} = [$ipp];
+		$jo->{".see"} = [$selfipp];
 		# also .tap our hash for +pop requests for NATs
-		$jo->{".tap"} = [{"is"=>{"+end"=>$ipphash},"has"=>["+pop"]}];
+		$jo->{".tap"} = [{"is"=>{"+end"=>$selfhash},"has"=>["+pop"]}];
 		tsend($jo);
 	}
 	# if no lines and we're not the seed
-	if($valid == 0 && $ipp ne $seedipp)
+	if($valid == 0 && $selfipp ne $seedipp)
 	{
-		$ipp=$connected=undef;
+		$selfipp=$connected=undef;
 		printf "\tLOFFLINE\n";	
 	}
 }
@@ -394,137 +395,36 @@ sub bootstrap
 {
 	my $seed = shift;
 	printf "SEEDING[%s]\n",$seed;
+	my $line = getline($seed);
+	$line->{visible} = 1; # default seed to always visible
 	my $jo = tnew($seed);
-	# make sure the hash is really far away so they .see us back a bunch
-	$jo->{"+end"} = bix_str(bix_far(bix_new(sha1_hex($seed))));
+	$jo->{"+end"} = $line->{end}; # any end will do, might as well ask for their neighborhood
 	tsend($jo);
-}
-
-# create the array of buckets
-sub bucket_init
-{
-	my @ba;
-	for my $pos (0..159)
-	{
-		$ba[$pos] = {};
-	}
-	return \@ba;
-}
-
-# find active switches
-sub bucket_near
-{
-	my $end = shift;
-	my $buckets = shift;
-	my $bto = bix_new($end); # convert to format for the big xor for faster sorting
-	my $bme = bix_new($ipphash);
-	my $start = bix_sbit(bix_or($bto,$bme));
-	$start = 0 if($start < 0 || $start > 159); # err, this needs to be handled better or something
-	my @ret;
-	# first check all buckets closer
-	printf "\tNEAR[%d %s] ",$start,$end;
-	my $pos = $start+1;
-	while(--$pos)
-	{
-#printf "%d/%d %s",$pos,scalar @ret,Dumper($buckets->[$pos]);
-		push @ret,grep($lines{$_}->{"lineat"},keys %{$buckets->[$pos]}); # only push active switches
-		last if(scalar @ret >= 5);
-	}
-	# the check all buckets further
-	for my $pos (($start+1) .. 159)
-	{
-#printf "%d/%d ",$pos,scalar @ret;
-		push @ret,grep($lines{$_}->{"lineat"},keys %{$buckets->[$pos]}); # only push active switches
-		last if(scalar @ret >= 5);
-	}
-	my %hashes = map {sha1_hex($_)=>$_} @ret;
-	$hashes{$ipphash} = $ipp; # include ourselves always
-	my @bixes = map {bix_new($_)} keys %hashes; # pre-bix the array for faster sorting
-	my @ckeys = sort {bix_cmp(bix_or($bto,$a),bix_or($bto,$b))} @bixes; # sort by closest to the end
-	printf("\tfrom %d switches, closest is %d\n",scalar @ckeys, bix_sbit(bix_or($bto,$ckeys[0])));
-	@ret = map {$hashes{bix_str($_)}} splice @ckeys, 0, 5; # convert back to ip:ports, top 5
-	return \@ret;
 }
 
 # see if we want to try this switch or not, and maybe prune the bucket
 sub bucket_want
 {
-	my $switch = shift;
+	my $ipp = shift;
 	my $buckets = shift;
-	my $pos = bix_sbit(bix_or(bix_new($switch),bix_new($ipphash)));
-	printf "\tBUCKET WANT[%d %s]\n",$pos,$switch;
+	my $pos = hash_distance(sha1_hex($ipp),$selfhash);
+	printf "\tBUCKET WANT[%d %s]\n",$pos,$ipp;
 	return undef if($pos < 0 || $pos > 159); # err!?
-#	$buckets->[$pos]->{$switch}++;
 	return 1; # for now we're always taking everyone, in future need to be more selective when the bucket is "full"!
 }
 
-
-# including these here for convenience
-# takes hex string
-sub bix_new
+# returns xor distance between two sha1 hex hashes, 159 is furthest bit, 0 is closest bit, -1 is same hash
+sub hash_distance
 {
-	my @bix;
-	for my $b (split undef,shift)
-	{
-		push @bix,hex $b;
-	}
-	return \@bix;
-}
-sub bix_str
-{
-	my $br = shift;
-	my $str;
-	for (@$br)
-	{
-		$str .= sprintf "%x",$_;
-	}
-	return $str;
-}
-sub bix_or
-{
-	my $a = shift;
-	my $b = shift;
-	my @c;
-	for my $i (0..39)
-	{
-		$c[$i] = $a->[$i] ^ $b->[$i];
-	}
-	return \@c;
-}
-
-sub bix_cmp
-{
-	my $a = shift;
-	my $b = shift;
-	for my $i (0..39)
-	{
-		next if($a->[$i] == $b->[$i]);
-		return $a->[$i] <=> $b->[$i];
-	}
-	return 0;
-}
-
-# invert the bits, or make a hash as far away as possible
-sub bix_far
-{
-	my $a = shift;
-	my @c;
-	for my $i (0..39)
-	{
-		$c[$i] = $a->[$i] ^ hex 'f';
-	}
-	return \@c;
-}
-
-sub bix_sbit
-{
-	my $b = shift;
+	my @a = map {hex $_} split undef,shift;
+	my @b = map {hex $_} split undef,shift;
 	my @sbtab = (-1,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3); # ln(hex)/log(2)
 	my $ret = 156;
 	for my $i (0..39)
 	{
-		return $ret + $sbtab[$b->[$i]] if($b->[$i]);
+		my $byte = $a[$i] ^ $b[$i];
+		return $ret + $sbtab[$byte] if($byte);
 		$ret -= 4;
 	}
-	return -1;
+	return -1; # same hashes?!
 }
