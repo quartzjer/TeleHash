@@ -35,6 +35,7 @@ my %taps;
 my $buff;
 $|++;
 my $selfipp, $selfhash;
+my $visibleipp;
 my $connected=undef;
 my $buckets;
 my $lastloop = int(time);
@@ -107,7 +108,8 @@ while(1)
 				{
 					printf "\t\tVISIBLE %s\n",$remoteipp;
 					$line->{visible}=1;
-					map {$line->{see}->{$_}=1} near_to($line->{end},$seedipp); # load values into this switch's neighbors list, seed is always visible
+					$visibleipp = $remoteipp unless($visibleipp); # first visible one becomes our default
+					map {$line->{neighbors}->{$_}=1} near_to($line->{end},$visibleipp); # load values into this switch's neighbors list, seed is always visible
 					near_to($line->{end},$remoteipp); # injects this switch as hints into it's neighbors, fully seeded now
 				}
 				next if($master{sha1_hex($seeipp)}); # skip if we know them already
@@ -142,15 +144,17 @@ while(1)
 		# any first-hop end signal is responded to
 		if($j->{"+end"} && int($j->{"_hop"}) == 0)
 		{
-			# get switches from buckets near to this end
-			# start from a visible switch (should use cached result someday)
-			my $vis = $line->{visible} ? $remoteipp : $seedipp;
-			my @cipps = near_to($j->{"+end"},$vis);
-			if(scalar @cipps > 0)
+			my $vis = $line->{visible} ? $remoteipp : $visibleipp; # start from a visible switch (should use cached result someday)
+			my @hashes = near_to($j->{"+end"},$vis); # get closest hashes (of other switches)
+			my %ipps = map {$master{$_}->{ipp} => 1} grep {$_} @hashes[0..4]; # convert back to IPPs
+			# TODO: this is where dampening should happen to not advertise switches that might be too busy
+			$ipps{$selfipp}=$line->{visibled}=1 unless($line->{visibled}); # mark ourselves visible at least once
+			
+			if(scalar keys %ipps > 0)
 			{
 				my $jo = tnew($remoteipp);
-				# TODO: this is where dampening should happen to not advertise switches that might be too busy
-				$jo->{".see"} = \@cipps;
+				my @ipps = grep { length($_) > 1 } keys %ipps;
+				$jo->{".see"} = \@ipps;
 				tsend($jo);
 			}
 		}
@@ -205,6 +209,7 @@ while(1)
 sub getline
 {
 	my $switch = shift;
+	return undef if(length($switch) < 4); # sanity
 	my $hash = sha1_hex($switch);
 	if(!$master{$hash} || $master{$hash}->{ipp} ne $switch)
 	{
@@ -224,7 +229,8 @@ sub near_to
 {
 	my $end = shift;
 	my $ipp = shift;
-	my $line = getline($ipp); # should always exist
+	my $line = $master{sha1_hex($ipp)};
+	return undef unless($line); # should always exist except in startup or offline, etc
 
 	# of the existing and visible cached neighbors, sort by distance to this end
 	my @see = sort {hash_distance($end,$a)<=>hash_distance($end,$b)} grep {$master{$_} && $master{$_}->{visible}} keys %{$line->{neighbors}};
@@ -235,19 +241,22 @@ sub near_to
 	if($see[0] eq $line->{end})
 	{
 		# this +end == this line then replace the neighbors cache with this result and each in the result walk and insert self into their neighbors
-		if($see[0] eq $end)
+		if($line->{end} eq $end)
 		{
-			$line->{neighbors} = map {$_=>1 if($_)} @see[0..4];
+			printf "\t\tNEIGH for %s was %s\n",$end,join(",",keys %{$line->{neighbors}});
+			my %neigh = map {$_=>1} grep {$_} @see[0..4];
+			$line->{neighbors} = \%neigh;
+			printf "\t\tNEIGH for %s now %s\n",$end,join(",",keys %{$line->{neighbors}});
 			for my $hash (keys %{$line->{neighbors}})
 			{
-				$master{$hash}->{neighbors}->{$line->{end}}=1;
+				$master{$hash}->{neighbors}->{$end}=1;
 			}
 		}
 		return @see;
 	}
 
 	# whomever is closer, if any, tail recurse endseeswitch them
-	return $see[0] ? near_to($end,$see[0]) : undef;
+	return $see[0] ? near_to($end,$master{$see[0]}->{ipp}) : undef;
 }
 
 # validate a telex with incoming ring/line headers
@@ -356,12 +365,12 @@ sub scanlines
 	printf "SCAN\t%d\n",scalar @switches;
 	for my $hash (@switches)
 	{
-		next if($hash eq $selfhash); # ??
+		next if($hash eq $selfhash || length($hash) < 10); # ??
 		my $line = $master{$hash};
 		next if($line->{"end"} ne $hash); # empty/dead line
 		if(($line->{"seenat"} == 0 && $at - $line->{"init"} > 70) || ($line->{"seenat"} != 0 && $at - $line->{"seenat"} > 70))
 		{ # remove them if they never responded or haven't in a while
-			printf "\tPURGE[%s]\n",$line->{ipp};
+			printf "\tPURGE[%s %s]\n",$hash,$line->{ipp};
 			$master{$hash} = {};
 			next;
 		}
@@ -369,8 +378,8 @@ sub scanlines
 		# end ourselves to see if they know anyone closer as a ping
 		my $jo = tnew($line->{ipp});
 		$jo->{"+end"} = $selfhash;
-		# also .see ourselves, default for now is to participate in the DHT
-		$jo->{".see"} = [$selfipp];
+		# also .see ourselves if we haven't yet, default for now is to participate in the DHT
+		$jo->{".see"} = [$selfipp] unless($line->{visibled}++);
 		# also .tap our hash for +pop requests for NATs
 		$jo->{".tap"} = [{"is"=>{"+end"=>$selfhash},"has"=>["+pop"]}];
 		tsend($jo);
@@ -396,7 +405,6 @@ sub bootstrap
 	my $seed = shift;
 	printf "SEEDING[%s]\n",$seed;
 	my $line = getline($seed);
-	$line->{visible} = 1; # default seed to always visible
 	my $jo = tnew($seed);
 	$jo->{"+end"} = $line->{end}; # any end will do, might as well ask for their neighborhood
 	tsend($jo);
