@@ -172,9 +172,10 @@ while(1)
 			for my $hash (grep($master{$_}->{rules},keys %master))
 			{
 				my $pass=0;
+				my $swipp = $master{$hash}->{ipp};
 				for my $rule (@{$master{$hash}->{"rules"}})
 				{
-					printf "\tTAP CHECK IS %s\t%s\n",$sw,$json->to_json($rule);
+					printf "\tTAP CHECK IS %s\t%s\n",$swipp,$json->to_json($rule);
 					# all the "is" are in this telex and match exactly
 					next unless(scalar grep($j->{$_} eq $rule->{"is"}->{$_}, keys %{$rule->{"is"}}) == scalar keys %{$rule->{"is"}});
 					# pass only if all has exist
@@ -188,7 +189,7 @@ while(1)
 				# forward this switch a copy
 				if($pass)
 				{
-					my $jo = tnew($sw);
+					my $jo = tnew($swipp);
 					for my $sig (grep(/^\+.+/, keys %$j))
 					{
 						$jo->{$sig} = $j->{$sig};
@@ -386,7 +387,7 @@ sub scanlines
 		next if($line->{"end"} ne $hash); # empty/dead line
 		if(($line->{"seenat"} == 0 && $at - $line->{"init"} > 70) || ($line->{"seenat"} != 0 && $at - $line->{"seenat"} > 70))
 		{ # remove them if they never responded or haven't in a while
-			printf "\tPURGE[%s %s]\n",$hash,$line->{ipp};
+			printf "\tPURGE[%s %s] last seen %d ago\n",$hash,$line->{ipp},$at - $line->{seenat};
 			$master{$hash} = {};
 			next;
 		}

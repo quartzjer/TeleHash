@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# given a hash (or otherwise), find the closest writers
+# given a hash (or otherwise), find the closest switches
 
 use Digest::SHA1 qw(sha1_hex);
 use IO::Select;
@@ -8,8 +8,8 @@ use Socket;
 use JSON::DWIW;
 my $json = JSON::DWIW->new;
 
-my $hash = (length($ARGV[0])==40)?$ARGV[0]:sha1_hex($ARGV[0]);
-printf "Dialing %s\n",$hash;
+my $end = (length($ARGV[0])==40)?$ARGV[0]:sha1_hex($ARGV[0]);
+printf "Dialing %s\n",$end;
 
 # defaults to listen on any ip and random port
 my $port = 0;
@@ -31,11 +31,10 @@ my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
 
 # send a hello to the seed
 my $jo = telex($seedipp);
-$jo->{"end"} = $hash;
+$jo->{"+end"} = $end;
 tsend($jo);
 
-my %cache; # just a dumb cache of writer hashes
-require "./bixor.pl"; # temp testing hack
+my %cache; # just a dumb cache of switch hashes
 my $buff;
 $|++;
 my $ipp, $ipphash;
@@ -45,9 +44,8 @@ while(1)
 	# wait for event or timeout loop
 	if(scalar $sel->can_read(5) == 0)
 	{
-		my $bto = bix_new($hash);
-		my @ckeys = sort {bix_sbit(bix_or($bto,bix_new($a))) <=> bix_sbit(bix_or($bto,bix_new($b)))} keys %cache; # sort by closest to the hash
-		print join("\n", map {$cache{$_}."\t".bix_sbit(bix_or($bto,bix_new($_)))} splice @ckeys, 0, 5),"\n";
+		my @ckeys = sort {hash_distance($end,$a)<=>hash_distance($end,$b)} keys %cache; # sort by closest to the hash
+		print join("\n", map {$cache{$_}."\t".hash_distance($end,$_)} @ckeys),"\n";
 		exit;
 	}
 
@@ -57,8 +55,8 @@ while(1)
 
 	# figure out who sent it
 	($cport, $addr) = sockaddr_in($caddr);
-	my $writer = sprintf("%s:%d",inet_ntoa($addr),$cport);
-	printf "RECV[%s]\t%s\n",$writer,$buff;
+	my $remoteipp = sprintf("%s:%d",inet_ntoa($addr),$cport);
+	printf "RECV[%s]\t%s\n",$remoteipp,$buff;
 
 	# json parse check
 	my $j = $json->from_json($buff) || next;
@@ -71,7 +69,7 @@ while(1)
 		$ipphash = sha1_hex($ipp);
 	}
 
-	# we've been told to talk to these writers
+	# we've been told to talk to these switches
 	if($j->{".see"})
 	{
 		# loop through and establish lines to them (just being dumb for now and trying everyone)
@@ -80,24 +78,24 @@ while(1)
 			next if($seeipp eq $ipp); # skip ourselves :)
 			next if($cache{sha1_hex($seeipp)}); # skip if we know them already
 			$cache{sha1_hex($seeipp)} = $seeipp;
-			next if($seeipp eq $writer); # if they think they're close, they may have sent themselves
+			next if($seeipp eq $remoteipp); # if they think they're close, they may have sent themselves
 
 			my $jo = telex($seeipp); # send direct (should open our outgoing to them)
-			$jo->{"+end"} = $hash;
+			$jo->{"+end"} = $end;
 			tsend($jo);
 
-			# send nat request back to the writer who .see'd us in case the new one is behind a nat
-			my $jo = telex($writer);
+			# send nat request back to the switch who .see'd us in case the new one is behind a nat
+			my $jo = telex($remoteipp);
 			$jo->{"+pop"} = "th:$seeipp";
 			$jo->{"+end"} = sha1_hex($seeipp);
 			tsend($jo);
 		}
 	}else{ # incoming telex with no .see? prolly nat hole punch, dial them again regardless
-		if(!$resend{$writer})
+		if(!$resend{$remoteipp})
 		{
-			$resend{$writer}++;
-			my $jo = telex($writer);
-			$jo->{"+end"} = $hash;
+			$resend{$remoteipp}++;
+			my $jo = telex($remoteipp);
+			$jo->{"+end"} = $end;
 			tsend($jo);
 		}
 	}
@@ -113,7 +111,7 @@ sub telex
 	return $js;
 }
 
-# actually send a telex to it's writer
+# actually send a telex to it's IPP
 sub tsend
 {
 	my $j = shift;
@@ -123,4 +121,20 @@ sub tsend
 	my $js = $json->to_json($j);
 	printf "SEND[%s]\t%s\n",$j->{"_to"},$js;
 	defined(send(SOCKET, $js, 0, $waddr))    or die "send $to: $!";	
+}
+
+# returns xor distance between two sha1 hex hashes, 159 is furthest bit, 0 is closest bit, -1 is same hash
+sub hash_distance
+{
+	my @a = map {hex $_} split undef,shift;
+	my @b = map {hex $_} split undef,shift;
+	my @sbtab = (-1,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3); # ln(hex)/log(2)
+	my $ret = 156;
+	for my $i (0..39)
+	{
+		my $byte = $a[$i] ^ $b[$i];
+		return $ret + $sbtab[$byte] if($byte);
+		$ret -= 4;
+	}
+	return -1; # same hashes?!
 }

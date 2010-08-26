@@ -2,6 +2,7 @@
 
 # given a writer ip:port, end hash, signal name and value, just send it
 
+use Digest::SHA1 qw(sha1_hex);
 use IO::Select;
 use Socket;
 use JSON::DWIW;
@@ -9,8 +10,9 @@ my $json = JSON::DWIW->new;
 
 my $ipp = $ARGV[0];
 my $end = $ARGV[1];
+$end = (length($end)==40)?$end:sha1_hex($end);
 my $sig = $ARGV[2];
-my $val = $ARGV[3] || die("./signal.pl ip:port endhash signame sigvalue");
+my $val = $ARGV[3] || die("./signal.pl ip:port endhash-or-string signame sigvalue");
 
 # reset just in case it was a hostname
 my($ippi,$ippp) = split(":",$ipp);
@@ -28,7 +30,7 @@ bind(SOCKET, $paddr)                          or die "bind: $!";
 $sel = IO::Select->new();
 $sel->add(\*SOCKET);
 
-my $j = {"_to"=>$ipp, "+end"=>$end, $sig=>$val};
+my $j = {"_to"=>$ipp, "+end"=>$end, $sig=>$val, "_hop"=>1}; # hop of one implies no .see reply needed
 my($ip,$port) = split(":",$ipp);
 my $wip = gethostbyname($ip);
 my $waddr = sockaddr_in($port,$wip);

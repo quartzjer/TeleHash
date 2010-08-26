@@ -10,9 +10,11 @@ use Socket;
 use JSON::DWIW;
 my $json = JSON::DWIW->new;
 
-my $ipp = $ARGV[0] || die("./listen.pl ip:port [signal] [endhash]");
+my $ipp = $ARGV[0] || die("./listen.pl ip:port [signal] [endhash or string]");
 my $sig = $ARGV[1];
 my $end = $ARGV[2];
+$end = (length($end)==40)?$end:sha1_hex($end) if($end);
+
 
 # reset just in case it was a hostname
 my($ippi,$ippp) = split(":",$ipp);
@@ -38,13 +40,22 @@ $jo->{"+end"}=sha1_hex($ipp);
 tsend($jo);
 
 my $regd;
+my $lastloop=time();
 while(1)
 {
 	# wait for event or timeout loop
 	if(scalar $sel->can_read(50) == 0)
 	{
-		tsend(telex($ipp)); # send keepalive
 		next;
+	}
+
+	# wait for event or timeout loop
+	my $newmsg = scalar $sel->can_read(10);
+	if($newmsg == 0 || $lastloop+45 < int(time))
+	{
+		tsend(telex($ipp)); # send keepalive
+		$lastloop = int(time);
+		next if($newmsg == 0); # timeout loop
 	}
 
 	# must be a telex waiting for us
@@ -53,9 +64,9 @@ while(1)
 
 	# figure out who sent it
 	($cport, $addr) = sockaddr_in($caddr);
-	my $writer = sprintf("%s:%d",inet_ntoa($addr),$cport);
-	printf "RECV[%s]\t%s\n",$writer,$buff;
-	if($writer ne $ipp)
+	my $remoteipp = sprintf("%s:%d",inet_ntoa($addr),$cport);
+	printf "RECV[%s]\t%s\n",$remoteipp,$buff;
+	if($remoteipp ne $ipp)
 	{
 		printf "NOTHANKS\n";
 		next;
