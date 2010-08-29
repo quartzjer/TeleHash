@@ -13,9 +13,14 @@ use JSON::DWIW;
 my $json = JSON::DWIW->new;
 
 # defaults to listen on any ip and random port
-my $port = $ARGV[0]||0;
+use Getopt::Std;
+getopt("pset"); # port seed end tap
+printf STDERR "options port '%s' seed '%s' end '%s' tap '%s'\n",$opt_p,$opt_s,$opt_e,$opt_t;
+my $port = $opt_p||0;
 my $ip = "0.0.0.0"; 
-my $seed = $ARGV[1]||"telehash.org:42424";
+my $seed = $opt_s||"telehash.org:42424";
+my $tap_end = $opt_e;
+my $tap_js = $opt_t?$json->from_json($opt_t):undef;
 
 $iaddr = gethostbyname($ip);
 $proto = getprotobyname('udp');
@@ -47,9 +52,13 @@ while(1)
 	my $newmsg = scalar $sel->can_read(10);
 	if($newmsg == 0 || $lastloop+10 < int(time))
 	{
-		printf "LOOP\n";
+		printf STDERR "LOOP\n";
 		$lastloop = int(time);
-		scanlines() if($connected);
+		if($connected)
+		{
+			scanlines();
+			taptap() if($tap_end);
+		}
 		next if($newmsg == 0); # timeout loop
 	}
 	
@@ -61,7 +70,7 @@ while(1)
 	($cport, $addr) = sockaddr_in($caddr);
 	my $remoteipp = sprintf("%s:%d",inet_ntoa($addr),$cport);
 
-	printf "\nRECV[%s]\t%s\n",$remoteipp,$buff;
+	printf STDERR "\nRECV[%s]\t%s\n",$remoteipp,$buff;
 
 	# json parse check
 	my $j = $json->from_json($buff) || next;
@@ -69,14 +78,15 @@ while(1)
 	# FIRST, if we're bootstrapping, discover our own ip:port
 	if(!$selfipp && $j->{"_to"})
 	{
-		printf "\tSELF[%s]\n",$j->{"_to"};
+		printf STDERR "\tSELF[%s]\n",$j->{"_to"};
 		$selfipp = $j->{"_to"};
 		$selfhash = sha1_hex($selfipp);
 		my $line = getline($selfipp);
 		$line->{visible}=1; # flag ourselves as default visible
+		$line->{rules} = $tap_js; # if we're tap'ing anything
 		if($selfipp eq $remoteipp)
 		{
-			printf "\tWe're the seed!\n";
+			printf STDERR "\tWe're the seed!\n";
 			next;
 		}
 	}
@@ -86,10 +96,10 @@ while(1)
 	my $lstat = checkline($line,$j,length($buff));
 	if(!$lstat)
 	{
-		printf "\tLINE FAIL[%s]\n",$json->to_json($line);
+		printf STDERR "\tLINE FAIL[%s]\n",$json->to_json($line);
 		next;
 	}else{
-		printf "\tLINE STATUS %s\n",$j->{"_line"}?"OPEN":"RINGING";
+		printf STDERR "\tLINE STATUS %s\n",$j->{"_line"}?"OPEN":"RINGING";
 	}
 	
 	# if there's an open line, we can process commands, yay
@@ -105,13 +115,13 @@ while(1)
 				# they're making themselves visible now, awesome
 				if($seeipp eq $remoteipp && !$line->{visible})
 				{
-					printf "\t\tVISIBLE %s\n",$remoteipp;
+					printf STDERR "\t\tVISIBLE %s\n",$remoteipp;
 					$line->{visible}=1;
 					map {$line->{neighbors}->{$_}=1} near_to($line->{end},$selfipp); # load values into this switch's neighbors list, start from ourselves
 					near_to($line->{end},$remoteipp); # injects this switch as hints into it's neighbors, fully seeded now
 				}
 				next if($master{sha1_hex($seeipp)}); # skip if we know them already
-				# XXX if we're dialing we'd want to reach out to any of these closer to that end
+				# XXX todo: if we're dialing we'd want to reach out to any of these closer to that $tap_end
 				# also check to see if we want them in a bucket
 				if(bucket_want($seeipp,$buckets))
 				{
@@ -162,7 +172,7 @@ while(1)
 		{ # should we verify that this came from a switch we actually have a tap on?
 			my $ip = $1;
 			my $port = $2;
-			printf "POP to $ip:$port\n";
+			printf STDERR "POP to $ip:$port\n";
 			tsend(tnew("$ip:$port"));
 		}
 
@@ -175,7 +185,7 @@ while(1)
 				my $swipp = $master{$hash}->{ipp};
 				for my $rule (@{$master{$hash}->{"rules"}})
 				{
-					printf "\tTAP CHECK IS %s\t%s\n",$swipp,$json->to_json($rule);
+					printf STDERR "\tTAP CHECK IS %s\t%s\n",$swipp,$json->to_json($rule);
 					# all the "is" are in this telex and match exactly
 					next unless(scalar grep($j->{$_} eq $rule->{"is"}->{$_}, keys %{$rule->{"is"}}) == scalar keys %{$rule->{"is"}});
 					# pass only if all has exist
@@ -189,15 +199,21 @@ while(1)
 				# forward this switch a copy
 				if($pass)
 				{
-					my $jo = tnew($swipp);
-					for my $sig (grep(/^\+.+/, keys %$j))
+					# it's us, it has to be our tap_js        
+					if($swipp eq $selfipp)
 					{
-						$jo->{$sig} = $j->{$sig};
+						printf "%s\n",$json->from_json($j);
+					}else{
+						my $jo = tnew($swipp);
+						for my $sig (grep(/^\+.+/, keys %$j))
+						{
+							$jo->{$sig} = $j->{$sig};
+						}
+						$jo->{"_hop"} = int($j->{"_hop"})+1;
+						tsend($jo);
 					}
-					$jo->{"_hop"} = int($j->{"_hop"})+1;
-					tsend($jo);
 				}else{
-					printf "\tCHECK MISS\n";
+					printf STDERR "\tCHECK MISS\n";
 				}
 			}
 		}
@@ -212,7 +228,7 @@ sub getline
 	my $hash = sha1_hex($switch);
 	if(!$master{$hash} || $master{$hash}->{ipp} ne $switch)
 	{
-		printf "\tNEWLINE[%s]\n",$switch;
+		printf STDERR "\tNEWLINE[%s]\n",$switch;
 		my($ip,$port) = split(":",$switch);
 		my $wip = gethostbyname($ip);
 		return undef unless($ip && $wip); # bad ip?
@@ -245,7 +261,7 @@ sub near_to
 	# of the existing and visible cached neighbors, sort by distance to this end
 	my @see = sort {hash_distance($end,$a)<=>hash_distance($end,$b)} grep {$master{$_} && $master{$_}->{visible}} keys %{$line->{neighbors}};
 
-	printf "\t\tNEARTO %s\t%s\t%d>%d\t%d=%d\n",$end,$ipp,scalar keys %{$line->{neighbors}},scalar @see,hash_distance($see[0],$end),hash_distance($see[0],$line->{end});
+	printf STDERR "\t\tNEARTO %s\t%s\t%d>%d\t%d=%d\n",$end,$ipp,scalar keys %{$line->{neighbors}},scalar @see,hash_distance($see[0],$end),hash_distance($see[0],$line->{end});
 
 	return undef unless(scalar @see);
 
@@ -255,17 +271,17 @@ sub near_to
 		# this +end == this line then replace the neighbors cache with this result and each in the result walk and insert self into their neighbors
 		if($line->{end} eq $end)
 		{
-			printf "\t\tNEIGH for %s was %s %d\n",$end,join(",",keys %{$line->{neighbors}}),scalar @see;
+			printf STDERR "\t\tNEIGH for %s was %s %d\n",$end,join(",",keys %{$line->{neighbors}}),scalar @see;
 			my %neigh = map {$_=>1} perlsucks(5,\@see);
 			$line->{neighbors} = \%neigh;
-			printf "\t\tNEIGH for %s is %s %d\n",$end,join(",",keys %{$line->{neighbors}}),scalar @see;
+			printf STDERR "\t\tNEIGH for %s is %s %d\n",$end,join(",",keys %{$line->{neighbors}}),scalar @see;
 			for my $hash (keys %{$line->{neighbors}})
 			{
 				$master{$hash}->{neighbors}->{$end}=1;
-				printf "\t\tSEED %s into %s\n",$ipp,$master{$hash}->{ipp};
+				printf STDERR "\t\tSEED %s into %s\n",$ipp,$master{$hash}->{ipp};
 			}
 		}
-		printf "\t\t\tSEE distance=%d count=%d\n",hash_distance($end,$see[0]),scalar @see;
+		printf STDERR "\t\t\tSEE distance=%d count=%d\n",hash_distance($end,$see[0]),scalar @see;
 		return @see;
 	}
 
@@ -319,7 +335,7 @@ sub checkline
 	}
 
 	# we're valid at this point, line or otherwise, track bytes
-printf "\tBR %s [%d += %d] DIFF %d\n",$line->{ipp},$line->{br},$br,$line->{bsent} - $t->{_br};
+	printf STDERR "\tBR %s [%d += %d] DIFF %d\n",$line->{ipp},$line->{br},$br,$line->{bsent} - $t->{_br};
 	$line->{br} += $br;
 	$line->{brin} = $t->{_br};
 	return undef if($line->{br} - $line->{brout} > 12000); # they can't send us that much more than what we've told them to, bad!
@@ -347,7 +363,7 @@ sub tsend
 	# check br and drop if too much
 	if($line->{"bsent"} - $line->{"brin"} > 10000)
 	{
-		printf "\tMAX SEND DROP\n";
+		printf STDERR "\tMAX SEND DROP\n";
 		return;
 	}
 	# if a line is open use that, else send a ring
@@ -362,7 +378,7 @@ sub tsend
 	my $js = $json->to_json($j);
 	$line->{"bsent"} += length($js);
 	$line->{"sentat"} = time();
-	printf "SEND[%s]\t%s\n",$j->{"_to"},$js;
+	printf STDERR "SEND[%s]\t%s\n",$j->{"_to"},$js;
 	offline("tsend") if(!defined(send(SOCKET, $js, 0, $line->{"addr"})));
 }
 
@@ -370,16 +386,27 @@ sub offline
 {
 	$selfipp=$connected=undef;
 	%master = ();
-	printf "\tOFFLINE %s\n",shift;	
+	printf STDERR "\tOFFLINE %s\n",shift;	
 
 }
+
+sub taptap
+{
+	my @hashes = near_to($tap_end,$selfipp); # get closest hashes (of other switches)
+	printf STDERR "\ttaptap to %s end %s tap %s\n",$master{$hashes[0]}->{ipp},$tap_end,$json->to_json($tap_js);
+	return unless(scalar @hashes > 1);
+	my $jo = tnew($master{$hashes[0]}->{ipp}); # tap the closest ipp to our target end 
+	$jo->{".tap"} = $tap_js;
+	tsend($jo);
+}
+
 # scan all known switches to keep any nat's open
 sub scanlines
 {
 	my $at = time();
 	my @switches = keys %master;
 	my $valid=0;
-	printf "SCAN\t%d\n",scalar @switches;
+	printf STDERR "SCAN\t%d\n",scalar @switches;
 	for my $hash (@switches)
 	{
 		next if($hash eq $selfhash || length($hash) < 10); # ??
@@ -387,7 +414,7 @@ sub scanlines
 		next if($line->{"end"} ne $hash); # empty/dead line
 		if(($line->{"seenat"} == 0 && $at - $line->{"init"} > 70) || ($line->{"seenat"} != 0 && $at - $line->{"seenat"} > 70))
 		{ # remove them if they never responded or haven't in a while
-			printf "\tPURGE[%s %s] last seen %d ago\n",$hash,$line->{ipp},$at - $line->{seenat};
+			printf STDERR "\tPURGE[%s %s] last seen %d ago\n",$hash,$line->{ipp},$at - $line->{seenat};
 			$master{$hash} = {};
 			next;
 		}
@@ -416,7 +443,7 @@ sub getend
 sub bootstrap
 {
 	my $seed = shift;
-	printf "SEEDING[%s]\n",$seed;
+	printf STDERR "SEEDING[%s]\n",$seed;
 	my $line = getline($seed);
 	my $jo = tnew($seed);
 	$jo->{"+end"} = $line->{end}; # any end will do, might as well ask for their neighborhood
@@ -429,7 +456,7 @@ sub bucket_want
 	my $ipp = shift;
 	my $buckets = shift;
 	my $pos = hash_distance(sha1_hex($ipp),$selfhash);
-	printf "\tBUCKET WANT[%d %s]\n",$pos,$ipp;
+	printf STDERR "\tBUCKET WANT[%d %s]\n",$pos,$ipp;
 	return undef if($pos < 0 || $pos > 159); # err!?
 	return 1; # for now we're always taking everyone, in future need to be more selective when the bucket is "full"!
 }
