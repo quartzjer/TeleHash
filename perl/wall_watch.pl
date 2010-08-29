@@ -21,6 +21,6 @@ while(<SWITCH>)
 	my $js = $json->from_json($_);
 	my $wall = $js->{"+wall"};
 	next if($js->{"+guid"} && $dedup{$js->{"+guid"}}++);
-	printf "%s\t%s\n",localtime(),$wall;
+	printf "%s\t%s\n",`date`,$wall;
 }
 close(SWITCH);

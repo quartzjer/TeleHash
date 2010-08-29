@@ -202,7 +202,8 @@ while(1)
 					# it's us, it has to be our tap_js        
 					if($swipp eq $selfipp)
 					{
-						printf "%s\n",$json->from_json($j);
+						printf STDERR "STDOUT[%s]\n",$json->to_json($j);
+						printf "%s\n",$json->to_json($j);
 					}else{
 						my $jo = tnew($swipp);
 						for my $sig (grep(/^\+.+/, keys %$j))
