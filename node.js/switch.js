@@ -5,16 +5,17 @@ var dgram = require("dgram");
 var dns = require("dns");
 
 /**
- * Emulate this helpful Object method if < JS 1.8.5.
+ * Enumerate data keys of an object.
  */
-if (!Object.prototype.keys) {
-    Object.prototype.keys = function() {
-        var result = [];
-        for (var key in this) {
-            result[result.length] = key;
+function keys(o) {
+    var result = [];
+    for (var key in o) {
+        if (o[key] && isFunction(o[key])) {
+            continue;
         }
-        return result;
+        result[result.length] = key;
     }
+    return result;
 }
 
 /**
@@ -53,6 +54,13 @@ function isString(o) {
 }
 
 /**
+ * Test if an Object is a Function.
+ */
+function isFunction(o) {
+    return o.constructor == Function;
+}
+
+/**
  * Create a new Telex.
  * If the first argument is a string, it is used as the _to endpoint
  * for the new Telex. Otherwise all key-value pairs in the argument
@@ -77,7 +85,7 @@ function Telex(arg){
  * Test if a telex has signals. Signals start with a '+'.
  */
 Telex.prototype.hasSignals = function() {
-    return this.keys().some(function(x){ x[0] == '+' });
+    return keys(this).some(function(x){ return x[0] == '+' });
 }
 
 /**
@@ -87,7 +95,7 @@ Telex.prototype.hasSignals = function() {
  */
 Telex.prototype.getCommands = function() {
     var result = {};
-    this.keys().filter(function(x){ return x[0] == '.' }).forEach(function(x){
+    keys(this).filter(function(x){ return x[0] == '.' }).forEach(function(x){
         result[x] = this[x];
     });
     return result;
@@ -152,17 +160,11 @@ function Switch(bindPort, bootHost, bootPort){
     
     // Register built-in command handlers
     
-//    this.on(".natr", function(source, telex, line) {
-//        self._natr(source, telex, line);
-//    });
-//    this.on(".nat", function(source, telex, line) {
-//        self._nat(source, telex, line);
-//    });
-    this.on(".see", function(source, telex, line) {
-        self._see(source, telex, line);
+    this.on(".see", function(remoteipp, telex, line) {
+        self._see(remoteipp, telex, line);
     });
-    this.on(".tap", function(source, telex, line) {
-        self._tap(source, telex, line);
+    this.on(".tap", function(remoteipp, telex, line) {
+        self._tap(remoteipp, telex, line);
     });
 }
 
@@ -194,8 +196,10 @@ Switch.prototype.stop = function() {
  * bootstrap switch.
  */
 Switch.prototype.startBootstrap = function(seed){
+	console.log(["SEEDING[", seed, "]"].join(""));
+	var line = this.getline(seed);
     var bootTelex = new Telex(seed);
-    bootTelex["+end"] = new Hash(seed).far().toString();
+    bootTelex["+end"] = line.end; // any end will do, might as well ask for their neighborhood
     this.send(bootTelex);
 }
 
@@ -203,21 +207,20 @@ Switch.prototype.startBootstrap = function(seed){
  * Complete the bootstrap by processing the response from
  * the bootstrap switch.
  */
-Switch.prototype.completeBootstrap = function(source, telex) {
+Switch.prototype.completeBootstrap = function(remoteipp, telex) {
     this.connected = true;
     this.selfipp = telex._to;
     this.selfhash = new Hash(this.selfipp).toString();
     
-    console.log(["\tSELF[", telex._to, "]"].join(""));
+    console.log(["\tSELF[", telex._to, " = ", this.selfhash, "]"].join(""));
     
     var line = this.getline(this.selfipp);
     line.visible = 1; // flag ourselves as default visible
 	line.rules = this.tap_js; // if we're tap'ing anything
 	
     // WE are the seed, haha, remove our own line and skip
-    if (this.selfipp == source) {
+    if (this.selfipp == remoteipp) {
         console.log("\tWe're the seed!\n");
-        delete this.lines[this.selfipp];
     }
 }
 
@@ -247,7 +250,7 @@ Switch.prototype.recv = function(msgstr, rinfo) {
         console.log(["\tLINE STATUS ", (telex._line ? "OPEN":"RINGING")].join(""));
     }
     
-    console.log("line: " + JSON.stringify(line));
+//    console.log("line: " + JSON.stringify(line));
     
     // Process commands if the line is open
     if (line) {
@@ -258,25 +261,30 @@ Switch.prototype.recv = function(msgstr, rinfo) {
     }
     
     if (telex.hasSignals()) {
-        var hop = parseInt(telex._hop)
+        var hop = telex._hop == null ? 0 : parseInt(telex._hop)
         if ("+end" in telex && hop == 0) {
 			var vis = line.visible ? remoteipp : this.selfipp; // start from a visible switch (should use cached result someday)
-			var hashes = near_to(telex["+end"], vis); // get closest hashes (of other switches)
+			var hashes = this.near_to(telex["+end"], vis); // get closest hashes (of other switches)
+			
+			console.log("+end hashes: " + JSON.stringify(hashes));
 			
 			// convert back to IPPs
 			var ipps = {};
 			hashes.slice(0,5).forEach(function(hash){
-			    self.master[hash.toString()].ipp = 1;
+			    ipps[self.master[hash].ipp] = 1;
 			});
+			
+			console.log("+end ipps: " + JSON.stringify(ipps));
 			
 			// TODO: this is where dampening should happen to not advertise switches that might be too busy
 			if (!line.visibled) {
     			ipps[this.selfipp] = line.visibled = 1; // mark ourselves visible at least once
             }
-            			
-			if (ipps.keys().length > 0) {
+            
+            var ippKeys = keys(ipps);	
+			if (ippKeys.length) {
 				var telexOut = new Telex(remoteipp);
-				var seeipps = ipps.keys().filter(function(ipp){ return ipp.length > 1 });
+				var seeipps = ippKeys.filter(function(ipp){ return ipp.length > 1 });
 				telexOut[".see"] = seeipps;
 				this.send(telexOut);
 			}
@@ -296,7 +304,7 @@ Switch.prototype.recv = function(msgstr, rinfo) {
 		
 		// if not last-hop, check for any active taps (todo: optimize the matching, this is just brute force)
         if (hop < 4) {
-            this.master.keys()
+            keys(this.master)
             .filter(function(hash){ return self.master[hash].rules })
             .forEach(function(hash){
 			    var pass = 0;
@@ -305,15 +313,18 @@ Switch.prototype.recv = function(msgstr, rinfo) {
 				    console.log(["\tTAP CHECK IS ", swipp, "\t", JSON.stringify(rule)].join(""));
 				    
 				    // all the "is" are in this telex and match exactly
-				    if (rule.is.keys().length !=
-				        rule.is.keys().filter(function(is) { telex[is] == rule.is[is] }).length) {
+				    var ruleIsKeys = keys(rule.is);
+				    if (ruleIsKeys.length !=
+				        ruleIsKeys.filter(function(is) { return telex[is] == rule.is[is] }).length) {
+				        console.log("isses don't match");
 				        return; // continue
 				    }
 				    
 				    // pass only if all has exist
 				    var haspass = 1;
 				    rule.has.forEach(function(sig){
-					    if (!telex.sig) {
+				        console.log("has sig=" + sig + ", telex[sig]=" + telex[sig]);
+					    if (!telex[sig]) {
 					        haspass=0;
 					    }
 				    });
@@ -331,11 +342,11 @@ Switch.prototype.recv = function(msgstr, rinfo) {
 				    }
 				    else{
 					    var telexOut = new Telex(swipp);
-					    telex.keys().filter(function(key){ return key.matches(/^\+.+/); })
+					    keys(telex).filter(function(key){ return key.matches(/^\+.+/); })
 				        .forEach(function(sig){
 						    telexOut[sig] = telex[sig];
 					    });
-					    telexOut["_hop"] = parseInt(telex["_hop"])+1;
+					    telexOut["_hop"] = hop + 1;
 					    self.senf(telexOut);
 				    }
 			    }
@@ -350,75 +361,59 @@ Switch.prototype.recv = function(msgstr, rinfo) {
 }
 
 /**
- * Handle the .natr TeleHash command.
- */
-Switch.prototype._natr = function(source, telex, line) {
-    if (telex[".natr"] && self.lines[telex[".natr"]]) {
-        var telexOut = new Telex(telex[".natr"]);
-        telexOut[".nat"] = source; 
-        this.send(telexOut);
-    }
-}
-
-/**
- * Handle the .nat TeleHash command.
- */
-Switch.prototype._nat = function(source, telex, line) {
-    this.send(new Telex(telex[".nat"]));
-}
-
-/**
  * Handle the .see TeleHash command.
  */
 Switch.prototype._see = function(remoteipp, telex, line) {
     // loop through and establish lines to them (just being dumb for now and trying everyone)
+    var self = this;
     var seeipps = telex[".see"];
-    if (!seeipps) { return; }
+    if (!seeipps || !seeipps.length) { return; }
     
     console.log(".see: " + JSON.stringify(seeipps));
     
-    for (var i = 0; i < seeipps.length; i++) {
-        var seeipp = seeipps[i];
-        if (this.selfipp == seeipp[i]) {
+    seeipps.forEach(function(seeipp){
+        if (self.selfipp == seeipp) {
             // skip ourselves :)
-            continue;
+            return; //continue;
         }
         
 		// they're making themselves visible now, awesome
 		if (seeipp == remoteipp && !line.visible) {
 			console.log(["\t\tVISIBLE ", remoteipp].join(""));
 			line.visible=1;
-			this.near_to(line.end, this.selfipp).map(function(x) { line.neighbors[x]=1; });
-			this.near_to(line.end, remoteipp); // injects this switch as hints into it's neighbors, fully seeded now
+			self.near_to(line.end, self.selfipp).map(function(x) { return line.neighbors[x]=1; });
+			self.near_to(line.end, remoteipp); // injects this switch as hints into it's neighbors, fully seeded now
 		}
 		
-		if (this.master[new Hash(seeipp).toString()]) {
-		    continue; // skip if we know them already
+		var seeippHash = new Hash(seeipp).toString(); 
+		
+		if (self.master[seeippHash]) {
+		    return; //continue; // skip if we know them already
 		}
 		
 		// XXX todo: if we're dialing we'd want to reach out to any of these closer to that $tap_end
 		// also check to see if we want them in a bucket
-		if (this.bucket_want(seeipp)) {
+		if (self.bucket_want(seeipp)) {
 		    
 			// send direct (should open our outgoing to them)
 			var telexOut = new Telex(seeipp);
-			telexOut["+end"] = this.selfhash;
-			this.send(telexOut);
+			telexOut["+end"] = self.selfhash;
+			self.send(telexOut);
 			
 			// send pop signal back to the switch who .see'd us in case the new one is behind a nat
 			telexOut = new Telex(remoteipp);
-			telexOut["+end"] = new Hash(seeipp).toString();
-			telexOut["+pop"] = "th:" + this.selfipp;
+			telexOut["+end"] = seeippHash;
+			telexOut["+pop"] = "th:" + self.selfipp;
 			telexOut["_hop"] = 1;
-			this.send(telexOut);
+			self.send(telexOut);
 		}
-    }
+    });
 }
 
 /**
  * Handle the .tap TeleHash command.
  */
-Switch.prototype._tap = function(source, telex, line) {
+Switch.prototype._tap = function(remoteipp, telex, line) {
 	// handle a tap command, add/replace rules
 	if (telex[".tap"] && isArray(telex[".tap"])) {
 		line.rules = telex[".tap"];
@@ -465,8 +460,9 @@ Switch.prototype.getline = function(endpoint) {
         return undefined; // sanity check
     }
     
-	var endpointHash = new Hash(endpoint);
+	var endpointHash = new Hash(endpoint).toString();
 	if (!this.master[endpointHash] || this.master[endpointHash].ipp != endpoint) {
+		console.log(["\tNEWLINE[", endpoint, "]"].join(""));
         var endpieces = endpoint.split(":");
         var host = endpieces[0];
         var port = endpieces[1];
@@ -583,7 +579,7 @@ Switch.prototype.checkline = function(line, t, br) {
  */
 Switch.prototype.scanlines = function() {
     var now = time();
-    var switches = this.master.keys();
+    var switches = keys(this.master);
     var valid = 0;
     var self = this;
 	console.log(["SCAN\t" + switches.length].join(""));
@@ -631,8 +627,7 @@ Switch.prototype.scanlines = function() {
  * generate a .see for an +end, using a switch as a hint
  */
 Switch.prototype.near_to = function(end, ipp){
-    if (isString(end)) { end = new Hash(end); }
-    
+    var endHash = new Hash(end);
     var self = this;
 	var line = this.master[new Hash(ipp).toString()];
 	if (!line) {
@@ -640,53 +635,58 @@ Switch.prototype.near_to = function(end, ipp){
 	}
     
 	// of the existing and visible cached neighbors, sort by distance to this end
-	var see = line.neighbors.keys()
+	var see = keys(line.neighbors)
     .filter(function(x){ return self.master[x] && self.master[x].visible })
-    .sort(function(a,b){ return end.distanceTo(a) - end.distanceTo(b) })
-    .map(function(x){ return new Hash(x); });
+    .sort(function(a,b){ return endHash.distanceTo(a) - endHash.distanceTo(b) });
     
     console.log("near_to: see[]=" + JSON.stringify(see));
-    
-	console.log(["\t\tNEARTO ", end, '\t', ipp, '\t', 
-	    line.neighbors.keys().length, ">", see.length, '\t',
-	    see[0].distanceTo(end), "=", see[0].distanceTo(line.end)].join(""));
     
     if (!see.length) {
         return undefined;
     }
     
+    var firstSee = see[0];
+    var firstSeeHash = new Hash(firstSee);
+    var lineNeighborKeys = keys(line.neighbors);
+    
+	console.log(["\tNEARTO ", end, '\t', ipp, '\t', 
+	    lineNeighborKeys.length, ">", see.length, '\t',
+	    firstSeeHash.distanceTo(end), "=", firstSeeHash.distanceTo(line.end)].join(""));
+    
 	// it's either us or we're the same distance away so return these results
-	if (see[0].equals(line.end) 
-    	    || (see[0].distanceTo(end).equals(see[0].distanceTo(line.end)))) {
+	if (firstSee == line.end
+    	    || (firstSeeHash.distanceTo(end) == firstSeeHash.distanceTo(line.end))) {
     	
 		// this +end == this line then replace the neighbors cache with this result 
 		// and each in the result walk and insert self into their neighbors
 		if (line.end == end) {
-			console.log(["\t\tNEIGH for ", end, " was ", line.neighbors.keys().join(","), " ", see.length].join(""));
+			console.log(["\tNEIGH for ", end, " was ", lineNeighborKeys.join(","), " ", see.length].join(""));
 			var neigh = {};
 			see.slice(0,5).forEach(function(seeHash){
-			    neigh[seeHash.toString()] = 1;
+			    neigh[seeHash] = 1;
 			});
 			line.neighbors = neigh;
 			
-			console.log(["\t\tNEIGH for ", end, " is ", line.neighbors.keys().join(","), " ", see.length].join(""));
-			line.neighbors.forEach(function(hash) {
-				self.master[hash].neighbors[end]=1;
-				console.log(["\t\tSEED ", ipp, " into ", self.master[hash].ipp].join(""));
+			console.log(["\tNEIGH for ", end, " is ", lineNeighborKeys.join(","), " ", see.length].join(""));
+			lineNeighborKeys.forEach(function(hash) {
+                if (hash in self.master) {
+    				self.master[hash].neighbors[end]=1;
+    				console.log(["\t\tSEED ", ipp, " into ", self.master[hash].ipp].join(""));
+    			}
 			});
 		}
-		console.log(["\t\t\tSEE distance=", end.distanceTo(see[0]), " count=", see.length].join(""));
+		console.log(["\t\tSEE distance=", endHash.distanceTo(firstSeeHash), " count=", see.length].join(""));
 		return see;
 	}
 
 	// whomever is closer, if any, tail recurse endseeswitch them
-	return this.near_to(end, this.master[see[0].toString()].ipp);
+	return this.near_to(end, this.master[firstSee].ipp);
 }
 
 // see if we want to try this switch or not, and maybe prune the bucket
 Switch.prototype.bucket_want = function(ipp) {
 	var pos = new Hash(ipp).distanceTo(this.selfhash);
-	console.log(["\tBUCKET WANT[", pos, ipp, "]"].join(""));
+	console.log(["\tBUCKET WANT[", pos, " ", ipp, "]"].join(""));
 	if (pos < 0 || pos > this.NBUCKETS) {
 	    return undefined; // do not want
 	}
@@ -752,18 +752,28 @@ Hash.prototype = {
         return 0;
     },
     
+    nibbles: function() {
+        var result = [];
+        for (var i = 0; i < this.digest.length; i++) {
+            result[result.length] = this.digest[i] >> 4;
+            result[result.length] = this.digest[i] & 0xf;
+        }
+        return result;
+    },
+    
     /**
      * XOR distance between two sha1 hex hashes, 159 is furthest bit, 0 is closest bit, -1 is same hash
      */
     distanceTo: function(h) {
         if (isString(h)) { h = new Hash(h); }
         
-        var result = new Hash();
-        result.digest = new Buffer(this.digest.length);
+        var nibbles = this.nibbles();
+        var hNibbles = h.nibbles()
+        
         var sbtab = [-1,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3];
         var ret = 156;
-        for (var i = 0; i < this.digest.length; i++) {
-            var diff = this.digest[i] ^ h.digest[i];
+        for (var i = 0; i < nibbles.length; i++) {
+            var diff = nibbles[i] ^ hNibbles[i];
             if (diff) {
                 return ret + sbtab[diff]; 
             }
