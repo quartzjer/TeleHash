@@ -4,8 +4,13 @@ var crypto = require("crypto");
 var dgram = require("dgram");
 var dns = require("dns");
 
+/*
+ * Some generally useful functions.
+ */
+ 
 /**
- * Enumerate data keys of an object.
+ * Enumerate data fields of an object.
+ * Function objects are skipped.
  */
 function keys(o) {
     var result = [];
@@ -33,13 +38,6 @@ function rand(n) {
 }
 
 /**
- * Format a byte as a two digit hex string.
- */
-function byte2hex(d) {
-    return d < 16 ? "0" + d.toString(16) : d.toString(16);
-}
-
-/**
  * Test if an Object is an Array.
  */
 function isArray(o) {
@@ -59,6 +57,10 @@ function isString(o) {
 function isFunction(o) {
     return o.constructor == Function;
 }
+
+/*
+ * Telex
+ */
 
 /**
  * Create a new Telex.
@@ -101,41 +103,69 @@ Telex.prototype.getCommands = function() {
     return result;
 }
 
+/**
+ * Get all the signals in this telex.
+ * Returns an object of signal names mapped to command parameter,
+ * with leading '+' stripped off of signal name.
+ */
+Telex.prototype.getSignals = function() {
+    var result = {};
+    keys(this).filter(function(x){ return x[0] == '+' }).forEach(function(x){
+        result[x] = this[x];
+    });
+    return result;
+}
+
 exports.Telex = Telex;
 
+/**
+ * Switch
+ */
+
 function Switch(bindPort, bootHost, bootPort){
-    this.bindPort = bindPort == undefined ? 0 : bindPort;
-    this.bootHost = bootHost == undefined ? "telehash.org" : bootHost;
-    this.bootPort = bootPort == undefined ? 42424 : bootPort;
-    this.seedipp = bootHost + ":" + bootPort;
-    this.selfipp = null;
-    this.selfhash = null;
-    this.connected = false;
-    this.commandHandlers = [];
+    var self = this;
     
-    this.master = {};
-    this.tap_js = undefined;
-    this.taps = {};
+    // If bind port is not specified, pick a random open port.
+    self.bindPort = bindPort == undefined ? 0 : bindPort;
     
-    this.NBUCKETS=160; // 160 bits, since we're using SHA1
+    // Default boot host if not specified.
+    bootHost = bootHost == undefined ? "telehash.org" : bootHost;
     
-    var self  = this;
+    // Default boot port if not specified.
+    bootPort = bootPort == undefined ? 42424 : bootPort;
     
-    this.server = dgram.createSocket("udp4", function(msgstr, rinfo){
+    self.seedipp = bootHost + ":" + bootPort;
+    
+    // Initially, we don't know our own externally facing endpoint
+    self.selfipp = null;
+    self.selfhash = null;
+    self.connected = false;
+    
+    // Store all known lines, keyed by endpoint hash.
+    self.master = {};
+    
+    // Tap option & rules
+    self.tap_js = undefined;
+    self.taps = {};
+    
+    // 160 bits, since we're using SHA1
+    self.NBUCKETS=160;
+    
+    self.server = dgram.createSocket("udp4", function(msgstr, rinfo){
         self.recv(msgstr, rinfo);
     });
     
-    this.server.on("listening", function(){
+    self.server.on("listening", function(){
         // Lookup the bootstrap and attempt to connect
-        dns.resolve4(self.bootHost, function(err, addresses) {
+        dns.resolve4(bootHost, function(err, addresses) {
             if (err) {
                 throw err;
             }
             if (addresses.length == 0) {
-                throw "Cannot resolve bootstrap host '" + self.bootHost;
+                throw "Cannot resolve bootstrap host '" + bootHost;
             }
             var bootIP = addresses[0];
-            var bootEndpoint = bootIP + ":" + self.bootPort;
+            var bootEndpoint = bootIP + ":" + bootPort;
             
             // Start the bootstrap process
             self.startBootstrap(bootEndpoint);
@@ -160,19 +190,16 @@ function Switch(bindPort, bootHost, bootPort){
     
     // Register built-in command handlers
     
-    this.on(".see", function(remoteipp, telex, line) {
-        self._see(remoteipp, telex, line);
-    });
-    this.on(".tap", function(remoteipp, telex, line) {
-        self._tap(remoteipp, telex, line);
-    });
+    self.on(".see", self.onCommand_see);
+    self.on(".tap", self.onCommand_tap);
+    self.on("+end", self.onSignal_end);
 }
 
 sys.inherits(Switch, events.EventEmitter);
 exports.Switch = Switch;
 
-exports.createSwitch = function() {
-    return new Switch();
+exports.createSwitch = function(bindPort, bootHost, bootPort) {
+    return new Switch(bindPort, bootHost, bootPort);
 }
 
 /**
@@ -181,14 +208,16 @@ exports.createSwitch = function() {
  * and start the bootstrap process.
  */
 Switch.prototype.start = function() {
-    this.server.bind(this.bindPort);
+    var self = this;
+    self.server.bind(self.bindPort);
 }
 
 /**
  * Stop the switch.
  */
 Switch.prototype.stop = function() {
-    this.server.close();
+    var self = this;
+    self.server.close();
 }
 
 /**
@@ -196,11 +225,12 @@ Switch.prototype.stop = function() {
  * bootstrap switch.
  */
 Switch.prototype.startBootstrap = function(seed){
+    var self = this;
 	console.log(["SEEDING[", seed, "]"].join(""));
-	var line = this.getline(seed);
+	var line = self.getline(seed);
     var bootTelex = new Telex(seed);
     bootTelex["+end"] = line.end; // any end will do, might as well ask for their neighborhood
-    this.send(bootTelex);
+    self.send(bootTelex);
 }
 
 /**
@@ -208,18 +238,19 @@ Switch.prototype.startBootstrap = function(seed){
  * the bootstrap switch.
  */
 Switch.prototype.completeBootstrap = function(remoteipp, telex) {
-    this.connected = true;
-    this.selfipp = telex._to;
-    this.selfhash = new Hash(this.selfipp).toString();
+    var self = this;
+    self.connected = true;
+    self.selfipp = telex._to;
+    self.selfhash = new Hash(self.selfipp).toString();
     
-    console.log(["\tSELF[", telex._to, " = ", this.selfhash, "]"].join(""));
+    console.log(["\tSELF[", telex._to, " = ", self.selfhash, "]"].join(""));
     
-    var line = this.getline(this.selfipp);
+    var line = self.getline(self.selfipp);
     line.visible = 1; // flag ourselves as default visible
-	line.rules = this.tap_js; // if we're tap'ing anything
+	line.rules = self.tap_js; // if we're tap'ing anything
 	
     // WE are the seed, haha, remove our own line and skip
-    if (this.selfipp == remoteipp) {
+    if (self.selfipp == remoteipp) {
         console.log("\tWe're the seed!\n");
     }
 }
@@ -235,13 +266,13 @@ Switch.prototype.recv = function(msgstr, rinfo) {
     console.log([
         "RECV from ", remoteipp, ": ", JSON.stringify(telex)].join(""));
     
-    if (this.selfipp == null && "_to" in telex) {
-        this.completeBootstrap(remoteipp, telex);
+    if (self.selfipp == null && "_to" in telex) {
+        self.completeBootstrap(remoteipp, telex);
     }
     
     // if this is a switch we know, check a few things
-    var line = this.getline(remoteipp, telex._ring);
-    var lstat = this.checkline(line, telex, msgstr.length);
+    var line = self.getline(remoteipp, telex._ring);
+    var lstat = self.checkline(line, telex, msgstr.length);
     if (!lstat) {
         console.log(["\tLINE FAIL[", JSON.stringify(line), "]"].join(""));
         return;
@@ -256,55 +287,21 @@ Switch.prototype.recv = function(msgstr, rinfo) {
     if (line) {
         for (var key in telex.getCommands()) {
             console.log("dispatch command: " + key);
-            this.emit(key, remoteipp, telex, line);
+            self.emit(key, remoteipp, telex, line);
         }
+    }
+    
+    for (var key in telex.getSignals()) {
+        console.log("dispatch signal: " + key);
+        self.emit(key, remoteipp, telex, line);
     }
     
     if (telex.hasSignals()) {
         var hop = telex._hop == null ? 0 : parseInt(telex._hop)
-        if ("+end" in telex && hop == 0) {
-			var vis = line.visible ? remoteipp : this.selfipp; // start from a visible switch (should use cached result someday)
-			var hashes = this.near_to(telex["+end"], vis); // get closest hashes (of other switches)
-			
-			console.log("+end hashes: " + JSON.stringify(hashes));
-			
-			// convert back to IPPs
-			var ipps = {};
-			hashes.slice(0,5).forEach(function(hash){
-			    ipps[self.master[hash].ipp] = 1;
-			});
-			
-			console.log("+end ipps: " + JSON.stringify(ipps));
-			
-			// TODO: this is where dampening should happen to not advertise switches that might be too busy
-			if (!line.visibled) {
-    			ipps[this.selfipp] = line.visibled = 1; // mark ourselves visible at least once
-            }
-            
-            var ippKeys = keys(ipps);	
-			if (ippKeys.length) {
-				var telexOut = new Telex(remoteipp);
-				var seeipps = ippKeys.filter(function(ipp){ return ipp.length > 1 });
-				telexOut[".see"] = seeipps;
-				this.send(telexOut);
-			}
-        }
         
-		// this is our .tap, requests to +pop for NATs
-		if (telex["+end"] == this.selfhash) {
-		    var tapMatch = telex["+pop"].match(/th\:([\d\.]+)\:(\d+)/);
-		    if (tapMatch) {
-		        // should we verify that this came from a switch we actually have a tap on?
-			    var ip = tapMatch[1];
-			    var port = tapMatch[2];
-			    console.log(["POP to ", ip, ":", port].join(""));
-			    this.send(new Telex([ip, port].join(":")));
-			}
-		}
-		
 		// if not last-hop, check for any active taps (todo: optimize the matching, this is just brute force)
         if (hop < 4) {
-            keys(this.master)
+            keys(self.master)
             .filter(function(hash){ return self.master[hash].rules })
             .forEach(function(hash){
 			    var pass = 0;
@@ -360,17 +357,63 @@ Switch.prototype.recv = function(msgstr, rinfo) {
     
 }
 
+Switch.prototype.onSignal_end = function(remoteipp, telex, line) {
+    var self = this;
+    var hop = telex._hop == null ? 0 : parseInt(telex._hop);
+    var end = telex["+end"];
+    if (hop == 0) {
+		var vis = line.visible ? remoteipp : self.selfipp; // start from a visible switch (should use cached result someday)
+		var hashes = self.near_to(end, vis); // get closest hashes (of other switches)
+		
+		console.log("+end hashes: " + JSON.stringify(hashes));
+		
+		// convert back to IPPs
+		var ipps = {};
+		hashes.slice(0,5).forEach(function(hash){
+		    ipps[self.master[hash].ipp] = 1;
+		});
+		
+		console.log("+end ipps: " + JSON.stringify(ipps));
+		
+		// TODO: this is where dampening should happen to not advertise switches that might be too busy
+		if (!line.visibled) {
+			ipps[self.selfipp] = line.visibled = 1; // mark ourselves visible at least once
+        }
+        
+        var ippKeys = keys(ipps);	
+		if (ippKeys.length) {
+			var telexOut = new Telex(remoteipp);
+			var seeipps = ippKeys.filter(function(ipp){ return ipp.length > 1 });
+			telexOut[".see"] = seeipps;
+			self.send(telexOut);
+		}
+    }
+    
+	// this is our .tap, requests to +pop for NATs
+	if (end == self.selfhash) {
+	    var tapMatch = telex["+pop"].match(/th\:([\d\.]+)\:(\d+)/);
+	    if (tapMatch) {
+	        // should we verify that this came from a switch we actually have a tap on?
+		    var ip = tapMatch[1];
+		    var port = tapMatch[2];
+		    console.log(["POP to ", ip, ":", port].join(""));
+		    self.send(new Telex([ip, port].join(":")));
+		}
+	}
+}
+
 /**
  * Handle the .see TeleHash command.
  */
-Switch.prototype._see = function(remoteipp, telex, line) {
-    // loop through and establish lines to them (just being dumb for now and trying everyone)
+Switch.prototype.onCommand_see = function(remoteipp, telex, line) {
     var self = this;
+    
     var seeipps = telex[".see"];
     if (!seeipps || !seeipps.length) { return; }
     
     console.log(".see: " + JSON.stringify(seeipps));
     
+    // loop through and establish lines to them (just being dumb for now and trying everyone)
     seeipps.forEach(function(seeipp){
         if (self.selfipp == seeipp) {
             // skip ourselves :)
@@ -413,7 +456,7 @@ Switch.prototype._see = function(remoteipp, telex, line) {
 /**
  * Handle the .tap TeleHash command.
  */
-Switch.prototype._tap = function(remoteipp, telex, line) {
+Switch.prototype.onCommand_tap = function(remoteipp, telex, line) {
 	// handle a tap command, add/replace rules
 	if (telex[".tap"] && isArray(telex[".tap"])) {
 		line.rules = telex[".tap"];
@@ -424,7 +467,8 @@ Switch.prototype._tap = function(remoteipp, telex, line) {
  * Send a telex.
  */
 Switch.prototype.send = function(telex) {
-    var line = this.getline(telex._to);
+    var self = this;
+    var line = self.getline(telex._to);
     
     // check br and drop if too much
     if (line.bsent - line.brin > 10000) {
@@ -448,7 +492,7 @@ Switch.prototype.send = function(telex) {
     line.sentat = time();
     console.log(["\tSEND[", telex._to, "]\t", msg].join(""));
     
-    this.server.send(msg, 0, line.bsent, line.port, line.host);
+    self.server.send(msg, 0, line.bsent, line.port, line.host);
 }
 
 /**
@@ -456,12 +500,13 @@ Switch.prototype.send = function(telex) {
  * creating a new line if necessary.
  */
 Switch.prototype.getline = function(endpoint) {
+    var self = this;
     if (endpoint.length < 4) {
         return undefined; // sanity check
     }
     
 	var endpointHash = new Hash(endpoint).toString();
-	if (!this.master[endpointHash] || this.master[endpointHash].ipp != endpoint) {
+	if (!self.master[endpointHash] || self.master[endpointHash].ipp != endpoint) {
 		console.log(["\tNEWLINE[", endpoint, "]"].join(""));
         var endpieces = endpoint.split(":");
         var host = endpieces[0];
@@ -470,7 +515,7 @@ Switch.prototype.getline = function(endpoint) {
         var lineNeighbors = {};
         lineNeighbors[endpointHash] = 1;
         
-        this.master[endpointHash] = {
+        self.master[endpointHash] = {
 	        ipp: endpoint,
 	        end: endpointHash,
 	        host: host,
@@ -489,7 +534,7 @@ Switch.prototype.getline = function(endpoint) {
         };
     }
     
-    return this.master[endpointHash];
+    return self.master[endpointHash];
 }
 
 /**
@@ -497,6 +542,7 @@ Switch.prototype.getline = function(endpoint) {
  * True if open, false if ringing.
  */
 Switch.prototype.checkline = function(line, t, br) {
+    var self = this;
     if (!line) {
         return false;
     }
@@ -578,10 +624,10 @@ Switch.prototype.checkline = function(line, t, br) {
  * Update status of all lines, removing stale ones.
  */
 Switch.prototype.scanlines = function() {
-    var now = time();
-    var switches = keys(this.master);
-    var valid = 0;
     var self = this;
+    var now = time();
+    var switches = keys(self.master);
+    var valid = 0;
 	console.log(["SCAN\t" + switches.length].join(""));
 	
 	switches.forEach(function(hash){
@@ -618,7 +664,7 @@ Switch.prototype.scanlines = function() {
 		self.send(telexOut);
     });
     
-    if (!valid && this.selfipp != this.seedipp) {
+    if (!valid && self.selfipp != self.seedipp) {
         console.log("\tOFFLINE");
     }
 }
@@ -627,9 +673,9 @@ Switch.prototype.scanlines = function() {
  * generate a .see for an +end, using a switch as a hint
  */
 Switch.prototype.near_to = function(end, ipp){
-    var endHash = new Hash(end);
     var self = this;
-	var line = this.master[new Hash(ipp).toString()];
+    var endHash = new Hash(end);
+	var line = self.master[new Hash(ipp).toString()];
 	if (!line) {
 	    return undefined; // should always exist except in startup or offline, etc
 	}
@@ -680,14 +726,15 @@ Switch.prototype.near_to = function(end, ipp){
 	}
 
 	// whomever is closer, if any, tail recurse endseeswitch them
-	return this.near_to(end, this.master[firstSee].ipp);
+	return self.near_to(end, self.master[firstSee].ipp);
 }
 
 // see if we want to try this switch or not, and maybe prune the bucket
 Switch.prototype.bucket_want = function(ipp) {
-	var pos = new Hash(ipp).distanceTo(this.selfhash);
+    var self = this;
+	var pos = new Hash(ipp).distanceTo(self.selfhash);
 	console.log(["\tBUCKET WANT[", pos, " ", ipp, "]"].join(""));
-	if (pos < 0 || pos > this.NBUCKETS) {
+	if (pos < 0 || pos > self.NBUCKETS) {
 	    return undefined; // do not want
 	}
 	return 1; // for now we're always taking everyone, in future need to be more selective when the bucket is "full"!
@@ -705,6 +752,14 @@ function Hash(value) {
         this.digest = new Buffer(hashAlgorithm.digest("base64"), "base64");
     }
 }
+
+/**
+ * Format a byte as a two digit hex string.
+ */
+function byte2hex(d) {
+    return d < 16 ? "0" + d.toString(16) : d.toString(16);
+}
+
 
 exports.Hash = Hash
 
@@ -801,7 +856,4 @@ Hash.prototype = {
         return toString() == hstr;
     }
 }
-
-var _switch = new Switch();
-_switch.start()
 
