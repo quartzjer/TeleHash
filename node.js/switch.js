@@ -126,13 +126,13 @@ function Switch(bindPort, bootHost, bootPort){
     var self = this;
     
     // If bind port is not specified, pick a random open port.
-    self.bindPort = bindPort == undefined ? 0 : bindPort;
+    self.bindPort = bindPort == undefined ? 0 : parseInt(bindPort);
     
     // Default boot host if not specified.
     bootHost = bootHost == undefined ? "telehash.org" : bootHost;
     
     // Default boot port if not specified.
-    bootPort = bootPort == undefined ? 42424 : bootPort;
+    bootPort = bootPort == undefined ? 42424 : parseInt(bootPort);
     
     self.seedipp = bootHost + ":" + bootPort;
     
@@ -145,8 +145,7 @@ function Switch(bindPort, bootHost, bootPort){
     self.master = {};
     
     // Tap option & rules
-    self.tap_js = undefined;
-    self.taps = {};
+    self.taps = [];
     
     // 160 bits, since we're using SHA1
     self.NBUCKETS=160;
@@ -177,6 +176,7 @@ function Switch(bindPort, bootHost, bootPort){
                 }
                 else {
                     self.scanlines();
+                    self.taptap();
                     self.startBootstrap(bootEndpoint);
                 }
             }, 10000);
@@ -220,6 +220,31 @@ Switch.prototype.stop = function() {
     self.server.close();
 }
 
+Switch.prototype.addTap = function(tap) {
+    var self = this;
+    self.taps[self.taps.length] = tap;
+}
+
+Switch.prototype.taptap = function() {
+    var self = this;
+    for (var i = 0; i < self.taps.length; i++) {
+        var tap = self.taps[i];
+        var tapEnd = tap.is["+end"];
+        if (!tapEnd) {
+            continue;
+        }
+        var hashes = self.near_to(tapEnd, self.selfipp);
+        if (hashes.length == 0) { 
+            continue;
+        }
+    	console.log(["\ttaptap to ", self.master[hashes[0]].ipp, " end ", tapEnd, " tap ", tap].join(""));
+        
+	    var telexOut = new Telex(self.master[hashes[0]].ipp); // tap the closest ipp to our target end 
+	    telexOut[".tap"] = tap;
+	    self.send(telexOut);
+    }
+}
+
 /**
  * Start the bootstrap process by sending a telex to the 
  * bootstrap switch.
@@ -247,7 +272,7 @@ Switch.prototype.completeBootstrap = function(remoteipp, telex) {
     
     var line = self.getline(self.selfipp);
     line.visible = 1; // flag ourselves as default visible
-	line.rules = self.tap_js; // if we're tap'ing anything
+	line.rules = self.taps; // if we're tap'ing anything
 	
     // WE are the seed, haha, remove our own line and skip
     if (self.selfipp == remoteipp) {
@@ -286,13 +311,13 @@ Switch.prototype.recv = function(msgstr, rinfo) {
     // Process commands if the line is open
     if (line) {
         for (var key in telex.getCommands()) {
-            console.log("dispatch command: " + key);
+//            console.log("dispatch command: " + key);
             self.emit(key, remoteipp, telex, line);
         }
     }
     
     for (var key in telex.getSignals()) {
-        console.log("dispatch signal: " + key);
+//        console.log("dispatch signal: " + key);
         self.emit(key, remoteipp, telex, line);
     }
     
@@ -320,7 +345,7 @@ Switch.prototype.recv = function(msgstr, rinfo) {
 				    // pass only if all has exist
 				    var haspass = 1;
 				    rule.has.forEach(function(sig){
-				        console.log("has sig=" + sig + ", telex[sig]=" + telex[sig]);
+//				        console.log("has sig=" + sig + ", telex[sig]=" + telex[sig]);
 					    if (!telex[sig]) {
 					        haspass=0;
 					    }
@@ -365,7 +390,7 @@ Switch.prototype.onSignal_end = function(remoteipp, telex, line) {
 		var vis = line.visible ? remoteipp : self.selfipp; // start from a visible switch (should use cached result someday)
 		var hashes = self.near_to(end, vis); // get closest hashes (of other switches)
 		
-		console.log("+end hashes: " + JSON.stringify(hashes));
+//		console.log("+end hashes: " + JSON.stringify(hashes));
 		
 		// convert back to IPPs
 		var ipps = {};
@@ -373,7 +398,7 @@ Switch.prototype.onSignal_end = function(remoteipp, telex, line) {
 		    ipps[self.master[hash].ipp] = 1;
 		});
 		
-		console.log("+end ipps: " + JSON.stringify(ipps));
+//		console.log("+end ipps: " + JSON.stringify(ipps));
 		
 		// TODO: this is where dampening should happen to not advertise switches that might be too busy
 		if (!line.visibled) {
@@ -390,7 +415,7 @@ Switch.prototype.onSignal_end = function(remoteipp, telex, line) {
     }
     
 	// this is our .tap, requests to +pop for NATs
-	if (end == self.selfhash) {
+	if (end == self.selfhash && telex["+pop"]) {
 	    var tapMatch = telex["+pop"].match(/th\:([\d\.]+)\:(\d+)/);
 	    if (tapMatch) {
 	        // should we verify that this came from a switch we actually have a tap on?
@@ -411,7 +436,7 @@ Switch.prototype.onCommand_see = function(remoteipp, telex, line) {
     var seeipps = telex[".see"];
     if (!seeipps || !seeipps.length) { return; }
     
-    console.log(".see: " + JSON.stringify(seeipps));
+//    console.log(".see: " + JSON.stringify(seeipps));
     
     // loop through and establish lines to them (just being dumb for now and trying everyone)
     seeipps.forEach(function(seeipp){
@@ -490,7 +515,7 @@ Switch.prototype.send = function(telex) {
     
     line.bsent += msg.length;
     line.sentat = time();
-    console.log(["\tSEND[", telex._to, "]\t", msg].join(""));
+    console.log(["SEND[", telex._to, "]\t", msg].join(""));
     
     self.server.send(msg, 0, line.bsent, line.port, line.host);
 }
@@ -597,7 +622,7 @@ Switch.prototype.checkline = function(line, t, br) {
         // we can set up the line now if needed
         if (line.lineat == 0) {
             line.ringin = t._ring;
-            line.line = line.ringin * $line.ringout;
+            line.line = line.ringin * line.ringout;
             line.lineat = time();
         }
     }
@@ -685,7 +710,8 @@ Switch.prototype.near_to = function(end, ipp){
     .filter(function(x){ return self.master[x] && self.master[x].visible })
     .sort(function(a,b){ return endHash.distanceTo(a) - endHash.distanceTo(b) });
     
-    console.log("near_to: see[]=" + JSON.stringify(see));
+//    console.log("near_to: see[]=" + JSON.stringify(see));
+//    console.log("near_to: line=" + JSON.stringify(line));
     
     if (!see.length) {
         return undefined;
