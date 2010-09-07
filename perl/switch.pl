@@ -21,6 +21,7 @@ my $ip = "0.0.0.0";
 my $seed = $opt_s||"telehash.org:42424";
 my $tap_end = $opt_e;
 my $tap_js = $opt_t?$json->from_json($opt_t):undef;
+my 
 
 $iaddr = gethostbyname($ip);
 $proto = getprotobyname('udp');
@@ -49,10 +50,10 @@ while(1)
 	bootstrap($seedipp) if(!$connected && $selfipp ne $seedipp);
 
 	# wait for event or timeout loop
-	my $newmsg = scalar $sel->can_read(10);
-	if($newmsg == 0 || $lastloop+10 < int(time))
+	my $newmsg = scalar $sel->can_read(1);
+	if($newmsg == 0 || $lastloop+1 < int(time))
 	{
-		printf STDERR "LOOP\n";
+		printf STDERR "LOOP %d\t%d\t%d\t%d\n",$newmsg,$lastloop,$connected,$tap_end;
 		$lastloop = int(time);
 		if($connected)
 		{
@@ -257,12 +258,12 @@ sub near_to
 	my $end = shift;
 	my $ipp = shift;
 	my $line = $master{sha1_hex($ipp)};
-	return undef unless($line); # should always exist except in startup or offline, etc
+	return undef unless($line && $line->{ipp} eq $ipp); # should always exist except in startup or offline, etc
 
 	# of the existing and visible cached neighbors, sort by distance to this end
 	my @see = sort {hash_distance($end,$a)<=>hash_distance($end,$b)} grep {$master{$_} && $master{$_}->{visible}} keys %{$line->{neighbors}};
 
-	printf STDERR "\t\tNEARTO %s\t%s\t%d>%d\t%d=%d\n",$end,$ipp,scalar keys %{$line->{neighbors}},scalar @see,hash_distance($see[0],$end),hash_distance($see[0],$line->{end});
+	printf STDERR "\t\tNEARTO %s\t%s=%s\t%s>>>%s\t%d=%d\n",$end,$ipp,$line->{end},join(",",keys %{$line->{neighbors}}),join(",", @see),hash_distance($see[0],$end),hash_distance($see[0],$line->{end});
 
 	return undef unless(scalar @see);
 
@@ -393,18 +394,26 @@ sub offline
 
 sub taptap
 {
+	# todo, use last nearest as cached from/for near_to, or $selfipp if it's gone
 	my @hashes = near_to($tap_end,$selfipp); # get closest hashes (of other switches)
-	printf STDERR "\ttaptap to %s end %s tap %s\n",$master{$hashes[0]}->{ipp},$tap_end,$json->to_json($tap_js);
-	return unless(scalar @hashes > 1);
-	my $jo = tnew($master{$hashes[0]}->{ipp}); # tap the closest ipp to our target end 
+	printf STDERR "TAPTAP from %d to %s end %s tap %s\n",scalar @hashes,$master{$hashes[0]}->{ipp},$tap_end,$json->to_json($tap_js);
+	return unless(scalar @hashes > 1 && $hashes[0] ne $selfhash);
+	my $line = $master{$hashes[0]};
+	return if($line->{taplast} && $line->{taplast}+50 > time()); # only tap every 50sec
+	$line->{taplast} = time();
+	my $jo = tnew($line->{ipp}); # tap the closest ipp to our target end 
 	$jo->{".tap"} = $tap_js;
+	# todo someday, include test signals and check to make sure they're returned or flag ignore this switch
 	tsend($jo);
 }
 
 # scan all known switches to keep any nat's open
+my $lastscan;
 sub scanlines
 {
 	my $at = time();
+	return if($lastscan+30 > $at);
+	$lastscan=$at;
 	my @switches = keys %master;
 	my $valid=0;
 	printf STDERR "SCAN\t%d\n",scalar @switches;
