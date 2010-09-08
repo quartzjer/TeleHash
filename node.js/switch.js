@@ -234,7 +234,7 @@ Switch.prototype.taptap = function() {
             continue;
         }
         var hashes = self.near_to(tapEnd, self.selfipp);
-        if (hashes.length == 0) { 
+        if (!hashes || hashes.length == 0) { 
             continue;
         }
     	console.log(["\ttaptap to ", self.master[hashes[0]].ipp, " end ", tapEnd, " tap ", tap].join(""));
@@ -517,7 +517,7 @@ Switch.prototype.send = function(telex) {
     line.sentat = time();
     console.log(["SEND[", telex._to, "]\t", msg].join(""));
     
-    self.server.send(msg, 0, line.bsent, line.port, line.host);
+    self.server.send(msg, 0, msg.length, line.port, line.host);
 }
 
 /**
@@ -699,6 +699,11 @@ Switch.prototype.scanlines = function() {
  */
 Switch.prototype.near_to = function(end, ipp){
     var self = this;
+    
+    if (!end || !ipp) {
+        return undefined;
+    }
+    
     var endHash = new Hash(end);
 	var line = self.master[new Hash(ipp).toString()];
 	if (!line) {
