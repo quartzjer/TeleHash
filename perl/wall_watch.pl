@@ -4,6 +4,7 @@
 
 die("temp hack, plz run from the same dir as switch.pl") if(!-f "switch.pl");
 my $wall = $ARGV[0]||"42";
+my $doit = $ARGV[1];
 my $end = sha1_hex($wall);
 my $tap = "[{\"is\":{\"+end\":\"$end\"},\"has\":[\"+wall\"]}]";
 my %dedup;
@@ -21,6 +22,12 @@ while(<SWITCH>)
 	my $js = $json->from_json($_);
 	my $wall = $js->{"+wall"};
 	next if($js->{"+guid"} && $dedup{$js->{"+guid"}}++);
-	printf "%s\t%s\n",`date`,$wall;
+	if($doit)
+	{
+		open(R,"|$doit");
+		print R $wall."\n";
+		close(R);
+	}
+	printf "%s\t%s\n",`date`,$wall;		
 }
 close(SWITCH);

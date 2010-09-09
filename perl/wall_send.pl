@@ -2,6 +2,8 @@
 
 # send lines from STDIN to a wall
 my $wall = $ARGV[0]||"42";
+my $onemsg = $ARGV[1];
+my $seed = $ARGV[2]||"telehash.org:42424";
 
 use Digest::SHA1 qw(sha1_hex);
 use IO::Select;
@@ -13,8 +15,8 @@ my $json = JSON::DWIW->new;
 # defaults to listen on any ip and random port
 my $port = 0;
 my $ip = "0.0.0.0"; 
-my $seed = $ARGV[1]||"telehash.org:42424";
 my $end = sha1_hex($wall);
+my $oneguid = sprintf("%f",time()); # microsecond
 
 $iaddr = gethostbyname($ip);
 $proto = getprotobyname('udp');
@@ -32,6 +34,11 @@ my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
 # send a hello to the seed
 my $jo = telex($seedipp);
 $jo->{"+end"} = $end;
+if($onemsg)
+{
+	$jo->{"+wall"} = $onemsg;
+	$jo->{"+guid"} = $oneguid;
+}			
 tsend($jo);
 
 my %cache; # just a dumb cache of switch hashes
@@ -49,16 +56,19 @@ while(1)
 		{
 			my $target = $cache{$ckeys[0]};
 			printf "attached to %s at distance %d\n",$target,hash_distance($end,$ckeys[0]);
-			while(<STDIN>)
+			if(!$onemsg)
 			{
-				chop;
-				my $msg = sprintf("%s",$_); # ensure it's a string
-				my $jo = telex($target);
-				$jo->{"+end"} = $end;
-				$jo->{"+wall"} = $msg;
-				$jo->{"+guid"} = sprintf("%f",time()); # microsecond
-				$jo->{"_hop"} = 1; # hop of one implies no .see reply needed, we're too dumb to handle them
-				tsend($jo);
+				while(<STDIN>)
+				{
+					chop;
+					my $msg = sprintf("%s",$_); # ensure it's a string
+					my $jo = telex($target);
+					$jo->{"+end"} = $end;
+					$jo->{"+wall"} = $msg;
+					$jo->{"+guid"} = sprintf("%f",time()); # microsecond
+					$jo->{"_hop"} = 1; # hop of one implies no .see reply needed here, we're too dumb to handle them
+					tsend($jo);
+				}
 			}
 		}else{
 			printf "no network?\n";
@@ -100,6 +110,11 @@ while(1)
 
 			my $jo = telex($seeipp); # send direct (should open our outgoing to them)
 			$jo->{"+end"} = $end;
+			if($onemsg)
+			{
+				$jo->{"+wall"} = $onemsg;
+				$jo->{"+guid"} = $oneguid;
+			}			
 			tsend($jo);
 
 			# send nat request back to the switch who .see'd us in case the new one is behind a nat
@@ -114,6 +129,11 @@ while(1)
 			$resend{$remoteipp}++;
 			my $jo = telex($remoteipp);
 			$jo->{"+end"} = $end;
+			if($onemsg)
+			{
+				$jo->{"+wall"} = $onemsg;
+				$jo->{"+guid"} = $oneguid;
+			}			
 			tsend($jo);
 		}
 	}
