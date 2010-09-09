@@ -364,12 +364,12 @@ Switch.prototype.recv = function(msgstr, rinfo) {
 				    }
 				    else{
 					    var telexOut = new Telex(swipp);
-					    keys(telex).filter(function(key){ return key.matches(/^\+.+/); })
+					    keys(telex).filter(function(key){ return key.match(/^\+.+/); })
 				        .forEach(function(sig){
 						    telexOut[sig] = telex[sig];
 					    });
 					    telexOut["_hop"] = hop + 1;
-					    self.senf(telexOut);
+					    self.send(telexOut);
 				    }
 			    }
 			    else{
