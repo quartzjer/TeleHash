@@ -378,10 +378,14 @@ sub tsend
 	# update our bytes tracking and send current state
 	$j->{"_br"} = $line->{"brout"} = $line->{"br"};
 	my $js = $json->to_json($j);
+	printf STDERR "SEND[%s]\t%s\n",$j->{"_to"},$js;
+	if(!defined(send(SOCKET, $js, 0, $line->{"addr"})))
+	{
+		offline("tsend");
+		return;
+	}
 	$line->{"bsent"} += length($js);
 	$line->{"sentat"} = time();
-	printf STDERR "SEND[%s]\t%s\n",$j->{"_to"},$js;
-	offline("tsend") if(!defined(send(SOCKET, $js, 0, $line->{"addr"})));
 }
 
 sub offline
@@ -397,14 +401,19 @@ sub taptap
 	# todo, use last nearest as cached from/for near_to, or $selfipp if it's gone
 	my @hashes = near_to($tap_end,$selfipp); # get closest hashes (of other switches)
 	printf STDERR "TAPTAP from %d to %s end %s tap %s\n",scalar @hashes,$master{$hashes[0]}->{ipp},$tap_end,$json->to_json($tap_js);
-	return unless(scalar @hashes > 1 && $hashes[0] ne $selfhash);
-	my $line = $master{$hashes[0]};
-	return if($line->{taplast} && $line->{taplast}+50 > time()); # only tap every 50sec
-	$line->{taplast} = time();
-	my $jo = tnew($line->{ipp}); # tap the closest ipp to our target end 
-	$jo->{".tap"} = $tap_js;
-	# todo someday, include test signals and check to make sure they're returned or flag ignore this switch
-	tsend($jo);
+	return unless(scalar @hashes > 1);
+	# tap the top 3 closest
+	for my $hash (perlsucks(3,\@hashes))
+	{
+		next if($hash eq $selfhash);
+		my $line = $master{$hash};
+		return if($line->{taplast} && $line->{taplast}+50 > time()); # only tap every 50sec
+		$line->{taplast} = time();
+		my $jo = tnew($line->{ipp}); # tap the closest ipp to our target end 
+		$jo->{".tap"} = $tap_js;
+		# todo someday, include test signals and check to make sure they're returned or flag ignore this switch
+		tsend($jo);
+	}
 }
 
 # scan all known switches to keep any nat's open
@@ -455,6 +464,7 @@ sub bootstrap
 	my $seed = shift;
 	printf STDERR "SEEDING[%s]\n",$seed;
 	my $line = getline($seed);
+	$line->{"bsent"}=0; # always reset for seeding
 	my $jo = tnew($seed);
 	$jo->{"+end"} = $line->{end}; # any end will do, might as well ask for their neighborhood
 	tsend($jo);
@@ -474,8 +484,10 @@ sub bucket_want
 # returns xor distance between two sha1 hex hashes, 159 is furthest bit, 0 is closest bit, -1 is same hash
 sub hash_distance
 {
-	my @a = map {hex $_} split undef,shift;
-	my @b = map {hex $_} split undef,shift;
+	my $ha = shift;
+	my $hb = shift;
+	my @a = map {hex $_} split undef,$ha;
+	my @b = map {hex $_} split undef,$hb;
 	my @sbtab = (-1,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3); # ln(hex)/log(2)
 	my $ret = 156;
 	for my $i (0..39)

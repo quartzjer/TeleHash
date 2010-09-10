@@ -62,12 +62,17 @@ while(1)
 				{
 					chop;
 					my $msg = sprintf("%s",$_); # ensure it's a string
-					my $jo = telex($target);
-					$jo->{"+end"} = $end;
-					$jo->{"+wall"} = $msg;
-					$jo->{"+guid"} = sprintf("%f",time()); # microsecond
-					$jo->{"_hop"} = 1; # hop of one implies no .see reply needed here, we're too dumb to handle them
-					tsend($jo);
+					# send to the top 3 closest
+					for(my $i=0;$ckeys[$i] && $i < 3;$i++)
+					{
+						my $target = $cache{$ckeys[$i]};
+						my $jo = telex($target);
+						$jo->{"+end"} = $end;
+						$jo->{"+wall"} = $msg;
+						$jo->{"+guid"} = sprintf("%f",time()); # microsecond
+						$jo->{"_hop"} = 1; # hop of one implies no .see reply needed here, we're too dumb to handle them
+						tsend($jo);
+					}
 				}
 			}
 		}else{
