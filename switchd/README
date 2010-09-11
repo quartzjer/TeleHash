@@ -12,4 +12,11 @@ Goals:
 		- AMQP queue
 	- admin interface for monitoring/debugging
 
-Undecided if this is best done in C or Ruby, both have their merits/tradeoffs :)
+Undecided what language this is best done in, C? Ruby? Node.JS? All have their merits/tradeoffs :)
+
+Common app patterns:
+	send a signal (fire and forget)
+	listen for signal(s)
+	initiate a direct connection to another switch
+		send/receive custom json over that
+	request an open port to another switch (pop)
