@@ -268,7 +268,7 @@ sub near_to
 	return undef unless(scalar @see);
 
 	# it's either us or we're the same distance away so return these results
-	if($see[0] eq $line->{end} || hash_distance($see[0],$end) == hash_distance($see[0],$line->{end}))
+	if($see[0] eq $line->{end} || hash_distance($see[0],$end) == hash_distance($line->{end},$end))
 	{
 		# this +end == this line then replace the neighbors cache with this result and each in the result walk and insert self into their neighbors
 		if($line->{end} eq $end)
