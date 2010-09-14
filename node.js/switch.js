@@ -23,6 +23,8 @@ function keys(o) {
     return result;
 }
 
+exports.keys = keys;
+
 /**
  * See time(2).
  */
@@ -237,7 +239,7 @@ Switch.prototype.taptap = function() {
         if (!hashes || hashes.length == 0) { 
             continue;
         }
-    	console.log(["\ttaptap to ", self.master[hashes[0]].ipp, " end ", tapEnd, " tap ", tap].join(""));
+    	console.log(["\tTAPTAP to ", self.master[hashes[0]].ipp, " end ", tapEnd, " tap ", tap].join(""));
         
 	    var telexOut = new Telex(self.master[hashes[0]].ipp); // tap the closest ipp to our target end 
 	    telexOut[".tap"] = tap;
@@ -338,7 +340,7 @@ Switch.prototype.recv = function(msgstr, rinfo) {
 				    var ruleIsKeys = keys(rule.is);
 				    if (ruleIsKeys.length !=
 				        ruleIsKeys.filter(function(is) { return telex[is] == rule.is[is] }).length) {
-				        console.log("isses don't match");
+//				        console.log("isses don't match");
 				        return; // continue
 				    }
 				    
@@ -725,14 +727,15 @@ Switch.prototype.near_to = function(end, ipp){
     var firstSee = see[0];
     var firstSeeHash = new Hash(firstSee);
     var lineNeighborKeys = keys(line.neighbors);
+    var lineEndHash = new Hash(line.end);
     
 	console.log(["\tNEARTO ", end, '\t', ipp, '\t', 
 	    lineNeighborKeys.length, ">", see.length, '\t',
-	    firstSeeHash.distanceTo(end), "=", firstSeeHash.distanceTo(line.end)].join(""));
+	    firstSeeHash.distanceTo(end), "=", lineEndHash.distanceTo(end)].join(""));
     
 	// it's either us or we're the same distance away so return these results
 	if (firstSee == line.end
-    	    || (firstSeeHash.distanceTo(end) == firstSeeHash.distanceTo(line.end))) {
+    	    || (firstSeeHash.distanceTo(end) == lineEndHash.distanceTo(end))) {
     	
 		// this +end == this line then replace the neighbors cache with this result 
 		// and each in the result walk and insert self into their neighbors
@@ -794,97 +797,94 @@ function byte2hex(d) {
 
 exports.Hash = Hash
 
-Hash.prototype = {
-    
-    /**
-     * Get the hash as geometrically "far" as possible from this one.
-     * That would be the logical inverse, every bit flipped.
-     */
-    far: function() {
-        var result = new Hash();
-        result.digest = new Buffer(this.digest.length);
-        for (var i = 0; i < this.digest.length; i++) {
-            result.digest[i] = this.digest[i] ^= 0xff;
-        }
-        return result;
-    },
-    
-    /**
-     * Logical bitwise 'or' this hash with another.
-     */
-    or: function(h) {
-        if (isString(h)) { h = new Hash(h); }
-        
-        var result = new Hash();
-        result.digest = new Buffer(this.digest.length);
-        for (var i = 0; i < this.digest.length; i++) {
-            result.digest[i] = this.digest[i] ^ h.digest[i];
-        }
-        return result;
-    },
-    
-    /**
-     * Comparator for hash objects.
-     */
-    cmp: function(h) {
-        if (isString(h)) { h = new Hash(h); }
-        
-        for (var i = 0; i < this.digest.length; i++) {
-            var d = this.digest[i] - h.digest[i];
-            if (d != 0) {
-                return d;
-            }
-        }
-        return 0;
-    },
-    
-    nibbles: function() {
-        var result = [];
-        for (var i = 0; i < this.digest.length; i++) {
-            result[result.length] = this.digest[i] >> 4;
-            result[result.length] = this.digest[i] & 0xf;
-        }
-        return result;
-    },
-    
-    /**
-     * XOR distance between two sha1 hex hashes, 159 is furthest bit, 0 is closest bit, -1 is same hash
-     */
-    distanceTo: function(h) {
-        if (isString(h)) { h = new Hash(h); }
-        
-        var nibbles = this.nibbles();
-        var hNibbles = h.nibbles()
-        
-        var sbtab = [-1,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3];
-        var ret = 156;
-        for (var i = 0; i < nibbles.length; i++) {
-            var diff = nibbles[i] ^ hNibbles[i];
-            if (diff) {
-                return ret + sbtab[diff]; 
-            }
-            ret -= 4;
-        }
-        return -1; // samehash ?!
-    },
-    
-    /**
-     * Represent the hash as a hexadecimal string.
-     */
-    toString: function() {
-        var result = [];
-        for (var i = this.digest.length - 1; i >= 0; i--) {
-            result[i] = byte2hex(this.digest[i]);
-        }
-        return result.join("");
-    },
-    
-    /**
-     * Test if two hashes are equal.
-     */
-    equals: function(h) {
-        var hstr = isString(h) ? h : h.toString();
-        return toString() == hstr;
+/**
+ * Get the hash as geometrically "far" as possible from this one.
+ * That would be the logical inverse, every bit flipped.
+ */
+Hash.prototype.far = function() {
+    var result = new Hash();
+    result.digest = new Buffer(this.digest.length);
+    for (var i = 0; i < this.digest.length; i++) {
+        result.digest[i] = this.digest[i] ^= 0xff;
     }
+    return result;
+}
+    
+/**
+ * Logical bitwise 'or' this hash with another.
+ */
+Hash.prototype.or = function(h) {
+    if (isString(h)) { h = new Hash(h); }
+    
+    var result = new Hash();
+    result.digest = new Buffer(this.digest.length);
+    for (var i = 0; i < this.digest.length; i++) {
+        result.digest[i] = this.digest[i] ^ h.digest[i];
+    }
+    return result;
+}
+
+/**
+ * Comparator for hash objects.
+ */
+Hash.prototype.cmp = function(h) {
+    if (isString(h)) { h = new Hash(h); }
+    
+    for (var i = 0; i < this.digest.length; i++) {
+        var d = this.digest[i] - h.digest[i];
+        if (d != 0) {
+            return d;
+        }
+    }
+    return 0;
+}
+
+Hash.prototype.nibbles = function() {
+    var result = [];
+    for (var i = 0; i < this.digest.length; i++) {
+        result[result.length] = this.digest[i] >> 4;
+        result[result.length] = this.digest[i] & 0xf;
+    }
+    return result;
+}
+
+/**
+ * XOR distance between two sha1 hex hashes, 159 is furthest bit, 0 is closest bit, -1 is same hash
+ */
+Hash.prototype.distanceTo = function(h) {
+    if (isString(h)) { h = new Hash(h); }
+    
+    var nibbles = this.nibbles();
+    var hNibbles = h.nibbles()
+    
+    var sbtab = [-1,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3];
+    var ret = 156;
+    for (var i = 0; i < nibbles.length; i++) {
+        var diff = nibbles[i] ^ hNibbles[i];
+        if (diff) {
+            return ret + sbtab[diff]; 
+        }
+        ret -= 4;
+    }
+    return -1; // samehash ?!
+}
+
+/**
+ * Represent the hash as a hexadecimal string.
+ */
+Hash.prototype.toString = function() {
+    var result = [];
+    for (var i = this.digest.length - 1; i >= 0; i--) {
+        result[i] = byte2hex(this.digest[i]);
+    }
+    return result.join("");
+}
+
+/**
+ * Test if two hashes are equal.
+ */
+Hash.prototype.equals = function(h) {
+    var hstr = isString(h) ? h : h.toString();
+    return toString() == hstr;
 }
 

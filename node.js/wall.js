@@ -6,9 +6,11 @@ _switch.on("+wall", function(remoteipp, telex, line) {
     console.log(new Date() + " <" + remoteipp + "> " + telex["+wall"]);
 });
 
+var endHash = new sw.Hash("42");
+
 var tap = [];
 tap.is = {};
-tap.is["+end"] = new sw.Hash("42").toString()
+tap.is["+end"] = endHash.toString();
 tap.has = ["+wall"];
 
 _switch.addTap(tap);
@@ -17,15 +19,21 @@ var stdin = process.openStdin();
 stdin.setEncoding("UTF-8");
 
 stdin.on('data', function(chunk){
-    sys.print("local: " + chunk);
-    for (var hash in _switch.master) {
-        var telexOut = new sw.Telex(_switch.master[hash].ipp);
+    console.log("local: " + chunk);
+    
+    var ckeys = sw.keys(_switch.master)
+    .filter(function(x) { return _switch.master[x].ipp != _switch.selfipp; })
+    .sort(function(a,b) { return endHash.distanceTo(a) - endHash.distanceTo(b) })
+    .slice(0,3).forEach(function(ckey){
+        var target = _switch.master[ckey].ipp;
+	    console.log("attached to " + target + " at distance " + endHash.distanceTo(target));
+        var telexOut = new sw.Telex(target);
         telexOut["+wall"] = chunk;
         telexOut["+guid"] = new Date().getTime();
         telexOut["_hop"] = 1;
-        telexOut["+end"] = new sw.Hash(chunk).toString();
+        telexOut["+end"] = endHash.toString();
         _switch.send(telexOut);
-    }
+	});
 });
 
 process.on('SIGINT', function() {
