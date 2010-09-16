@@ -29,14 +29,14 @@ exports.keys = keys;
  * See time(2).
  */
 function time() {
-    return new Date().getTime();
+    return new Date().getTime() / 1000;
 }
 
 /**
  * Return a random integer 1..n inclusive.
  */
 function rand(n) {
-  return ( Math.floor ( Math.random ( time() ) * n + 1 ) );
+  return ( Math.floor ( Math.random ( new Date().getTime() ) * n + 1 ) );
 }
 
 /**
@@ -166,23 +166,10 @@ function Switch(bindPort, bootHost, bootPort){
                 throw "Cannot resolve bootstrap host '" + bootHost;
             }
             var bootIP = addresses[0];
-            var bootEndpoint = bootIP + ":" + bootPort;
+            self.bootEndpoint = bootIP + ":" + bootPort;
             
             // Start the bootstrap process
-            self.startBootstrap(bootEndpoint);
-            
-            // Retry the bootstrap every 10s until it completes
-            var bootstrapRetryID = setInterval(function() {
-                if (self.connected) {
-                    clearInterval(bootstrapRetryID);
-                }
-                else {
-                    self.scanlines();
-                    self.taptap();
-                    self.startBootstrap(bootEndpoint);
-                }
-            }, 10000);
-            
+            self.startBootstrap();
         });
         
         var address = self.server.address();
@@ -251,13 +238,27 @@ Switch.prototype.taptap = function() {
  * Start the bootstrap process by sending a telex to the 
  * bootstrap switch.
  */
-Switch.prototype.startBootstrap = function(seed){
+Switch.prototype.startBootstrap = function(){
     var self = this;
+    var seed = self.bootEndpoint;
 	console.log(["SEEDING[", seed, "]"].join(""));
 	var line = self.getline(seed);
     var bootTelex = new Telex(seed);
     bootTelex["+end"] = line.end; // any end will do, might as well ask for their neighborhood
     self.send(bootTelex);
+    
+    // Retry the bootstrap every 10s until it completes
+    var bootstrapRetryID = setInterval(function() {
+        if (self.connected) {
+            clearInterval(bootstrapRetryID);
+        }
+        else {
+            self.scanlines();
+            self.taptap();
+            self.startBootstrap(seed);
+        }
+    }, 10000);
+    
 }
 
 /**
@@ -280,6 +281,18 @@ Switch.prototype.completeBootstrap = function(remoteipp, telex) {
     if (self.selfipp == remoteipp) {
         console.log("\tWe're the seed!\n");
     }
+    
+    // Start scan/taptap interval scanning until disconnected
+    var scanID = setInterval(function() {
+        if (!self.connected) {
+            clearInterval(scanID);
+        }
+        else {
+            self.scanlines();
+            self.taptap();
+        }
+    }, 10000);
+    
 }
 
 /**
@@ -528,7 +541,7 @@ Switch.prototype.send = function(telex) {
  */
 Switch.prototype.getline = function(endpoint) {
     var self = this;
-    if (endpoint.length < 4) {
+    if (!endpoint || endpoint.length < 4) {
         return undefined; // sanity check
     }
     
@@ -677,23 +690,41 @@ Switch.prototype.scanlines = function() {
 		
 		valid++;
 		
-		// +end ourselves to see if they know anyone closer as a ping
-		var telexOut = new Telex(line.ipp);
-		telexOut["+end"] = self.selfhash;
+		if (self.connected) {
 		
-		// also .see ourselves if we haven't yet, default for now is to participate in the DHT
-		if (!line.visibled++) {
-    		telexOut[".see"] = [self.selfipp];
-    	}
-    	
-		// also .tap our hash for +pop requests for NATs
-		telexOut[".tap"] = [ JSON.parse("{'is': {'+end': '" + self.selfhash + "'}, 'has': ['+pop']}") ];
-		self.send(telexOut);
+		    // +end ourselves to see if they know anyone closer as a ping
+		    var telexOut = new Telex(line.ipp);
+		    telexOut["+end"] = self.selfhash;
+		
+		    // also .see ourselves if we haven't yet, default for now is to participate in the DHT
+		    if (!line.visibled++) {
+        		telexOut[".see"] = [self.selfipp];
+        	}
+        	
+		    // also .tap our hash for +pop requests for NATs
+		    var tapOut = {is: {}};
+		    tapOut.is['+end'] = self.selfhash;
+		    tapOut.has = ['+pop'];
+		    telexOut[".tap"] = tapOut;
+		    self.send(telexOut);
+		    
+		}
     });
     
     if (!valid && self.selfipp != self.seedipp) {
-        console.log("\tOFFLINE");
+        self.offline();
+        self.startBootstrap();
     }
+}
+
+Switch.prototype.offline = function() {
+    var self = this;
+    console.log("\tOFFLINE");
+    self.selfipp = null;
+    self.selfhash = null;
+    self.connected = false;
+    self.master = {};
+    self.startBootstrap();
 }
 
 /**

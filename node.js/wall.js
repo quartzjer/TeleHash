@@ -26,6 +26,10 @@ stdin.on('data', function(chunk){
     .sort(function(a,b) { return endHash.distanceTo(a) - endHash.distanceTo(b) })
     .slice(0,3).forEach(function(ckey){
         var target = _switch.master[ckey].ipp;
+        if (!target) {
+            return;
+        }
+        
 	    console.log("attached to " + target + " at distance " + endHash.distanceTo(target));
         var telexOut = new sw.Telex(target);
         telexOut["+wall"] = chunk;
