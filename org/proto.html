@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>TeleHash Spec</title>
+
+<meta content="en" http-equiv="content-language">
+<meta content="" name="description">
+<!--[if IE]><script src="http://html5shiv.googlecode.com/svn/trunk/html5.js" type="text/javascript"></script><![endif]-->
+<style>article, aside, dialog, figure, footer, header, hgroup, menu, nav, section { display: block; }</style>
+<link href="screen.css" media="screen" rel="stylesheet" type="text/css">
+<link href="site.css" media="screen" rel="stylesheet" type="text/css">
+</head>
+
+<body class="about index" id="about_index">
+<div class="container">
+<div class="span-21">
+<header>
+<nav>
+<ul>
+<li><a href="about.html">About</a></li>
+<li><a href="http://github.com/quartzjer/TeleHash">Code</a></li>
+<li><a href="http://wiki.github.com/quartzjer/TeleHash/">Wiki</a></li>
+<li><a href="proto.html">Protocol</a></li>
+<li><a href="http://search.twitter.com/search?q=telehash">News</a></li>
+</ul>
+</nav>
+<h1>
+	TeleHa<span id="s">&#x26A1;</span>h
+</h1>
+<h2>JSON<em>+</em>UDP<em>+</em>DHT<em>=</em>Freedom</h2>
+</header>
+</div>
+</div>
+
+<div class="alt" id="intro">
+<p>
+&mdash; DRAFT PROTOCOL SPEC &mdash;</p>
+</div>
+<br><br>
+<div class="container">
+
+
+	<p>WARNING: pardon the formatting and terseness, draft state!
+	<p>
+	<p>Lexicon:
+	<ul><blockquote>
+	<li>		<big>Switch</big> - every TeleHash endpoint is called a Switch, one per app, it's GUID is formed from the SHA1 of it's IP:PORT
+	<li>		<big>Telex</big> - each UDP packet is a JSON object, contains any valid JSON and one or more Commands, Signals, or Headers
+	<li>		<big>+Signal</big> - A public broadcast "key":"value" pair, routed/relayed between Switches
+	<li>		<big>.Command</big> - An instruction sent from one Switch to another
+	<li>		<big>_Header</big> - A name/value pair with metadata specific to the Telex or Switches
+	<li>		<big>End</big> - The primary Signal with a hash value representing where the Telex is directed to in the network 
+	<li>		<big>Line</big> - Active relationship between two Switches
+	<li>		<big>Dial</big> - To look for a Switch to send Signals/Commands to, a multi-step process approaching an End
+	<li>		<big>Tap</big> - To be registered on another Switch that will forward matching Signals when they arrive
+	</blockquote></ul>
+
+	<p>
+	<pre>
+		// basic Telex with example command
+		{
+			"_ring":43723,
+			".see":["5.6.7.8:23456","11.22.33.44:11223"],
+		}
+
+		// Telex with example signals
+		{
+			"+end":"a9993e364706816aba3e25717850c26c9cd0d89d",
+			"+foo":"0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"
+		}
+
+		// Telex of a normal JSON object sent between two Switches
+		{
+			"_to":"1.2.3.4:5678",
+			"_line":63546230,
+			"profile_image_url": "http://a3.twimg.com/profile_images/852841481/Untitled_3_normal.jpg",
+			"created_at": "Sat, 08 May 2010 21:46:23 +0000",
+			"from_user": "pelchiie",
+			"metadata": {
+				"result_type": "recent"
+			},
+			"to_user_id": null,
+			"text": "twitter is dead today.",
+			"id": 13630378882,
+			"from_user_id": 12621761,
+			"geo": null,
+			"iso_language_code": "en",
+			"source": "&lt;a href=&quot;http://twitter.com/&quot;&gt;web&lt;/a&gt;"
+		}
+
+	</pre>
+
+
+	<p>		Every node is called a Switch, which is any process listening on an IP and UDP port both sending and receiving packets from that port.  A Switch is positioned within the DHT by the SHA1 of their IP:PORT, and unique to the app it's working for (not shared between apps).
+
+	<p>		A Telex is any individual UDP packet sent to or by any Switch.  It's raw contents are a single plain UTF-8 JSON object (max 1400 bytes) that can contain anything, but keys starting with a few special characters are processed by the Switch: ".*" is a Command, "_*" is a Header, and "+*" is a Signal.
+
+	<p>	Basic makeup of a Telex:
+
+	<ul><blockquote>
+			_* - Headers
+	<blockquote>
+	<li>			<big>_to</big> - A string value of the public IP:PORT that the Telex was sent to (helps recipient with NATs)
+	<li>			<big>_ring</big> - Used to open a Line with a Switch, integer value from 1 to 32768
+	<li>			<big>_line</big> - The private unique id of the line from one Switch to another, the product of the _ring from both
+	<li>			<big>_br</big> - Bytes Received, always tell the recipient the total bytes that have been received from them so far
+	<li>			<big>_hop</big> - Integer value from 0 to 4, incremented any time the Telex is forwarded
+	</blockquote>
+			.* - Commands
+	<blockquote>
+	<li>			<big>.see</big> - An array of other Switches (IP:PORT) that the recipient may find useful
+	<li>			<big>.tap</big> - An array of filters that describe which telexes to match and forward back to the requesting Switch
+	</blockquote>
+			+* - Example Signals (most signals are app/content specific)
+	<blockquote>
+	<li>			<big>+end</big> - [primary] The SHA1 hash value that the Telex is directed towards
+	<li>			<big>+pop</big> - [primary] Ping-Open-Port, a URI for UDP based protocols, the primary one being "th:IP:PORT" to signal a request to open a line to that Switch (and poke holes in NATs)
+	<li>			<big>+self</big> - [general] The IP:PORT of the sender, to announce own identity
+	<li>			<big>+sig</big> - [general] The RSA signature of the other signals
+	<li>			<big>+href</big> - [browser "click" event] The SHA1 of the HREF clicked on (End is SHA1 of current page)
+	<li>			<big>+from</big> - [browser "click" event] The SHA1 of the previous page (End is the SHA1 of the new page)
+	<li>			<big>+etag</big> - [browser "load" event] The value of the etag header (End is current page)
+	<li>			<big>+cht</big> - [browser "load" event] The Content-Hash-Tree calculation of the current page
+	</blockquote>
+	</blockquote></ul>
+
+	<h2>	Common Patterns</h2>
+
+	<p>		<big>+end .see</big> - Dialing (routing): Whenever a Telex comes in with an End, check to see if any closer Switches are known and if so .see back to that Switch a list of closer IP:PORTs.  If none are closer or if the nearer Switches are dampened (congestion control), .see back only ourselves.
+
+	<p>		<big>.tap</big> - To externally observe Signals coming in around an interesting End, first try dialing the End in order to discover the closest Switches we can find.  Then send a .tap of which Signals to observe to those Switches close to the End along with some test Signals, who if willing will respond with process the .tap and immediately send the matching Signals back to confirm that it's active.  Any Switch can process any .tap request, and should check every incoming Signal to see if it matches any .tap with an active Line.
+	<pre>
+			// Telex with example .tap request
+			{
+				"_line":43723459,
+				".tap":
+				[
+					{"is":{ "+end":"a9993e364706816aba3e25717850c26c9cd0d89d" }, "has":[ "+foo" ] },
+					{"is":{ "+foo":"0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33" } },
+					{"has":[ "+foo", "+bar" ] },
+				]
+			}
+	</pre>
+
+
+	<p>		<big>+end _to</big> - Startup: A Switch must have a cache or seed list of other Switches to bootstrap from.  It would first reach out to a few of them sending a random End that they would respond with a _to informing it of its visible public IP:PORT.  Then, it would Dial the SHA1 hash of that _to to start filling up its kbuckets (see Kademlia).  Use the _to for validation of future packets (EXPAND: how to handle different scenarios here).
+
+	<p>		<big>_ring _line</big> - Lines: Any Switches that want to have an ongoing relationship (proximity, listening, keeping a NAT open, etc) or for validating the other Switch's IP:PORT should establish a Line with them.  Both Switches at any point can send a _ring with a random number it assigns and stores for the other Switch. When either one receives a _ring it then starts sending a _line that is a product of the _ring it assigned and the one it received.  Any incoming _line can then be verified as being divisible by the assigned _ring to validate the other Switch.
+
+	<p>		<big>+pop</big> - NATs: Whenever any Switch .see's new IP:PORT's to us, remember that it was them so that when trying to initiate the first Telex to that NEWIP:PORT we also send a "+end":sha1("NEWIP:PORT") and "+pop":"th:OURIP:OURPORT" to the originating Switch.  If the Switch we're trying to connect to is behind a NAT it should have .tap'd itself to receive the +pop requests and would then receive it and send an opening Telex, opening a path through any NATs.
+
+	<h2>Notes</h2>
+
+	<!-- AKA command/header? Allow more hash ids of a Switch derived from internal 10. 192. etc IPs? become multiple Switches? -->
+	<!-- ipv6 is just another switch -->
+
+	<p>For any incoming Telex, once any _ring/_line is sorted out, a Switch then processes any commands (each is stateless and processed on their own).  If there is an End signal, it should cause a .see response of some sort (unless there's a _hop > 0).  Next, if the _hop is less than 4, any and all contained signals should be checked against any active .tap filters, and all matching .tap Switches should get a copy of the telex with the _hop incremented.
+
+	<p>Signals should primarily only ever contain hashes or generic (like xpath) content references and never actual content, as the sending and recipient parties must both be independently aware of the context or content in question so as to avoid any injection or attract spamming from 3rd parties.
+
+	<p>The low level protocol is designed to be the absolute minimal to build connections and exchange notifications, all needs for peer trust, proxying, anonymizing, etc happen at a higher layer and outside of the basic protocol. The required headers/commands are a bare minimum at every step even if it creates some implementation headaches, every additional datum sent is an vector for introducing future trust or spoofing problems.
+
+	<p>Dampening is used to reduce congestion around any single Switch or group of them nearby when there is a lot of signals or listeners coming in around one or more Ends.  There are two strategies, one when all the traffic is to a single End, and another when it's just to one part of the ring (different but nearby Ends).  A Switch should not .see back to anyone the IP:PORT of any other Switch when it's _br is sufficiently out of sync with it (need to test to find an appropriate window here), this dampens general parts of the DHT when traffic might flow beyond any Switches desire or ability to respond to.  Secondarily, any Switch should return itself as the endpoint for any End that is the most popular one it is seeing (also need to test to find best time window to check popularity).
+
+
+	<h2>Switch Implementations</h2>
+
+	<p>There is a few different common levels of support a Switch can implement, from the most ultra-simple to a full Switch, which is still intended to be as lightweight as possible:
+		<ul><blockquote>
+			<li>Announcer - Only dials and sends signals, doesn't process any commands other than .see and doesn't send any _ring, possibly short-lived, can send signals.
+			<li>Listener - Stays running, also supports returning basic _ring/_line/_br so that it can send .tap commands in order to receive new signals, but processes no other commands.
+			<li>Full - Supports all commands and relaying to any active .tap.
+		</blockquote></ul>
+
+	<p>Full Switches need to implement seeding, keeping lines open, a basic bucketing system that tracks active Switches at different distances from themselves.  A Full Switch needs to do basic duplicate detection, it should only process a unique set of signals at most once every 10 seconds (hash the sorted string sigs/values).
+
+	<p>The _br header is important to any long-lived Switch to prevent sudden flooding and to control bandwidth rates.  Every incoming Telex's raw byte size should be totaled for it's sender, and any outgoing Telex sent back to them should contain a _br header with the current total received from them.  The raw bytes sent out to any other Switch should also be tracked, so that the two can be compared.  If the bytes sent out grows to more than 10k over the last _br reported back from the recipient, no more should be sent until an updated _br is received.  This also works in reverse, if more than 10k is received beyond the last _br sent out, incoming Telexes can be dropped.  An artificially higher _br can always be sent to allow a bigger than 10k window.
+
+	<p>The ideology of headers/cmds/sigs is as such: A _header can be of any type and it's purpose is to convey information about that single instance of a Telex and the state of a connection between Switches, meant to only carry extra information about the exchange, metadata, it is never meant to be used by any application or persisted/relayed.  A .command also can have any type of value and it's intended to cause an action on the recipient involving it's value and optionally including any signals in the same telex, also never to be relayed/persisted, private between Switches and open for applications to use custom commands to talk directly to each other.  A signal is always a string value usually relating to or from an application and is always considered public, possibly persisted and relayed to other Switches, and should only be used to convey information that may be of interest to an unknown or more than one party, discovery/announcements.
+
+	<p>Only one .tap can be active between any two Switches at any time, and while it can have some complex filters internal to it, it is one unit.  This simplifies what a receiving Switch has to do to manage a bunch of active .taps.  If an app really needs more than one .tap active on some Switch at the same time, it can create another listener-only Switch to do that.
+
+
+</div>
+
+
+</body></html>
