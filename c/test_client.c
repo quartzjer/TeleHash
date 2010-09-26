@@ -6,6 +6,8 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
+int js0n(unsigned char *js, unsigned int len, unsigned short *out);
+
 main(int argc, char *argv[])
 { 
 	struct sockaddr_in sad;
@@ -15,7 +17,8 @@ main(int argc, char *argv[])
 	int port = 42424;
 	char *hello = "{'+end':'0eb2ad19a7b508cc09b2d52b4a506845db39fae2'}";
 	char buff[2048];
-	int n;
+	int n,i;
+	unsigned short js[1024];
   
 	sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) {
@@ -38,6 +41,16 @@ main(int argc, char *argv[])
 	n=read(sock, buff, sizeof(buff));
   
 	printf("Response: %s\n",buff);
+	
+	if(js0n(buff,n,js))
+	{
+		printf("parse failed :(\n");
+	}else{
+		for(i=0;js[i];i+=4)
+		{
+			printf("%.*s\t%.*s\n",js[i+1],buff+js[i],js[i+3],buff+js[i+2]);
+		}
+	}
 	close(sock);
 }
 
