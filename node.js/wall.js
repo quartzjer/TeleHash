@@ -8,7 +8,7 @@ _switch.on("+wall", function(remoteipp, telex, line) {
 
 var endHash = new sw.Hash("42");
 
-var tap = [];
+var tap = {};
 tap.is = {};
 tap.is["+end"] = endHash.toString();
 tap.has = ["+wall"];
@@ -30,14 +30,14 @@ stdin.on('data', function(chunk){
             return;
         }
         
-	    console.log("attached to " + target + " at distance " + endHash.distanceTo(target));
+        console.log("attached to " + target + " at distance " + endHash.distanceTo(target));
         var telexOut = new sw.Telex(target);
         telexOut["+wall"] = chunk;
         telexOut["+guid"] = new Date().getTime();
         telexOut["_hop"] = 1;
         telexOut["+end"] = endHash.toString();
         _switch.send(telexOut);
-	});
+    });
 });
 
 process.on('SIGINT', function() {

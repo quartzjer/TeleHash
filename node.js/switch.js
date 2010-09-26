@@ -36,7 +36,7 @@ function time() {
  * Return a random integer 1..n inclusive.
  */
 function rand(n) {
-  return ( Math.floor ( Math.random ( new Date().getTime() ) * n + 1 ) );
+  return ( Math.floor ( Math.random ( time() ) * n + 1 ) );
 }
 
 /**
@@ -216,22 +216,32 @@ Switch.prototype.addTap = function(tap) {
 
 Switch.prototype.taptap = function() {
     var self = this;
-    for (var i = 0; i < self.taps.length; i++) {
-        var tap = self.taps[i];
+    self.taps.forEach(function(tap){
         var tapEnd = tap.is["+end"];
         if (!tapEnd) {
-            continue;
+            return; // continue
         }
-        var hashes = self.near_to(tapEnd, self.selfipp);
-        if (!hashes || hashes.length == 0) { 
-            continue;
-        }
-    	console.log(["\tTAPTAP to ", self.master[hashes[0]].ipp, " end ", tapEnd, " tap ", tap].join(""));
         
-	    var telexOut = new Telex(self.master[hashes[0]].ipp); // tap the closest ipp to our target end 
-	    telexOut[".tap"] = tap;
-	    self.send(telexOut);
-    }
+        var hashes = self.near_to(tapEnd, self.selfipp)
+        .filter(function(hash){ return hash != self.selfhash; }).slice(0,3);
+        
+        if (!hashes || hashes.length == 0) { 
+            return; // continue
+        }
+        
+        hashes.forEach(function(hash){
+            var line = self.master[hash];
+            
+            if (line.taplast && line.taplast + 50 > time()) {
+                return; // only tap every 50sec
+            }
+            line.taplast = time();
+            var telexOut = new Telex(line.ipp); // tap the closest ipp to our target end 
+            telexOut[".tap"] = [tap];
+            console.log(["\tTAPTAP to ", line.ipp, " end ", tapEnd, " tap ", JSON.stringify(tap)].join(""));
+            self.send(telexOut);
+        });
+    });
 }
 
 /**
@@ -241,8 +251,8 @@ Switch.prototype.taptap = function() {
 Switch.prototype.startBootstrap = function(){
     var self = this;
     var seed = self.bootEndpoint;
-	console.log(["SEEDING[", seed, "]"].join(""));
-	var line = self.getline(seed);
+    console.log(["SEEDING[", seed, "]"].join(""));
+    var line = self.getline(seed);
     var bootTelex = new Telex(seed);
     bootTelex["+end"] = line.end; // any end will do, might as well ask for their neighborhood
     self.send(bootTelex);
@@ -275,8 +285,8 @@ Switch.prototype.completeBootstrap = function(remoteipp, telex) {
     
     var line = self.getline(self.selfipp);
     line.visible = 1; // flag ourselves as default visible
-	line.rules = self.taps; // if we're tap'ing anything
-	
+    line.rules = self.taps; // if we're tap'ing anything
+    
     // WE are the seed, haha, remove our own line and skip
     if (self.selfipp == remoteipp) {
         console.log("\tWe're the seed!\n");
@@ -339,58 +349,53 @@ Switch.prototype.recv = function(msgstr, rinfo) {
     if (telex.hasSignals()) {
         var hop = telex._hop == null ? 0 : parseInt(telex._hop)
         
-		// if not last-hop, check for any active taps (todo: optimize the matching, this is just brute force)
+        // if not last-hop, check for any active taps (todo: optimize the matching, this is just brute force)
         if (hop < 4) {
             keys(self.master)
-            .filter(function(hash){ return self.master[hash].rules })
+            .filter(function(hash){ return self.master[hash].rules != null && self.master[hash].rules.length })
             .forEach(function(hash){
-			    var pass = 0;
-			    var swipp = self.master[hash].ipp;
-			    self.master[hash].rules.forEach(function(rule){
-				    console.log(["\tTAP CHECK IS ", swipp, "\t", JSON.stringify(rule)].join(""));
-				    
-				    // all the "is" are in this telex and match exactly
-				    var ruleIsKeys = keys(rule.is);
-				    if (ruleIsKeys.length !=
-				        ruleIsKeys.filter(function(is) { return telex[is] == rule.is[is] }).length) {
-//				        console.log("isses don't match");
-				        return; // continue
-				    }
-				    
-				    // pass only if all has exist
-				    var haspass = 1;
-				    rule.has.forEach(function(sig){
-//				        console.log("has sig=" + sig + ", telex[sig]=" + telex[sig]);
-					    if (!telex[sig]) {
-					        haspass=0;
-					    }
-				    });
-				    
-				    if (haspass) {
-				        pass++;
-				    }
-			    });
-			    
-			    // forward this switch a copy
-			    if (pass) {
-				    // it's us, it has to be our tap_js        
-				    if (swipp == self.selfipp) {
-					    console.log(["STDOUT[", JSON.stringify(telex), "]"].join(""));
-				    }
-				    else{
-					    var telexOut = new Telex(swipp);
-					    keys(telex).filter(function(key){ return key.match(/^\+.+/); })
-				        .forEach(function(sig){
-						    telexOut[sig] = telex[sig];
-					    });
-					    telexOut["_hop"] = hop + 1;
-					    self.send(telexOut);
-				    }
-			    }
-			    else{
-				    console.log("\tCHECK MISS");
-			    }
-		    });
+                var pass = 0;
+                var swipp = self.master[hash].ipp;
+                self.master[hash].rules.forEach(function(rule){
+                    console.log(["\tTAP CHECK IS ", swipp, "\t", JSON.stringify(rule)].join(""));
+                    
+                    // all the "is" are in this telex and match exactly
+                    var ruleIsKeys = keys(rule.is);
+                    
+                    if (!ruleIsKeys.every(function(isKey){ 
+                            console.log("IS match: " + telex[isKey] + " = " + rule.is[isKey] + "?");
+                            return telex[isKey] == rule.is[isKey]; })) {
+                        return; // continue
+                    }
+                    
+                    // pass only if all has exist
+                    if (rule.has.every(function(hasKey){ 
+                            console.log("HAS match: " + hasKey + " -> " + (hasKey in telex));
+                            return hasKey in telex; })) {
+                        pass++;
+                    }
+                });
+                
+                // forward this switch a copy
+                if (pass) {
+                    // it's us, it has to be our tap_js        
+                    if (swipp == self.selfipp) {
+                        console.log(["STDOUT[", JSON.stringify(telex), "]"].join(""));
+                    }
+                    else{
+                        var telexOut = new Telex(swipp);
+                        keys(telex).filter(function(key){ return key.match(/^\+.+/); })
+                        .forEach(function(sig){
+                            telexOut[sig] = telex[sig];
+                        });
+                        telexOut["_hop"] = hop + 1;
+                        self.send(telexOut);
+                    }
+                }
+                else{
+                    console.log("\tCHECK MISS");
+                }
+            });
         }
         
     }
@@ -402,44 +407,45 @@ Switch.prototype.onSignal_end = function(remoteipp, telex, line) {
     var hop = telex._hop == null ? 0 : parseInt(telex._hop);
     var end = telex["+end"];
     if (hop == 0) {
-		var vis = line.visible ? remoteipp : self.selfipp; // start from a visible switch (should use cached result someday)
-		var hashes = self.near_to(end, vis); // get closest hashes (of other switches)
-		
-//		console.log("+end hashes: " + JSON.stringify(hashes));
-		
-		// convert back to IPPs
-		var ipps = {};
-		hashes.slice(0,5).forEach(function(hash){
-		    ipps[self.master[hash].ipp] = 1;
-		});
-		
-//		console.log("+end ipps: " + JSON.stringify(ipps));
-		
-		// TODO: this is where dampening should happen to not advertise switches that might be too busy
-		if (!line.visibled) {
-			ipps[self.selfipp] = line.visibled = 1; // mark ourselves visible at least once
+        var vis = line.visible ? remoteipp : self.selfipp; // start from a visible switch (should use cached result someday)
+        var hashes = self.near_to(end, vis); // get closest hashes (of other switches)
+        
+//      console.log("+end hashes: " + JSON.stringify(hashes));
+        
+        // convert back to IPPs
+        var ipps = {};
+        hashes.slice(0,5).forEach(function(hash){
+            ipps[self.master[hash].ipp] = 1;
+        });
+        
+//      console.log("+end ipps: " + JSON.stringify(ipps));
+        
+        // TODO: this is where dampening should happen to not advertise switches that might be too busy
+        if (!line.visibled) {
+            ipps[self.selfipp] = line.visibled = 1; // mark ourselves visible at least once
         }
         
-        var ippKeys = keys(ipps);	
-		if (ippKeys.length) {
-			var telexOut = new Telex(remoteipp);
-			var seeipps = ippKeys.filter(function(ipp){ return ipp.length > 1 });
-			telexOut[".see"] = seeipps;
-			self.send(telexOut);
-		}
+        var ippKeys = keys(ipps);
+        if (ippKeys.length) {
+            var telexOut = new Telex(remoteipp);
+            var seeipps = ippKeys.filter(function(ipp){ return ipp.length > 1 });
+            telexOut[".see"] = seeipps;
+            self.send(telexOut);
+        }
     }
     
-	// this is our .tap, requests to +pop for NATs
-	if (end == self.selfhash && telex["+pop"]) {
-	    var tapMatch = telex["+pop"].match(/th\:([\d\.]+)\:(\d+)/);
-	    if (tapMatch) {
-	        // should we verify that this came from a switch we actually have a tap on?
-		    var ip = tapMatch[1];
-		    var port = tapMatch[2];
-		    console.log(["POP to ", ip, ":", port].join(""));
-		    self.send(new Telex([ip, port].join(":")));
-		}
-	}
+    // this is our .tap, requests to +pop for NATs
+    if (end == self.selfhash && telex["+pop"]) {
+        console.log("POP? " + telex["+pop"]);
+        var tapMatch = telex["+pop"].match(/th\:([\d\.]+)\:(\d+)/);
+        if (tapMatch) {
+            // should we verify that this came from a switch we actually have a tap on?
+            var ip = tapMatch[1];
+            var port = tapMatch[2];
+            console.log(["POP to ", ip, ":", port].join(""));
+            self.send(new Telex([ip, port].join(":")));
+        }
+    }
 }
 
 /**
@@ -460,36 +466,36 @@ Switch.prototype.onCommand_see = function(remoteipp, telex, line) {
             return; //continue;
         }
         
-		// they're making themselves visible now, awesome
-		if (seeipp == remoteipp && !line.visible) {
-			console.log(["\t\tVISIBLE ", remoteipp].join(""));
-			line.visible=1;
-			self.near_to(line.end, self.selfipp).map(function(x) { return line.neighbors[x]=1; });
-			self.near_to(line.end, remoteipp); // injects this switch as hints into it's neighbors, fully seeded now
-		}
-		
-		var seeippHash = new Hash(seeipp).toString(); 
-		
-		if (self.master[seeippHash]) {
-		    return; //continue; // skip if we know them already
-		}
-		
-		// XXX todo: if we're dialing we'd want to reach out to any of these closer to that $tap_end
-		// also check to see if we want them in a bucket
-		if (self.bucket_want(seeipp)) {
-		    
-			// send direct (should open our outgoing to them)
-			var telexOut = new Telex(seeipp);
-			telexOut["+end"] = self.selfhash;
-			self.send(telexOut);
-			
-			// send pop signal back to the switch who .see'd us in case the new one is behind a nat
-			telexOut = new Telex(remoteipp);
-			telexOut["+end"] = seeippHash;
-			telexOut["+pop"] = "th:" + self.selfipp;
-			telexOut["_hop"] = 1;
-			self.send(telexOut);
-		}
+        // they're making themselves visible now, awesome
+        if (seeipp == remoteipp && !line.visible) {
+            console.log(["\t\tVISIBLE ", remoteipp].join(""));
+            line.visible=1;
+            self.near_to(line.end, self.selfipp).map(function(x) { return line.neighbors[x]=1; });
+            self.near_to(line.end, remoteipp); // injects this switch as hints into it's neighbors, fully seeded now
+        }
+        
+        var seeippHash = new Hash(seeipp).toString(); 
+        
+        if (self.master[seeippHash]) {
+            return; //continue; // skip if we know them already
+        }
+        
+        // XXX todo: if we're dialing we'd want to reach out to any of these closer to that $tap_end
+        // also check to see if we want them in a bucket
+        if (self.bucket_want(seeipp)) {
+            
+            // send direct (should open our outgoing to them)
+            var telexOut = new Telex(seeipp);
+            telexOut["+end"] = self.selfhash;
+            self.send(telexOut);
+            
+            // send pop signal back to the switch who .see'd us in case the new one is behind a nat
+            telexOut = new Telex(remoteipp);
+            telexOut["+end"] = seeippHash;
+            telexOut["+pop"] = "th:" + self.selfipp;
+            telexOut["_hop"] = 1;
+            self.send(telexOut);
+        }
     });
 }
 
@@ -497,10 +503,10 @@ Switch.prototype.onCommand_see = function(remoteipp, telex, line) {
  * Handle the .tap TeleHash command.
  */
 Switch.prototype.onCommand_tap = function(remoteipp, telex, line) {
-	// handle a tap command, add/replace rules
-	if (telex[".tap"] && isArray(telex[".tap"])) {
-		line.rules = telex[".tap"];
-	}
+    // handle a tap command, add/replace rules
+    if (telex[".tap"] && isArray(telex[".tap"])) {
+        line.rules = telex[".tap"];
+    }
 }
 
 /**
@@ -545,9 +551,9 @@ Switch.prototype.getline = function(endpoint) {
         return undefined; // sanity check
     }
     
-	var endpointHash = new Hash(endpoint).toString();
-	if (!self.master[endpointHash] || self.master[endpointHash].ipp != endpoint) {
-		console.log(["\tNEWLINE[", endpoint, "]"].join(""));
+    var endpointHash = new Hash(endpoint).toString();
+    if (!self.master[endpointHash] || self.master[endpointHash].ipp != endpoint) {
+        console.log(["\tNEWLINE[", endpoint, "]"].join(""));
         var endpieces = endpoint.split(":");
         var host = endpieces[0];
         var port = endpieces[1];
@@ -556,10 +562,10 @@ Switch.prototype.getline = function(endpoint) {
         lineNeighbors[endpointHash] = 1;
         
         self.master[endpointHash] = {
-	        ipp: endpoint,
-	        end: endpointHash,
-	        host: host,
-	        port: port,
+            ipp: endpoint,
+            end: endpointHash,
+            host: host,
+            port: port,
             ringout: rand(32768),
             init: time(),
             seenat: 0,
@@ -668,47 +674,47 @@ Switch.prototype.scanlines = function() {
     var now = time();
     var switches = keys(self.master);
     var valid = 0;
-	console.log(["SCAN\t" + switches.length].join(""));
-	
-	switches.forEach(function(hash){
-	    if (hash == self.selfhash || hash.length < 10) {
-	        return; // skip our own endpoint and what is this (continue)
-	    }
-	    
-	    var line = self.master[hash];
-	    if (line.end != hash) {
-	        return; // empty/dead line (continue)
-	    }
-	    
-	    if ((line.seenat == 0 && now - line.init > 70)
-	            || (line.seenat != 0 && now - line.seenat > 70)) {
-    		// remove line if they never responded or haven't in a while
-	        console.log(["\tPURGE[", hash, " ", line.ipp, "] last seen ", now - line.seenat, "s ago"].join(""));
-			self.master[hash] = {};
-			return;
-		}
-		
-		valid++;
-		
-		if (self.connected) {
-		
-		    // +end ourselves to see if they know anyone closer as a ping
-		    var telexOut = new Telex(line.ipp);
-		    telexOut["+end"] = self.selfhash;
-		
-		    // also .see ourselves if we haven't yet, default for now is to participate in the DHT
-		    if (!line.visibled++) {
-        		telexOut[".see"] = [self.selfipp];
-        	}
-        	
-		    // also .tap our hash for +pop requests for NATs
-		    var tapOut = {is: {}};
-		    tapOut.is['+end'] = self.selfhash;
-		    tapOut.has = ['+pop'];
-		    telexOut[".tap"] = tapOut;
-		    self.send(telexOut);
-		    
-		}
+    console.log(["SCAN\t" + switches.length].join(""));
+    
+    switches.forEach(function(hash){
+        if (hash == self.selfhash || hash.length < 10) {
+            return; // skip our own endpoint and what is this (continue)
+        }
+        
+        var line = self.master[hash];
+        if (line.end != hash) {
+            return; // empty/dead line (continue)
+        }
+        
+        if ((line.seenat == 0 && now - line.init > 70)
+                || (line.seenat != 0 && now - line.seenat > 70)) {
+            // remove line if they never responded or haven't in a while
+            console.log(["\tPURGE[", hash, " ", line.ipp, "] last seen ", now - line.seenat, "s ago"].join(""));
+            self.master[hash] = {};
+            return;
+        }
+        
+        valid++;
+        
+        if (self.connected) {
+        
+            // +end ourselves to see if they know anyone closer as a ping
+            var telexOut = new Telex(line.ipp);
+            telexOut["+end"] = self.selfhash;
+        
+            // also .see ourselves if we haven't yet, default for now is to participate in the DHT
+            if (!line.visibled++) {
+                telexOut[".see"] = [self.selfipp];
+            }
+            
+            // also .tap our hash for +pop requests for NATs
+            var tapOut = {is: {}};
+            tapOut.is['+end'] = self.selfhash;
+            tapOut.has = ['+pop'];
+            telexOut[".tap"] = [tapOut];
+            self.send(telexOut);
+            
+        }
     });
     
     if (!valid && self.selfipp != self.seedipp) {
@@ -738,13 +744,13 @@ Switch.prototype.near_to = function(end, ipp){
     }
     
     var endHash = new Hash(end);
-	var line = self.master[new Hash(ipp).toString()];
-	if (!line) {
-	    return undefined; // should always exist except in startup or offline, etc
-	}
+    var line = self.master[new Hash(ipp).toString()];
+    if (!line) {
+        return undefined; // should always exist except in startup or offline, etc
+    }
     
-	// of the existing and visible cached neighbors, sort by distance to this end
-	var see = keys(line.neighbors)
+    // of the existing and visible cached neighbors, sort by distance to this end
+    var see = keys(line.neighbors)
     .filter(function(x){ return self.master[x] && self.master[x].visible })
     .sort(function(a,b){ return endHash.distanceTo(a) - endHash.distanceTo(b) });
     
@@ -760,49 +766,52 @@ Switch.prototype.near_to = function(end, ipp){
     var lineNeighborKeys = keys(line.neighbors);
     var lineEndHash = new Hash(line.end);
     
-	console.log(["\tNEARTO ", end, '\t', ipp, '\t', 
-	    lineNeighborKeys.length, ">", see.length, '\t',
-	    firstSeeHash.distanceTo(end), "=", lineEndHash.distanceTo(end)].join(""));
+    console.log(["\tNEARTO ", end, '\t', ipp, '\t', 
+        lineNeighborKeys.length, ">", see.length, '\t',
+        firstSeeHash.distanceTo(end), "=", lineEndHash.distanceTo(end)].join(""));
     
-	// it's either us or we're the same distance away so return these results
-	if (firstSee == line.end
-    	    || (firstSeeHash.distanceTo(end) == lineEndHash.distanceTo(end))) {
-    	
-		// this +end == this line then replace the neighbors cache with this result 
-		// and each in the result walk and insert self into their neighbors
-		if (line.end == end) {
-			console.log(["\tNEIGH for ", end, " was ", lineNeighborKeys.join(","), " ", see.length].join(""));
-			var neigh = {};
-			see.slice(0,5).forEach(function(seeHash){
-			    neigh[seeHash] = 1;
-			});
-			line.neighbors = neigh;
-			
-			console.log(["\tNEIGH for ", end, " is ", lineNeighborKeys.join(","), " ", see.length].join(""));
-			lineNeighborKeys.forEach(function(hash) {
+    // it's either us or we're the same distance away so return these results
+    if (firstSee == line.end
+            || (firstSeeHash.distanceTo(end) == lineEndHash.distanceTo(end))) {
+        
+        // this +end == this line then replace the neighbors cache with this result 
+        // and each in the result walk and insert self into their neighbors
+        if (line.end == end) {
+            console.log(["\tNEIGH for ", end, " was ", lineNeighborKeys.join(","), " ", see.length].join(""));
+            var neigh = {};
+            see.slice(0,5).forEach(function(seeHash){
+                neigh[seeHash] = 1;
+            });
+            line.neighbors = neigh;
+            
+            console.log(["\tNEIGH for ", end, " is ", lineNeighborKeys.join(","), " ", see.length].join(""));
+            lineNeighborKeys.forEach(function(hash) {
                 if (hash in self.master) {
-    				self.master[hash].neighbors[end]=1;
-    				console.log(["\t\tSEED ", ipp, " into ", self.master[hash].ipp].join(""));
-    			}
-			});
-		}
-		console.log(["\t\tSEE distance=", endHash.distanceTo(firstSeeHash), " count=", see.length].join(""));
-		return see;
-	}
+                    if (self.master[hash].neighbors == null) {
+                        self.master[hash].neighbors = {};
+                    }
+                    self.master[hash].neighbors[end]=1;
+                    console.log(["\t\tSEED ", ipp, " into ", self.master[hash].ipp].join(""));
+                }
+            });
+        }
+        console.log(["\t\tSEE distance=", endHash.distanceTo(firstSeeHash), " count=", see.length].join(""));
+        return see;
+    }
 
-	// whomever is closer, if any, tail recurse endseeswitch them
-	return self.near_to(end, self.master[firstSee].ipp);
+    // whomever is closer, if any, tail recurse endseeswitch them
+    return self.near_to(end, self.master[firstSee].ipp);
 }
 
 // see if we want to try this switch or not, and maybe prune the bucket
 Switch.prototype.bucket_want = function(ipp) {
     var self = this;
-	var pos = new Hash(ipp).distanceTo(self.selfhash);
-	console.log(["\tBUCKET WANT[", pos, " ", ipp, "]"].join(""));
-	if (pos < 0 || pos > self.NBUCKETS) {
-	    return undefined; // do not want
-	}
-	return 1; // for now we're always taking everyone, in future need to be more selective when the bucket is "full"!
+    var pos = new Hash(ipp).distanceTo(self.selfhash);
+    console.log(["\tBUCKET WANT[", pos, " ", ipp, "]"].join(""));
+    if (pos < 0 || pos > self.NBUCKETS) {
+        return undefined; // do not want
+    }
+    return 1; // for now we're always taking everyone, in future need to be more selective when the bucket is "full"!
 }
 
 /**
