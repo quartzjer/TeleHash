@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <openssl/sha.h>
 
 int js0n(unsigned char *js, unsigned int len, unsigned short *out);
 
@@ -17,9 +18,10 @@ main(int argc, char *argv[])
 	int port = 42424;
 	char *hello = "{'+end':'0eb2ad19a7b508cc09b2d52b4a506845db39fae2'}";
 	char buff[2048];
-	int n,i;
+	int n,i,j;
 	unsigned short js[1024];
-  
+	unsigned char sha1bin[20];
+
 	sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) {
 		fprintf(stderr, "socket creation failed\n");
@@ -49,6 +51,15 @@ main(int argc, char *argv[])
 		for(i=0;js[i];i+=4)
 		{
 			printf("%.*s\t%.*s\n",js[i+1],buff+js[i],js[i+3],buff+js[i+2]);
+			if(strncmp("_to",buff+js[i],3)==0)
+			{
+				SHA1(buff+js[i+2], js[i+3], sha1bin);
+				printf("SELF: ");
+			    for (i = 0; i < 20; i++) {
+			        printf("%02x", sha1bin[i]);
+			    }
+				printf("\n");
+			}
 		}
 	}
 	close(sock);
