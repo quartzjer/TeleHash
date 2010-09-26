@@ -1,19 +1,19 @@
 var sys = require("sys");
-var sw = require("./switch");
+var telehash = require("./telehash");
 
-var _switch = new sw.createSwitch(undefined, process.argv[2], process.argv[3]);
-_switch.on("+wall", function(remoteipp, telex, line) {
+var s = new telehash.createSwitch(undefined, process.argv[2], process.argv[3]);
+s.on("+wall", function(remoteipp, telex, line) {
     console.log(new Date() + " <" + remoteipp + "> " + telex["+wall"]);
 });
 
-var endHash = new sw.Hash("42");
+var endHash = new telehash.Hash("42");
 
 var tap = {};
 tap.is = {};
 tap.is["+end"] = endHash.toString();
 tap.has = ["+wall"];
 
-_switch.addTap(tap);
+s.addTap(tap);
 
 var stdin = process.openStdin();
 stdin.setEncoding("UTF-8");
@@ -21,22 +21,22 @@ stdin.setEncoding("UTF-8");
 stdin.on('data', function(chunk){
     console.log("local: " + chunk);
     
-    var ckeys = sw.keys(_switch.master)
-    .filter(function(x) { return _switch.master[x].ipp != _switch.selfipp; })
+    var ckeys = telehash.keys(s.master)
+    .filter(function(x) { return s.master[x].ipp != s.selfipp; })
     .sort(function(a,b) { return endHash.distanceTo(a) - endHash.distanceTo(b) })
     .slice(0,3).forEach(function(ckey){
-        var target = _switch.master[ckey].ipp;
+        var target = s.master[ckey].ipp;
         if (!target) {
             return;
         }
         
         console.log("attached to " + target + " at distance " + endHash.distanceTo(target));
-        var telexOut = new sw.Telex(target);
+        var telexOut = new telehash.Telex(target);
         telexOut["+wall"] = chunk;
         telexOut["+guid"] = new Date().getTime();
         telexOut["_hop"] = 1;
         telexOut["+end"] = endHash.toString();
-        _switch.send(telexOut);
+        s.send(telexOut);
     });
 });
 
@@ -45,9 +45,9 @@ process.on('SIGINT', function() {
 });
 
 stdin.on('end', function () {
-    _switch.stop();
+    s.stop();
     process.exit(0);
 });
 
-_switch.start()
+s.start()
 
