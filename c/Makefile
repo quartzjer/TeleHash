@@ -1,7 +1,7 @@
-all: test_client
+all: test_switch
 
-test_client:
-	gcc -g -o test_client test_client.c js0n.c
+test_switch: test_switch.c
+	gcc -g -lssl -lcrypto -o test_switch test_switch.c js0n.c
 
 clean:
-	rm -f test_client
+	rm -f test_switch
