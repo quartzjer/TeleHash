@@ -1,0 +1,20 @@
+{ "name" : "telehash"
+, "description" : "A new wire protocol enabling applications to connect directly in a real-time and fully distributed manner, freeing them from relying on centralized datacenters"
+, "version" : "0.0.0"
+, "homepage" : "http://github.com/quartzjer/TeleHash/node.js"
+, "author" : "Jeremie Miller <jeremie@jabber.org>"
+, "contributors" :
+  [ "Casey Marshall <casey.marshall@gmail.com>"
+  ]
+, "repository" :
+  { "type" : "git"
+  , "url" : "http://github.com/quartzjer/TeleHash.git"
+  }
+, "bugs" :
+  { "web" : "http://github.com/quartzjer/TeleHash/issues"
+  }
+, "main" : "telehash"
+, "engines" : { "node" : ">=0.2.0" }
+, "scripts" : {  }
+}
+
