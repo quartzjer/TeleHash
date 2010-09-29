@@ -38,7 +38,24 @@
 <br><br>
 <div class="container">
 
+<h2>Switch</h2>
+<p>
+	Every TeleHash endpoint on the network is called a Switch, there is usually one per application.  It is identified by it's public IP:PORT, and placed within the DHT by the SHA1(IP:PORT). Switches communicate only by sending UDP packets to each other.
 
+<h2>Telex</h2>
+<p>
+	Every UDP packet is a plain JSON object called a Telex, consisting of valid UTF-8 and is 1400 or less total bytes in length. It will also contain one or more key/value pairs that are used by the Switch, called Commands, Signals, or Headers, all which start with a special character so as to be easily identifiable separate from any other JSON data.
+
+<blockquote>
+	<h4>Signals</h4>
+	<p>A public broadcast "key":"value" pair, routed/relayed between Switches.  Signal keys must always begin with a "+" character, and values must always be strings.  These should always be treated as public data as their defined purpose is to be routed/shared between many unknown Switches automatically.
+
+	<h4>Commands</h4>
+	<p>An instruction sent from one Switch to another, a direct request to perform an action with the value. Commands always start with a "." character.
+		
+	<h4>Headers</h4>
+	<p>A key/value pair containing metadata relating specifically to the Telex or state of the Switches.  Headers always start with a "_" character
+</blockquote>	
 	<p>WARNING: pardon the formatting and terseness, draft state!
 	<p>
 	<p>Lexicon:
