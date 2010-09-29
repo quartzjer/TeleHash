@@ -6,6 +6,8 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <openssl/sha.h>
+#include "telex.h"
+#include "jw.h"
 
 int js0n(unsigned char *js, unsigned int len, unsigned short *out);
 
@@ -16,7 +18,6 @@ main(int argc, char *argv[])
 	struct hostent *ptrh;
 	char *host = "telehash.org";
 	int port = 42424;
-	char *hello = "{'+end':'0eb2ad19a7b508cc09b2d52b4a506845db39fae2'}";
 	char buff[2048];
 	int n,i,j;
 	unsigned short js[1024];
@@ -38,8 +39,11 @@ main(int argc, char *argv[])
 	}
 	memcpy(&sad.sin_addr, ptrh->h_addr, ptrh->h_length);
   
-	n=sendto(sock, hello, strlen(hello),0,(struct sockaddr *) &sad, sizeof(struct sockaddr));
-	memset((char*)&buff,0,sizeof(buff));
+	bzero(buff,sizeof(buff));
+	jw_str(buff,"+end",4,"0eb2ad19a7b508cc09b2d52b4a506845db39fae2",40);
+	printf("Sending: %s\n",buff);
+	n=sendto(sock, buff, strlen(buff),0,(struct sockaddr *) &sad, sizeof(struct sockaddr));
+	bzero(buff,sizeof(buff));
 	n=read(sock, buff, sizeof(buff));
   
 	printf("Response: %s\n",buff);
