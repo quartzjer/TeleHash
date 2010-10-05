@@ -307,7 +307,7 @@ sub checkline
 	}
 
 	# second, process incoming _line
-	if($t->{_line})
+	if(defined $t->{_line})
 	{
 		return undef unless($line->{ringout} > 0);
 		$t->{_line} = int($t->{_line}); # be nice in what we accept, strict in what we send
@@ -323,7 +323,7 @@ sub checkline
 	}
 
 	# last, process any incoming _ring's (remember, could be out of order, after a _line)
-	if($t->{_ring})
+	if(defined $t->{_ring})
 	{
 		return undef if($line->{ringin} && $t->{_ring} != $line->{ringin}); # already had a ring and this one doesn't match, should be rare
 		return undef unless($t->{_ring} > 0 && $t->{_ring} <= 32768); # make sure within valid range

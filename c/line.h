@@ -4,10 +4,11 @@ typedef struct line_struct
 	char ipp[23]; // IP:PORT
 	char iph[41]; // sha1 of ipp
 	unsigned short ringout;
+	unsigned int _line;
 	unsigned int seenat;
 	unsigned int sentat;
 	unsigned int lineat;
-	unsigned int br;
+	unsigned int _br;
 	unsigned int brout;
 	unsigned int brin;
 	unsigned int bsent;

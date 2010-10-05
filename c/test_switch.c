@@ -22,7 +22,7 @@ main(int argc, char *argv[])
 	char buff[2048],localip[17];
 	int n,i,j;
 	unsigned short js[1024];
-	line self = NULL;
+	line self = NULL, seed = NULL;
 	
 	// first let's figure out our local IP
 	sock = socket(PF_INET, SOCK_DGRAM, 0);
@@ -63,9 +63,13 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	memcpy(&sad.sin_addr, ptrh->h_addr, ptrh->h_length);
+	// create line for seed
+	sprintf(buff,"%s:%d",inet_ntoa(sad.sin_addr),port);
+	seed = line_new(buff,strlen(buff));
   
 	bzero(buff,sizeof(buff));
 	jw_str(buff,"+end",4,"0eb2ad19a7b508cc09b2d52b4a506845db39fae2",40);
+	jw_int(buff,"_ring",5,seed->ringout);
 	printf("Sending: %s\n",buff);
 	n=sendto(sock, buff, strlen(buff),0,(struct sockaddr *) &sad, sizeof(struct sockaddr));
 	bzero(buff,sizeof(buff));
@@ -84,6 +88,13 @@ main(int argc, char *argv[])
 	{
 		printf("%.*s\t%.*s\n",js[i+1],buff+js[i],js[i+3],buff+js[i+2]);
 		if(strncmp("_to",buff+js[i],3)==0) self = line_new(buff+js[i+2],js[i+3]);
+		if(strncmp("_ring",buff+js[i],5)==0) line_check(seed,0,atoi(buff+js[i+2]));
+		if(strncmp("_line",buff+js[i],5)==0 && line_check(seed,atoi(buff+js[i+2]),0))
+		{
+			printf("seed line failed, boo");
+			close(sock);
+			exit(1);
+		}
 	}
 	if(!self)
 	{
@@ -93,6 +104,16 @@ main(int argc, char *argv[])
 		
 	}
 	if(self) printf("SELF\tlocal ip %s\tremote ipp %s\tour +end=%s\n",localip,self->ipp,self->iph);
+
+	// send ourselves now
+	bzero(buff,sizeof(buff));
+	jw_str(buff,"+end",4,self->iph,40);
+	jw_int(buff,"_line",5,seed->_line);
+	printf("Sending: %s\n",buff);
+	n=sendto(sock, buff, strlen(buff),0,(struct sockaddr *) &sad, sizeof(struct sockaddr));
+	bzero(buff,sizeof(buff));
+	n=read(sock, buff, sizeof(buff));  
+	printf("Response: %s\n",buff);
 
 	close(sock);
 }

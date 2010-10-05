@@ -44,18 +44,27 @@
 
 <h2>Telex</h2>
 <p>
-	Every UDP packet is a plain JSON object called a Telex, consisting of valid UTF-8 and is 1400 or less total bytes in length. It will also contain one or more key/value pairs that are used by the Switch, called Commands, Signals, or Headers, all which start with a special character so as to be easily identifiable separate from any other JSON data.
+	Every UDP packet is a plain JSON object called a Telex, consisting of valid UTF-8 and is 1400 or less total bytes in length. It will also contain one or more special key/value pairs that are used by the Switch, called Commands, Signals, or Headers, all which start with a special character so as to be easily identifiable separate from any other JSON data.
 
 <blockquote>
 	<h4>Signals</h4>
-	<p>A public broadcast "key":"value" pair, routed/relayed between Switches.  Signal keys must always begin with a "+" character, and values must always be strings.  These should always be treated as public data as their defined purpose is to be routed/shared between many unknown Switches automatically.
+	<p>A public broadcast "key":"value" pair, routed/relayed between Switches.  Signal keys must always begin with a "+" character, and values must always be strings.  These pairs should always be considered public data as their defined purpose is to be routed/shared between many unknown Switches automatically.
 
 	<h4>Commands</h4>
-	<p>An instruction sent from one Switch to another, a direct request to perform an action with the value. Commands always start with a "." character.
+	<p>A private instruction sent from one Switch to another, a direct request to perform an action with the value. Commands always start with a "." character.
 		
 	<h4>Headers</h4>
-	<p>A key/value pair containing metadata relating specifically to the Telex or state of the Switches.  Headers always start with a "_" character
+	<p>A key/value pair containing metadata relating specifically to the Telex or shared state of the sending/receiving Switches.  Headers always start with a "_" character.
 </blockquote>	
+
+<h2>Startup</h2>
+<p>
+	The very first thing any Switch needs to do upon starting is discover the public IP:PORT that it is using, and it does this by contacting a seed.  Seeds can be a list of well known public IP:PORTs, such as one the current primary one is "telehash.org:42424".  Every Telex sent/received should contain a _to header of the recipients IP:PORT, so a new Switch needs only trigger any response from the seed.  This can be done by sending: {"+end":"a9993e364706816aba3e25717850c26c9cd0d89d"} to the seed (or any sha1 hash as the value).  The response should contain a "_to":"1.2.3.4:5678" of the new Switch's public IP:PORT.  The new Switch now has a location within the global DHT of the hash value of SHA1("1.2.3.4:5678").
+
+<p>
+	Next, the new Switch needs to seed itself in the DHT.  It does this by sending it's hash to one or more seeds in order to discover other Switches closer to itself, and repeating this process until no closer Switches are returned.
+
+<hr>
 	<p>WARNING: pardon the formatting and terseness, draft state!
 	<p>
 	<p>Lexicon:

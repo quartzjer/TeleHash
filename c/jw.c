@@ -2,7 +2,7 @@
 #include <string.h>
 
 // make sure open/close always set
-#define FIRSTY(len) if(len == 0){j[len] = '{';}else{if(j[len] == '}') j[len] = ',';} 
+#define FIRSTY(len) if(len == 0){j[len] = '{';}else{if(j[len-1] == '}') j[len-1] = ',';} 
 
 void jw_str(char *j, char *key, int klen, char *val, int vlen)
 {

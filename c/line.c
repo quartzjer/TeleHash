@@ -17,13 +17,26 @@ line line_new(char *ipp, int len)
 	memcpy(l->ipp,ipp,len);
 	SHA1(ipp, len, sha1bin);
 	for (i = 0; i < 20; i++) sprintf(l->iph+(i*2),"%02x", sha1bin[i]);
+	l->ringout = (unsigned short)(rand() % 32768)+1; // 1 to 32768
 	return l;
 }
 
-// validate incoming line/ring values
+// validate incoming line/ring values, != 0 is bad
 int line_check(line l, int _line, int _ring)
 {
-	return 0;
+	if(!l->_line && !_line)
+	{
+		l->_line = _ring * l->ringout;
+		return 0;
+	}
+	// need to fill in the logic here badly
+	if(!l->_line && _line)
+	{
+		if(_line % l->ringout != 0) return 1; // didn't use the ring we sent in the product??
+		l->_line = _line;
+		return 0;
+	}
+	return 1;
 }
 
 // check+update line byte incoming status
