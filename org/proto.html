@@ -8,6 +8,32 @@
 <style>article, aside, dialog, figure, footer, header, hgroup, menu, nav, section { display: block; }</style>
 <link href="screen.css" media="screen" rel="stylesheet" type="text/css">
 <link href="site.css" media="screen" rel="stylesheet" type="text/css">
+<style>
+.in
+{
+	display:none;
+}
+.out
+{
+	display:block;
+}
+.flag
+{
+	cursor:pointer;
+}
+.flag:before
+{
+	content:" ★ ";
+	font-size:12pt;
+	color:gold;
+}
+</style>
+<script>
+function flag(id)
+{
+	
+}
+</script>
 </head>
 
 <body class="about index" id="about_index">
@@ -46,26 +72,82 @@
 <p>
 	Every UDP packet is a plain JSON object called a Telex, consisting of valid UTF-8 and is 1400 or less total bytes in length. It will also contain one or more special key/value pairs that are used by the Switch, called Commands, Signals, or Headers, all which start with a special character so as to be easily identifiable separate from any other JSON data.
 
-<blockquote>
-	<h4>Signals</h4>
+<span class="flag" onclick="this.parentNode.nextSibling.className='out';this.style.display='none'"></span>
+<blockquote class="in">
+	<h4>+signals</h4>
 	<p>A public broadcast "key":"value" pair, routed/relayed between Switches.  Signal keys must always begin with a "+" character, and values must always be strings.  These pairs should always be considered public data as their defined purpose is to be routed/shared between many unknown Switches automatically.
 
-	<h4>Commands</h4>
+	<h4>.commands</h4>
 	<p>A private instruction sent from one Switch to another, a direct request to perform an action with the value. Commands always start with a "." character.
 		
-	<h4>Headers</h4>
+	<h4>_headers</h4>
 	<p>A key/value pair containing metadata relating specifically to the Telex or shared state of the sending/receiving Switches.  Headers always start with a "_" character.
-</blockquote>	
+</blockquote>
+
+
+<h2>Basics</h2>
+<p>
+	Each Telex has a couple of common headers that are always included to help keep track of the sending or receiving Switches. These common headers include _to, _br, _ring, _line, and _hop.
+
+<span class="flag" onclick="this.parentNode.nextSibling.className='out';this.style.display='none'"></span>
+<blockquote class="in">
+	<h4>_to</h4>
+	<p>A common courtesy is to tell the recipient what IP:PORT you know them as, since they may not know if they are behind a NAT. 
+	<h4>_br</h4>
+	<p>Another courtesy is to inform the recipient of how many bytes in total have been received from them at the time the Telex was sent, so they can detect network issues.
+	<h4>_ring</h4>
+	<p>If the sender wishes to have an ongoing exchange with a Switch, it should send a _ring with a random integer value from 1 to 32768. (more later)
+	<h4>_line</h4>
+	<p>Once a _ring has been received, a _line is always sent by both sides that is the product of both _ring values. The "line" is an active relationship between two Switches. (times out after 60 sec of inactivity)
+	<h4>_hop</h4>
+	<p>When a Telex contains signals and is being relayed from one Switch to another, include and increment the _hop value as it's sent.
+</blockquote>
+
+<p>Switches are generally performing one of two primary roles, either announcing signals into the network, or listening for specific incoming signals on the network. Outside of the common network patterns, they may be connected to other Switches and doing additional things specific to an application.
+
+<span class="flag" onclick="this.parentNode.nextSibling.className='out';this.style.display='none'"></span>
+<blockquote class="in">
+	<h4>Announcing</h4>
+	<p>In order to send any signal into the network the relevant location in the DHT must be found, this is called the +end, a generic hash.  (needs more)
+	<h4>Listening</h4>
+	<p>Once the Switches near a relevant +end are found, they can be asked to relay any matching signals back to any Switch.  The .tap command accomplishes this by sending filter rules about which signals should trigger the incoming Telex to be relayed back. (needs more)
+	<h4>Other...</h4>
+	<p>Since Switches provide a communication channel between any two endpoints using generic JSON, applications will often want to send custom data back and forth even though it's a size-restricted and lossy connection.  These application-specific patterns will often include opening up additional ports between peers to establish other UDP-based protocols such as RTP or Reliable UDP, and may also include lightweight custom pings and notifications.
+</blockquote>
+
+<h2>DHT (Kademlia)</h2>
+<p>For the specific details, learning more about <a href="http://en.wikipedia.org/wiki/Kademlia">Kademlia</a> is highly encouraged. Essentially, every Switch on the DHT is identified by a SHA1 hash, and it has a known distance between every other Switch that is the XOR of the two hashes.  Every Switch maintains a list of it's neighbors, some further from that, and a few from very far away (see "buckets" in the Kademlia paper), that it uses to recommend who else to connect to for someone querying a location on the DHT.
+
+<span class="flag" onclick="this.parentNode.nextSibling.className='out';this.style.display='none'"></span>
+<blockquote class="in">
+	<h4>Switch Identity</h4>
+	<p>Every Switch's location in the DHT is simply the SHA1 of it's public IP:PORT.</p>
+	<h4>Location Requests ("Dialing")</h4>
+	<p>The most common activity in TeleHash is that of looking for closer Switches to a given +end hash.  Any Telex that contains a +end should be responded to with a list of the closest known Switches to that +end.  This is called the .see command, the value is an array of IP:PORTs of other Switches. (needs more, send self if closest, send self to make visible, how many to return and how to prefer, etc)
+	<h4>Seeding</h4>
+	<p>Upon starting up the Switch must contact one or more other Switches from a default list, and from there "Dial" recursively Switches that are closer to it's own +end hash.  Once it can't find any closer it then maintains lines to those closest, filling in it's "buckets".
+</blockquote>
 
 <h2>Startup</h2>
 <p>
-	The very first thing any Switch needs to do upon starting is discover the public IP:PORT that it is using, and it does this by contacting a seed.  Seeds can be a list of well known public IP:PORTs, such as one the current primary one is "telehash.org:42424".  Every Telex sent/received should contain a _to header of the recipients IP:PORT, so a new Switch needs only trigger any response from the seed.  This can be done by sending: {"+end":"a9993e364706816aba3e25717850c26c9cd0d89d"} to the seed (or any sha1 hash as the value).  The response should contain a "_to":"1.2.3.4:5678" of the new Switch's public IP:PORT.  The new Switch now has a location within the global DHT of the hash value of SHA1("1.2.3.4:5678").
+	The very first thing any Switch needs to do upon starting is discover the public IP:PORT that it is known to the world as, and it does this by contacting a seed.  Seeds can be a list of well known public IP:PORTs, such as one the current primary one is "telehash.org:42424".  Every Telex sent/received should contain a _to header of the recipients IP:PORT, so a new Switch needs only trigger any response from the seed.  This can be done by sending: {"+end":"a9993e364706816aba3e25717850c26c9cd0d89d"} to the seed (or any sha1 hash as the value).  The response should contain a "_to":"1.2.3.4:5678" of the new Switch's public IP:PORT.  The new Switch now has a location within the global DHT of the hash value of SHA1("1.2.3.4:5678").
 
 <p>
 	Next, the new Switch needs to seed itself in the DHT.  It does this by sending it's hash to one or more seeds in order to discover other Switches closer to itself, and repeating this process until no closer Switches are returned.
 
+<h2>NATs</h2>
+<p>A very common pattern that every Switch has to deal with is working through NATs.  This is accomplished using the already mentioned mechanisms of .tap commands and a signal called +pop, for ping-open-port.
+
+<span class="flag" onclick="this.parentNode.nextSibling.className='out';this.style.display='none'"></span>
+<blockquote class="in">
+	<h4>.tap</h4>
+	<h4>+pop</h4>
+	<h4>Sequence</h4>
+</blockquote>
+
+
 <hr>
-	<p>WARNING: pardon the formatting and terseness, draft state!
+	<p>WARNING: pardon the formatting and terseness, draft state! This stuff is older, being migrated upward over time...
 	<p>
 	<p>Lexicon:
 	<ul><blockquote>
