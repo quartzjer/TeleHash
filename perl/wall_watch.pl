@@ -9,14 +9,17 @@ my $end = sha1_hex($wall);
 my $tap = "[{\"is\":{\"+end\":\"$end\"},\"has\":[\"+wall\"]}]";
 my %dedup;
 
+use IO::Handle;
+use IPC::Open2;
 use Digest::SHA1 qw(sha1_hex);
 use JSON::DWIW;
 my $json = JSON::DWIW->new;
 
 my $run = sprintf("./switch.pl -e '%s' -t '%s' |",$end,$tap);
 printf "running %s\n",$run;
-open(SWITCH,$run);
-while(<SWITCH>)
+my ($read_fh, $write_fh) = (IO::Handle->new(), IO::Handle->new());
+$pid = open2($read_fh, $write_fh, "./switch.pl","-e",$end,"-t",$tap)||die("oops $!");
+while(<$read_fh>)
 {
 	chop;
 	my $js = $json->from_json($_);
@@ -30,4 +33,5 @@ while(<SWITCH>)
 	}
 	printf "%s\t%s\n",`date`,$wall;		
 }
-close(SWITCH);
+close($read_fh);
+close($write_fh);
