@@ -30,6 +30,7 @@ socket(SOCKET, PF_INET, SOCK_DGRAM, $proto)   or die "socket: $!";
 bind(SOCKET, $paddr)                          or die "bind: $!";
 $sel = IO::Select->new();
 $sel->add(\*SOCKET);
+$sel->add(\*STDIN);
 
 # resolve our seed to it's ip:port
 my($seedhost,$seedport) = split(":",$seed);
@@ -38,7 +39,6 @@ my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
 
 my %master; # all known switches, key is sha1 hex
 my %taps;
-my $buff;
 $|++;
 my $selfipp, $selfhash;
 my $connected=undef;
@@ -46,26 +46,49 @@ my $buckets;
 my $lastloop = int(time);
 while(1)
 {
-	# if we're not online, attempt to talk to the seed
-	bootstrap($seedipp) if(!$connected && $selfipp ne $seedipp);
 
 	# wait for event or timeout loop
-	my $newmsg = scalar $sel->can_read(1);
-	if($newmsg == 0 || $lastloop+1 < int(time))
+	my @ready = $sel->can_read(1);
+	printf STDERR "LOOP %d\t%d\t%d\t%d\n",$newmsg,$lastloop,$connected,$tap_end;
+	for my $s (@ready)
 	{
-		printf STDERR "LOOP %d\t%d\t%d\t%d\n",$newmsg,$lastloop,$connected,$tap_end;
-		$lastloop = int(time);
-		if($connected)
-		{
-			scanlines();
-			taptap() if($tap_end);
-		}
-		next if($newmsg == 0); # timeout loop
+		in_stdin() if($s == \*STDIN);
+		in_udp() if($s == \*SOCKET);
 	}
-	
-	# must be a telex waiting for us
+	# maintenance
+	if(scalar @ready == 0 || $lastloop+1 < int(time))
+	{
+		in_loop();
+		$lastloop = int(time);
+	}
+}
+
+sub in_stdin
+{
+	my $buff;
+	sysread(STDIN, $buff,8192) || die("stdin $!");
+	printf STDERR "\nSTDIN %s\n",$buff;
+}
+
+# every second or so do maintenance checks
+sub in_loop
+{
+	if($connected)
+	{
+		scanlines();
+		taptap() if($tap_end);
+	}else{
+		# if we're not online, attempt to talk to the seed (if it's not us!)
+		bootstrap($seedipp) if($selfipp ne $seedipp);
+	}
+}
+
+# must be a telex waiting for us
+sub in_udp
+{
+	my $buff;
 	$connected = 1;
-	my $caddr = recv(SOCKET, $buff, 8192, 0) || die("recv $!");
+	my $caddr = recv(SOCKET, $buff, 8192, 0) || die("udp recv $!");
 
 	# figure out who sent it
 	($cport, $addr) = sockaddr_in($caddr);
