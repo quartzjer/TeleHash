@@ -110,3 +110,26 @@ eviction
 	finally, youngest (but older than 60s or so, might be mid-dial?)
 
 incoming
+
+
+--------
+switch as a localhost server on 127.0.0.1:xxxxx port
+	tapping
+		active or one-time
+		explicit or automatic
+	dialing
+		stream or timer
+	signals in
+		only if tap'd?
+	signals out
+		only if recipient?
+	plain js in
+	plain js out (recipient req)
+s-core
+	-dial=5
+	-tap=id track sigs
+	-ipp -nat
+	-new
+	-line=true/false request and status
+	-lend=end for line
+	-retry=3

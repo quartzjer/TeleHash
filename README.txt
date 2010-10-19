@@ -1,3 +1,5 @@
+TeleHash - Distributed JSON - http://telehash.org/
+
 org/		telehash.org contents (all docs so far)
 perl/		test implementations and utils in Perl
 c/			basic test stuff in C
