@@ -262,7 +262,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 
 	/**
 	 * Update status of all lines, removing stale ones.
-	 */
+	 * /
 	public void scanlines() {
 	    var self = this;
 	    var now = time();
@@ -316,6 +316,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	        self.startBootstrap();
 	    }
 	}
+	*/
 	
 	public Collection<Hash> nearTo(final Hash endHash, InetSocketAddress address) {
 		Hash addrHash = Hash.of(address);
