@@ -97,7 +97,8 @@ public class SwitchHandler extends IoHandlerAdapter {
 	public void send(final Map<String, ?> map) {
         ConnectFuture connFuture = connector.connect(parseAddress((String)map.get("_to")));
         connFuture.addListener(new IoFutureListener<ConnectFuture>() {
-        	public void operationComplete(ConnectFuture future) {
+        	@Override
+			public void operationComplete(ConnectFuture future) {
                 if (future.isConnected()) {
                     IoSession session = future.getSession();
                     String msg = Json.toJson(map);

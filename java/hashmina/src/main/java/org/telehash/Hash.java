@@ -68,6 +68,7 @@ public class Hash implements Comparable<Hash> {
 		return Hex.encodeHexString(bytes);
 	}
 
+	@Override
 	public int compareTo(Hash h) {
 	    for (int i = 0; i < bytes.length; i++) {
 	        int d = bytes[i] - h.bytes[i];
