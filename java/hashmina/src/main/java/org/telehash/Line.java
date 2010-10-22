@@ -1,21 +1,23 @@
 package org.telehash;
 
 import java.net.InetSocketAddress;
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import com.google.common.collect.Lists;
 
 public class Line {
 
+	public static final int NOT_SET = -1;
+
 	private InetSocketAddress address;
 	
 	private Hash end;
 	
-	private int ringin = -1;
+	private int ringin = NOT_SET;
 	
-	private int ringout = -1;
+	private int ringout = NOT_SET;
 	
 	private long init = 0;
 	
@@ -23,7 +25,7 @@ public class Line {
 	
 	private long sentAt = 0;
 	
-	private int lineAt = 0;
+	private long lineAt = 0;
 	
 	private int br = 0;
 	
@@ -33,7 +35,9 @@ public class Line {
 	
 	private int bsent = 0;
 	
-	private int lineId = 0;
+	private int lineId = NOT_SET;
+	
+	private int tapLast = NOT_SET;
 	
 	private List<Hash> neighbors;
 	
@@ -44,10 +48,14 @@ public class Line {
 	private List<Map<String, ?>> rules = Lists.newArrayList();
 	
 	public Line(InetSocketAddress address) {
+		this(address, Hash.of(address));
+	}
+	
+	public Line(InetSocketAddress address, Hash end) {
 		this.address = address;
-		this.end = Hash.of(address);
+		this.end = end;
 		this.neighbors = Lists.newArrayList();
-		this.ringout = new Random().nextInt(32768);
+		this.ringout = new SecureRandom().nextInt(32767) + 1;
 		this.init = System.currentTimeMillis();
 	}
 
@@ -67,11 +75,11 @@ public class Line {
 		this.sentAt = sentAt;
 	}
 
-	public int getLineAt() {
+	public long getLineAt() {
 		return lineAt;
 	}
 
-	public void setLineAt(int lineAt) {
+	public void setLineAt(long lineAt) {
 		this.lineAt = lineAt;
 	}
 
@@ -161,6 +169,14 @@ public class Line {
 
 	public void setRingin(int ringin) {
 		this.ringin = ringin;
+	}
+
+	public int getTapLast() {
+		return tapLast;
+	}
+
+	public void setTapLast(int tapLast) {
+		this.tapLast = tapLast;
 	}
 	
 }

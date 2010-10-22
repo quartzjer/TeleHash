@@ -80,7 +80,7 @@ public class SeeHandler implements TelexHandler {
 		        	switchHandler.send(telexOut);
 		            
 		            // send pop signal back to the switch who .see'd us in case the new one is behind a nat
-		            telexOut = TelexBuilder.to(recvLine.getAddress())
+		            telexOut = TelexBuilder.to(recvLine)
 		            	.end(seeHash)
 		            	.with("+pop", "th:" + formatAddress(switchHandler.getAddress()))
 		            	.with("_hop", 1).build();

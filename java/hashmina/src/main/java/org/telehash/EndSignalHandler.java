@@ -67,7 +67,7 @@ public class EndSignalHandler implements TelexHandler {
 	        
 	        if (!closestAddrs.isEmpty()) {
 	        	Map<String, ?> telexOut =
-		        	TelexBuilder.to(line.getAddress())
+		        	TelexBuilder.to(line)
 		        		.with(".see", closestAddrs).build();
 	        	
 	        	switchHandler.send(telexOut);

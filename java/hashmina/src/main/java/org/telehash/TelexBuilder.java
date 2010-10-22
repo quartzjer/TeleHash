@@ -17,6 +17,10 @@ public class TelexBuilder {
 		return to(formatAddress(_to));
 	}
 	
+	public static TelexBuilder to(Line line) {
+		return to(line.getAddress()).with("_line", line.getLineId());
+	}
+
 	public static String formatAddress(InetSocketAddress addr) {
 		return addr.getAddress().getHostAddress() + ":" + addr.getPort();
 	}

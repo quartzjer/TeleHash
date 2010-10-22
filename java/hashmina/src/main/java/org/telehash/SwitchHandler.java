@@ -26,7 +26,6 @@ import org.apache.mina.transport.socket.nio.NioDatagramConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -59,6 +58,8 @@ public class SwitchHandler extends IoHandlerAdapter {
 	private InetSocketAddress seedAddress;
 
 	private SwitchScanner scannerThread;
+
+	private List<TapRule> tapRules = Lists.newArrayList();
 	
 	public SwitchHandler() {
 		connector = new NioDatagramConnector();
@@ -102,11 +103,11 @@ public class SwitchHandler extends IoHandlerAdapter {
 		setState(State.SEEDING);
 	}
 
-	public State getState() {
+	public synchronized State getState() {
 		return state;
 	}
 	
-	protected void setState(State state) {
+	protected synchronized void setState(State state) {
 		if (state == State.CONNECTED && this.state != State.CONNECTED) {
 			startScannerThread();
 		}
@@ -117,12 +118,12 @@ public class SwitchHandler extends IoHandlerAdapter {
 	}
 
 	private void startScannerThread() {
-		if (scannerThread == null) {
-			scannerThread = new SwitchScanner(this);
+		if (scannerThread != null && scannerThread.isRunning()) {
+			scannerThread.stopRunning();
 		}
-		if (!scannerThread.isRunning()) {
-			scannerThread.start();
-		}
+		
+		scannerThread = new SwitchScanner(this);
+		scannerThread.start();
 	}
 
 	private void stopScannerThread() {
@@ -156,7 +157,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 			String response = new String(bufferContents);
 			logger.info("RECV {}: {}", formatAddress((InetSocketAddress)session.getRemoteAddress()), response);
 			Map<String, ?> telex = Json.fromJson(response);
-			switch (state) {
+			switch (getState()) {
 			case SEEDING:
 				completeBootstrap(session, telex, bufferContents.length);
 				break;
@@ -189,13 +190,17 @@ public class SwitchHandler extends IoHandlerAdapter {
 	}
 	
 	protected void completeBootstrap(IoSession session, Map<String, ?> telex, int br) {
-		state = State.CONNECTED;
 		String selfAddrString = (String) telex.get("_to");
 		selfAddress = parseAddress(selfAddrString);
 		selfHash = Hash.of(selfAddrString);
+		setState(State.CONNECTED);
 		logger.info("SELF[" + selfAddrString + " = " + selfHash + "]");
 		
 		Line line = getOrCreateLine(selfAddress);
+		if (line == null) {
+			return;
+		}
+		
 		line.setVisible(true);
 //		line.getRules().add(getSwitchRules());
 		
@@ -209,13 +214,19 @@ public class SwitchHandler extends IoHandlerAdapter {
 	}
 
 	public Line getOrCreateLine(InetSocketAddress endpoint) {
-		Hash endHash = Hash.of(endpoint);
-		Line line = lines.get(endHash);
-		if (line == null) {
-			line = new Line(endpoint);
-			lines.put(endHash, line);
+		if (endpoint == null) {
+			return null;
 		}
-		return line;
+		
+		synchronized (lines) {
+			Hash endHash = Hash.of(endpoint);
+			Line line = lines.get(endHash);
+			if (line == null) {
+				line = new Line(endpoint, endHash);
+				lines.put(endHash, line);
+			}
+			return line;
+		}
 	}
 	
 	private int time() {
@@ -232,17 +243,20 @@ public class SwitchHandler extends IoHandlerAdapter {
 	    }
 	    
 	    Integer _line = (Integer) telex.get("_line");
+	    if (_line == null) {
+	    	_line = Line.NOT_SET;
+	    }
 	    
 	    // first, if it's been more than 10 seconds after a line opened, 
 	    // be super strict, no more ringing allowed, _line absolutely required
 	    if (line.getLineAt() > 0 && time() - line.getLineAt() > 10) {
-	        if (!Objects.equal(_line, line.getLineId())) {
+	        if (_line != line.getLineId()) {
 	            return false;
 	        }
 	    }
 	    
 	    // second, process incoming _line
-	    if (_line != null) {
+	    if (_line != Line.NOT_SET) {
 	        if (line.getRingout() <= 0) {
 	            return false;
 	        }
@@ -266,12 +280,17 @@ public class SwitchHandler extends IoHandlerAdapter {
 	    }
 	    
 	    Integer _ring = (Integer) telex.get("_ring");
+	    if (_ring == null) {
+	    	_ring = Line.NOT_SET;
+	    }
 	    
 	    // last, process any incoming _ring's (remember, could be out of order, after a _line)
-	    if (_ring != null) {
+	    if (_ring != Line.NOT_SET) {
 	    	
 	        // already had a ring and this one doesn't match, should be rare
-	        if (line.getRingin() >= 0 && _ring != line.getRingin()) {
+	        if (line.getRingin() != Line.NOT_SET && _ring != line.getRingin()) {
+	        	logger.info("unmatched _ring from " + telex.get("_to"));
+	        	lines.remove(line.getEnd());
 	            return false;
 	        }
 	        
@@ -288,7 +307,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	        }
 	    }
 	    
-	    Integer _br = (Integer) telex.get("_br");
+	    Integer _br = Integer.parseInt(telex.get("_br").toString());
 	    
 	    // we're valid at this point, line or otherwise, track bytes
 	    logger.info(
@@ -312,9 +331,11 @@ public class SwitchHandler extends IoHandlerAdapter {
 	 * Update status of all lines, removing stale ones.
 	 */
 	public void scanLines() {
-	    int now = time();
+	    long now = time();
 	    int numValid = 0;
 	    logger.info("SCAN " + lines.size() + " lines");
+	    
+	    boolean isConnected = getState() == State.CONNECTED;
 	    
 	    for (Iterator<Entry<Hash, Line>> entryIter = lines.entrySet().iterator(); entryIter.hasNext(); ) {
 	    	Entry<Hash, Line> entry = entryIter.next();
@@ -339,34 +360,28 @@ public class SwitchHandler extends IoHandlerAdapter {
 	        
 	        numValid++;
 	        
-	        if (state == State.CONNECTED) {
+	        if (isConnected) {
 	        
 	            // +end ourselves to see if they know anyone closer as a ping
 	            Map<String, Object> telexOut = 
-	            	TelexBuilder.to(line.getAddress())
+	            	TelexBuilder.to(line)
 	            		.end(selfHash).build();
 	            
 	            // also .see ourselves if we haven't yet, default for now is to participate in the DHT
 	            if (!line.isAdvertised()) {
 	            	line.setAdvertised(true);
-	                telexOut.put(".see", Lists.newArrayList(selfAddress));
+	                telexOut.put(".see", Lists.newArrayList(formatAddress(selfAddress)));
 	            }
 	            
 	            // also .tap our hash for +pop requests for NATs
-	            Map<String, ?> tap = new TelexBuilder()
-	            	.with("is",  new TelexBuilder().with("+end", selfHash).build())
-	            	.with("has",  Lists.newArrayList("+pop")).build();
-	            
-//	            var tapOut = {is: {}};
-//	            tapOut.is['+end'] = self.selfhash;
-//	            tapOut.has = ['+pop'];
-//	            telexOut[".tap"] = [tapOut];
-	            telexOut.put(".tap", tap);
+	            telexOut.put(".tap", Lists.newArrayList(TapRule.builder()
+	            		.is("+end", selfHash.toString())
+	            		.has("+pop").build()));
 	            send(telexOut);
 	        }
 	    }
 	    
-	    if (numValid == 0 && !selfAddress.equals(seedAddress)) {
+	    if (isConnected && numValid == 0 && !selfAddress.equals(seedAddress)) {
 	        offline();
 	        seed(seedAddress);
 	    }
@@ -376,7 +391,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 		logger.info("OFFLINE");
 		selfAddress = null;
 		selfHash = null;
-		state = State.OFFLINE;
+		setState(State.OFFLINE);
 		lines.clear();
 	}
 
@@ -468,8 +483,28 @@ public class SwitchHandler extends IoHandlerAdapter {
 	}
 
 	public void taptap() {
-		// TODO Auto-generated method stub
-		
+		for (TapRule tapRule : tapRules) {
+			String tapEndStr = (String) tapRule.getIs().get("+end");
+	        if (tapEndStr == null) {
+	            continue;
+	        }
+	        Hash tapEnd = new Hash(tapEndStr);
+	        
+	        for (Hash hash : Iterables.limit(nearTo(tapEnd, selfAddress), 3)) {
+	            Line line = getLine(hash);
+	            
+	            if (line.getTapLast() != Line.NOT_SET && line.getTapLast() + 50 > time()) {
+	                return; // only tap every 50sec
+	            }
+	            
+	            line.setTapLast(time());
+	            Map<String, ?> telexOut = TelexBuilder.to(line)
+	            	.with(".tap", Lists.newArrayList(tapRule)).build(); // tap the closest ipp to our target end 
+	            logger.info("TAPTAP to {} end {} tap {}", new Object[]{
+	            		line.getAddress(), tapEnd, Json.toJson(telexOut)});
+	            send(telexOut);
+	        }
+	    }
 	}
 	
 }
