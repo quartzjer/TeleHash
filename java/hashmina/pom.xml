@@ -29,6 +29,27 @@
                 <target>1.6</target>
             </configuration>
         </plugin>
+        <plugin>
+        	<groupId>org.codehaus.mojo</groupId>
+        	<artifactId>exec-maven-plugin</artifactId>
+        	<version>1.2</version>
+			   <executions>
+			    <execution>
+			     <goals>
+			      <goal>java</goal>
+			     </goals>
+			     <configuration>
+			      <mainClass>org.telehash.App</mainClass>
+			      <arguments>
+			      <!-- 
+			       <argument>arg0</argument>
+			       <argument>arg1</argument>
+			       -->
+			      </arguments>
+			     </configuration>
+			    </execution>
+			   </executions>
+        </plugin>
       </plugins>
   </build>
     

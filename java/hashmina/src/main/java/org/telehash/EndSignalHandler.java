@@ -77,12 +77,12 @@ public class EndSignalHandler implements TelexHandler {
 	    // this is our .tap, requests to +pop for NATs
 	    if (endHash.equals(switchHandler.getAddressHash()) && telex.containsKey("+pop")) {
 	    	String pop = (String) telex.get("+pop");
-	        logger.debug("POP? " + pop);
+	        logger.info("POP? " + pop);
 	        
             // should we verify that this came from a switch we actually have a tap on?
 	        if (pop.startsWith("th:")) {
 	        	InetSocketAddress popToAddr = parseAddress(pop.substring(3));
-	        	logger.debug("POP to " + popToAddr);
+	        	logger.info("POP to " + popToAddr);
 	        	switchHandler.send(TelexBuilder.to(popToAddr).build());
 	        }
 	    }

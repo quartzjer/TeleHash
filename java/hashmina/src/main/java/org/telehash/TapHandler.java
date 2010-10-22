@@ -4,12 +4,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
+
 public class TapHandler implements TelexHandler {
 
+	static private Set<String> MATCHING_KEYS = ImmutableSet.of(".tap");
+	
 	@Override
 	public Set<String> getMatchingKeys() {
-		// TODO Auto-generated method stub
-		return null;
+		return MATCHING_KEYS;
 	}
 
 	@Override

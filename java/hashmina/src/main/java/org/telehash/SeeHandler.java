@@ -57,7 +57,7 @@ public class SeeHandler implements TelexHandler {
 		        
 		        // they're making themselves visible now, awesome
 		        if (seeAddr.equals(recvLine.getAddress()) && !recvLine.isVisible()) {
-		            logger.debug("VISIBLE " + recvLine.getAddress());
+		            logger.info("VISIBLE " + recvLine.getAddress());
 		            recvLine.setVisible(true);
 		            recvLine.getNeighbors().addAll(
 		            		switchHandler.nearTo(recvLine.getEnd(), switchHandler.getAddress()));
@@ -91,7 +91,8 @@ public class SeeHandler implements TelexHandler {
 
 		private boolean bucketWant(InetSocketAddress seeAddr, Hash seeHash) {
 			int dist = seeHash.diffBit(switchHandler.getAddressHash());
-			logger.debug("BUCKET WANT[" + dist + " " + switchHandler.getAddress() + "]");
+			logger.info("BUCKET WANT[{} -> {} -> {}]", new Object[]{
+					seeAddr, Integer.toString(dist), switchHandler.getAddress()});
 			return dist >= 0;
 		}
 		

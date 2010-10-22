@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.mina.core.filterchain.DefaultIoFilterChainBuilder;
+import org.apache.mina.filter.logging.LogLevel;
 import org.apache.mina.filter.logging.LoggingFilter;
 import org.apache.mina.transport.socket.DatagramSessionConfig;
 import org.apache.mina.transport.socket.nio.NioDatagramAcceptor;
@@ -25,7 +26,8 @@ public class App {
 		acceptor.setHandler(handler);
 		
 		DefaultIoFilterChainBuilder chain = acceptor.getFilterChain();
-		chain.addLast("logger", new LoggingFilter());
+		LoggingFilter loggingFilter = new LoggingFilter();
+		chain.addLast("logger", loggingFilter);
 		
 		DatagramSessionConfig dcfg = acceptor.getSessionConfig();
 		dcfg.setReuseAddress(true);

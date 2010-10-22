@@ -60,7 +60,11 @@ public class Hash implements Comparable<Hash> {
 
 	@Override
 	public boolean equals(Object obj) {
-		return ArrayUtils.isEquals(this, obj);
+		if (obj instanceof Hash) {
+			return ArrayUtils.isEquals(this.bytes, ((Hash)obj).bytes);
+		}
+		
+		return false;
 	}
 
 	@Override
