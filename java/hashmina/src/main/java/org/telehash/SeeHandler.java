@@ -46,6 +46,7 @@ public class SeeHandler implements TelexHandler {
 		    @SuppressWarnings("unchecked")
 			List<String> seeAddrStrs = (List<String>) telex.get(".see");
 		    if (seeAddrStrs == null) {
+		    	logger.warn("SeeHandler was dispatched a Telex without .see command!");
 		    	return;
 		    }
 		    

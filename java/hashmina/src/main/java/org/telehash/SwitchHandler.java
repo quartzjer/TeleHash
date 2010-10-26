@@ -4,7 +4,8 @@ import static org.telehash.TelexBuilder.formatAddress;
 import static org.telehash.TelexBuilder.parseAddress;
 
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -18,6 +19,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.mina.core.buffer.IoBuffer;
 import org.apache.mina.core.buffer.SimpleBufferAllocator;
 import org.apache.mina.core.future.ConnectFuture;
+import org.apache.mina.core.future.IoFuture;
 import org.apache.mina.core.future.IoFutureListener;
 import org.apache.mina.core.service.IoHandlerAdapter;
 import org.apache.mina.core.session.IoSession;
@@ -25,11 +27,11 @@ import org.apache.mina.transport.socket.DatagramConnector;
 import org.apache.mina.transport.socket.nio.NioDatagramConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.telehash.SwitchState.ConnectionStatus;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 
 public class SwitchHandler extends IoHandlerAdapter {
@@ -39,23 +41,9 @@ public class SwitchHandler extends IoHandlerAdapter {
 	private DatagramConnector connector;
 	private SimpleBufferAllocator allocator;
 
-	public enum State {
-		SEEDING,
-		CONNECTED,
-		OFFLINE
-	};
-	
-	private State state = State.OFFLINE;
-
-	private InetSocketAddress selfAddress = null;
-
-	private Hash selfHash = null;
-
-	private Map<Hash, Line> lines = new MapMaker().makeMap();
+	private final SwitchState state = new SwitchState();
 
 	private List<TelexHandler> telexHandlers = Lists.newArrayList();
-
-	private InetSocketAddress seedAddress;
 
 	private SwitchScanner scannerThread;
 
@@ -71,50 +59,50 @@ public class SwitchHandler extends IoHandlerAdapter {
 		addTelexHandler("+end", new EndSignalHandler());
 	}
 	
-	public Line getLine(InetSocketAddress endpoint) {
-		return getLine(Hash.of(endpoint));
+	@Override
+	public void sessionCreated(IoSession session) throws Exception {
+		super.sessionCreated(session);
+		Line line = state.getOrCreateLine((InetSocketAddress)session.getRemoteAddress());
+		session.setAttribute("line", line);
+		logger.info("Session[{}] created", session.getId());
 	}
-	
+
+	@Override
+	public void sessionClosed(IoSession session) throws Exception {
+		super.sessionClosed(session);
+		logger.info("Session[{}] closed", session.getId());
+	}
+
 	public Line getLine(Hash endHash) {
-		return lines.get(endHash);
+		return state.getLines().get(endHash);
 	}
 	
 	public InetSocketAddress getAddress() {
-		return selfAddress;
+		return state.getSelfAddress();
 	}
 
 	public Hash getAddressHash() {
-		return selfHash;
+		return state.getSelfHash();
 	}
 
-	public synchronized void addTelexHandler(String key, TelexHandler handler) {
+	public void addTelexHandler(String key, TelexHandler handler) {
 		telexHandlers.add(handler);
 	}
 	
-	public synchronized void removeTelexHandler(TelexHandler handler) {
+	public void removeTelexHandler(TelexHandler handler) {
 		telexHandlers.remove(handler);
 	}
 	
-	public void seed(InetSocketAddress seedAddress) {
-		this.seedAddress = seedAddress;
-		send(TelexBuilder
-			.to(seedAddress)
-			.end(Hash.of(seedAddress).toString()).build());
-		setState(State.SEEDING);
-	}
-
-	public synchronized State getState() {
-		return state;
-	}
-	
-	protected synchronized void setState(State state) {
-		if (state == State.CONNECTED && this.state != State.CONNECTED) {
-			startScannerThread();
-		}
-		else if (state != State.CONNECTED) {
-			stopScannerThread();
-		}
-		this.state = state;
+	public void seed(final InetSocketAddress seedAddress) {
+		state.seeding(new Runnable(){
+			@Override
+			public void run() {
+				state.setSeedAddress(seedAddress);
+				Line seedLine = state.getOrCreateLine(seedAddress);
+				send(TelexBuilder.to(seedLine)
+						.end(Hash.of(state.getSeedAddress()).toString()).build());
+			}
+		});
 	}
 
 	private void startScannerThread() {
@@ -130,52 +118,108 @@ public class SwitchHandler extends IoHandlerAdapter {
 		if (scannerThread != null) {
 			scannerThread.stopRunning();
 		}
+		scannerThread = null;
 	}
 
-	public void send(final Map<String, ?> map) {
-        ConnectFuture connFuture = connector.connect(parseAddress((String)map.get("_to")));
-        connFuture.addListener(new IoFutureListener<ConnectFuture>() {
-        	@Override
-			public void operationComplete(ConnectFuture future) {
-                if (future.isConnected()) {
-                    IoSession session = future.getSession();
-                    String msg = Json.toJson(map);
-                    logger.info("SEND: {}", msg);
-                    IoBuffer buffer = allocator.wrap(ByteBuffer.wrap(msg.getBytes()));
-                    session.write(buffer);
-                }
-            }
-    	});
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public void send(final Map map) {
+		final InetSocketAddress toAddr = parseAddress((String)map.get("_to"));
+	    final Line line = state.getOrCreateLine(toAddr);
+	    
+	    // check br and drop if too much
+	    if (line.getBsent() - line.getBrIn() > 10000) {
+	        logger.warn("MAX SEND DROP");
+	        return;
+	    }
+	    
+	    // if a line is open use that, else send a ring
+	    if (line.getLineId() != Line.NOT_SET) {
+	        map.put("_line", line.getLineId());
+	    }
+	    else {
+	    	map.remove("_line");
+	        map.put("_ring", line.getRingout());
+	    }
+	    
+	    // update our bytes tracking and send current state
+	    line.setBrOut(line.getBr());
+	    map.put("_br", line.getBr());
+	    
+        final String msg = Json.toJson(map);
+        final byte[] bytes = msg.getBytes();
+        final IoBuffer buffer = allocator.allocate(bytes.length, true);
+        buffer.put(bytes);
+        buffer.flip();
+        
+        final IoFutureListener onWriteComplete = new IoFutureListener<IoFuture>() {
+        	public void operationComplete(IoFuture future) {
+            	line.setBsent(line.getBsent() + bytes.length);
+            	line.setSentAt(time());
+        	};
+		};
+		
+        if (line != null && line.getSession() != null && line.getSession().getAttribute("line") == line) {
+            logger.info("SEND[{}]: {} bytes: {}", new Object[]{
+            		line.getSession().getId(), bytes.length, msg});
+        	line.getSession().write(buffer).addListener(onWriteComplete);
+        }
+        else {
+	        ConnectFuture connFuture = connector.connect(toAddr);
+	        connFuture.addListener(new IoFutureListener<ConnectFuture>() {
+	        	@Override
+				public void operationComplete(ConnectFuture future) {
+	                if (future.isConnected()) {
+	                    IoSession session = future.getSession();
+	                    line.setSession(session);
+	                    session.setAttribute("line", line);
+	                    
+	                    logger.info("SEND[{}]: {} bytes: {}", new Object[]{
+	                    		session.getId(), bytes.length, msg});
+	                    session.write(buffer).addListener(onWriteComplete);
+	                }
+	            }
+	    	});
+        }
 	}
 
-	@Override
+    static private final CharsetDecoder decoder = Charset.forName("UTF-8").newDecoder();
+    
+    @Override
 	public void messageReceived(IoSession session, Object message)
 			throws Exception {
 		if (message instanceof IoBuffer) {
 			IoBuffer buffer = (IoBuffer) message;
-			byte[] bufferContents = buffer.buf().array();
-			String response = new String(bufferContents);
-			logger.info("RECV {}: {}", formatAddress((InetSocketAddress)session.getRemoteAddress()), response);
+			String response = buffer.getString(decoder);
+			int br = response.getBytes().length;
+			logger.info("RECV[{}] from {}: {} bytes: {}", new Object[]{
+					session.getId(),
+					(InetSocketAddress)session.getRemoteAddress(), br, response});
 			Map<String, ?> telex = Json.fromJson(response);
-			switch (getState()) {
+			switch (state.getConnectionStatus()) {
 			case SEEDING:
-				completeBootstrap(session, telex, bufferContents.length);
+				completeBootstrap(session, telex, br);
 				break;
 			case CONNECTED:
-				processTelex(session, telex, bufferContents.length);
+				processTelex(session, telex, br);
 				break;
 			}
 		}
 	}
 
 	protected void processTelex(IoSession session, Map<String, ?> telex, int br) {
-		Line line = getOrCreateLine((InetSocketAddress) session.getRemoteAddress());
+		Line line = (Line) session.getAttribute("line");
+		if (line == null) {
+			session.close(true);
+			return;
+		}
+		
 		boolean lineStatus = checkLine(line, telex, br);
 		if (lineStatus) {
-			logger.info("LINE STATUS {}", telex.containsKey("_line") ? "RINGING" : "OPEN");
+			logger.info("LINE [{}] STATUS {}", line.getAddress(), 
+					telex.containsKey("_line") ? "OPEN" : "RINGING");
 		}
 		else {
-			logger.info("LINE FAIL [{}]", line.getAddress());
+			logger.info("LINE [{}] FAIL", line.getAddress());
 			return;
 		}
 		
@@ -189,47 +233,35 @@ public class SwitchHandler extends IoHandlerAdapter {
 		// TODO: process taps & forward
 	}
 	
-	protected void completeBootstrap(IoSession session, Map<String, ?> telex, int br) {
-		String selfAddrString = (String) telex.get("_to");
-		selfAddress = parseAddress(selfAddrString);
-		selfHash = Hash.of(selfAddrString);
-		setState(State.CONNECTED);
-		logger.info("SELF[" + selfAddrString + " = " + selfHash + "]");
-		
-		Line line = getOrCreateLine(selfAddress);
-		if (line == null) {
-			return;
-		}
-		
-		line.setVisible(true);
-//		line.getRules().add(getSwitchRules());
-		
-		if (selfAddress.equals(session.getRemoteAddress())) {
-			logger.info("We're the seed.");
-		}
-		
-		// TODO: start scanning thread
-		
-		processTelex(session, telex, br);
+	protected void completeBootstrap(final IoSession session, final Map<String, ?> telex, final int br) {
+		state.connected(new Runnable(){
+			@Override
+			public void run() {
+				String selfAddrString = (String) telex.get("_to");
+				state.setSelfAddress(parseAddress(selfAddrString));
+				logger.info("SELF[" + selfAddrString + " = " + state.getSelfHash() + "]");
+				
+				Line line = state.getOrCreateLine(state.getSelfAddress());
+				if (line == null) {
+					return;
+				}
+				
+				line.setVisible(true);
+//				line.getRules().add(getSwitchRules());
+				
+				if (state.getSelfAddress().equals(session.getRemoteAddress())) {
+					logger.info("We're the seed.");
+				}
+				
+				// start scanning thread
+				startScannerThread();
+				
+				processTelex(session, telex, br);
+			}
+		});
 	}
 
-	public Line getOrCreateLine(InetSocketAddress endpoint) {
-		if (endpoint == null) {
-			return null;
-		}
-		
-		synchronized (lines) {
-			Hash endHash = Hash.of(endpoint);
-			Line line = lines.get(endHash);
-			if (line == null) {
-				line = new Line(endpoint, endHash);
-				lines.put(endHash, line);
-			}
-			return line;
-		}
-	}
-	
-	private int time() {
+	static public int time() {
 		return (int)(System.currentTimeMillis() / 1000);
 	}
 	
@@ -262,7 +294,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	        }
 	        
 	        // must match if exist
-	        if (line.getLineId() != 0 && _line != line.getLineId()) {
+	        if (line.getLineId() != Line.NOT_SET && _line != line.getLineId()) {
 	            return false;
 	        }
 	        
@@ -289,8 +321,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	    	
 	        // already had a ring and this one doesn't match, should be rare
 	        if (line.getRingin() != Line.NOT_SET && _ring != line.getRingin()) {
-	        	logger.info("unmatched _ring from " + telex.get("_to"));
-	        	lines.remove(line.getEnd());
+	        	logger.info("unmatched _ring from " + line.getAddress());
 	            return false;
 	        }
 	        
@@ -333,14 +364,13 @@ public class SwitchHandler extends IoHandlerAdapter {
 	public void scanLines() {
 	    long now = time();
 	    int numValid = 0;
-	    logger.info("SCAN " + lines.size() + " lines");
 	    
-	    boolean isConnected = getState() == State.CONNECTED;
-	    
-	    for (Iterator<Entry<Hash, Line>> entryIter = lines.entrySet().iterator(); entryIter.hasNext(); ) {
+    	logger.info("SCAN " + state.getLines().size() + " lines");
+    	
+	    for (Iterator<Entry<Hash, Line>> entryIter = state.getLines().entrySet().iterator(); entryIter.hasNext(); ) {
 	    	Entry<Hash, Line> entry = entryIter.next();
 	    	Hash hash = entry.getKey();
-	        if (hash.equals(selfHash)) {
+	        if (hash.equals(state.getSelfHash())) {
 	            continue; // skip our own endpoint and what is this (continue)
 	        }
 	        
@@ -360,41 +390,40 @@ public class SwitchHandler extends IoHandlerAdapter {
 	        
 	        numValid++;
 	        
-	        if (isConnected) {
+	        if (state.getConnectionStatus() == ConnectionStatus.CONNECTED) {
 	        
 	            // +end ourselves to see if they know anyone closer as a ping
 	            Map<String, Object> telexOut = 
 	            	TelexBuilder.to(line)
-	            		.end(selfHash).build();
+	            		.end(state.getSelfHash()).build();
 	            
 	            // also .see ourselves if we haven't yet, default for now is to participate in the DHT
 	            if (!line.isAdvertised()) {
 	            	line.setAdvertised(true);
-	                telexOut.put(".see", Lists.newArrayList(formatAddress(selfAddress)));
+	                telexOut.put(".see", Lists.newArrayList(formatAddress(
+	                		state.getSelfAddress())));
 	            }
 	            
 	            // also .tap our hash for +pop requests for NATs
 	            telexOut.put(".tap", Lists.newArrayList(TapRule.builder()
-	            		.is("+end", selfHash.toString())
+	            		.is("+end", state.getSelfHash().toString())
 	            		.has("+pop").build()));
 	            send(telexOut);
 	        }
 	    }
 	    
-	    if (isConnected && numValid == 0 && !selfAddress.equals(seedAddress)) {
-	        offline();
-	        seed(seedAddress);
+	    if (state.getConnectionStatus() == ConnectionStatus.CONNECTED && numValid == 0 
+	    		&& !state.getSelfAddress().equals(state.getSeedAddress())) {
+	        state.offline(new Runnable(){
+	        	@Override
+	        	public void run() {
+	        		stopScannerThread();
+			        seed(state.getSeedAddress());
+	        	}
+	        });
 	    }
 	}
 	
-	protected void offline() {
-		logger.info("OFFLINE");
-		selfAddress = null;
-		selfHash = null;
-		setState(State.OFFLINE);
-		lines.clear();
-	}
-
 	public Collection<Hash> nearTo(final Hash endHash, InetSocketAddress address) {
 		Hash addrHash = Hash.of(address);
 	    Line addrLine = getLine(addrHash);
@@ -463,7 +492,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	        	
 	        	for (Hash neighborHash : addrLine.getNeighbors()) {
 	        		Line neighborLine = getLine(neighborHash);
-	        		if (neighborLine == null) {
+	        		if (neighborLine == null || neighborLine == addrLine) {
 	        			continue;
 	        		}
 	        		
@@ -484,13 +513,17 @@ public class SwitchHandler extends IoHandlerAdapter {
 
 	public void taptap() {
 		for (TapRule tapRule : tapRules) {
+			if (state.getConnectionStatus() != ConnectionStatus.CONNECTED) {
+				break;
+			}
+			
 			String tapEndStr = (String) tapRule.getIs().get("+end");
 	        if (tapEndStr == null) {
 	            continue;
 	        }
 	        Hash tapEnd = new Hash(tapEndStr);
 	        
-	        for (Hash hash : Iterables.limit(nearTo(tapEnd, selfAddress), 3)) {
+	        for (Hash hash : Iterables.limit(nearTo(tapEnd, state.getSelfAddress()), 3)) {
 	            Line line = getLine(hash);
 	            
 	            if (line.getTapLast() != Line.NOT_SET && line.getTapLast() + 50 > time()) {

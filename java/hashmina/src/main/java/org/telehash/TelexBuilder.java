@@ -18,7 +18,12 @@ public class TelexBuilder {
 	}
 	
 	public static TelexBuilder to(Line line) {
-		return to(line.getAddress()).with("_line", line.getLineId());
+		if (line.getLineId() != Line.NOT_SET) {
+			return to(line.getAddress()).with("_line", line.getLineId());
+		}
+		else {
+			return to(line.getAddress()).with("_ring", line.getRingout());
+		}
 	}
 
 	public static String formatAddress(InetSocketAddress addr) {

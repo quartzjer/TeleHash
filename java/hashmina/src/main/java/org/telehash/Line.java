@@ -5,6 +5,8 @@ import java.security.SecureRandom;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.mina.core.session.IoSession;
+
 import com.google.common.collect.Lists;
 
 public class Line {
@@ -46,6 +48,8 @@ public class Line {
 	private boolean advertised = false;
 
 	private List<Map<String, ?>> rules = Lists.newArrayList();
+
+	private IoSession session;
 	
 	public Line(InetSocketAddress address) {
 		this(address, Hash.of(address));
@@ -54,9 +58,9 @@ public class Line {
 	public Line(InetSocketAddress address, Hash end) {
 		this.address = address;
 		this.end = end;
-		this.neighbors = Lists.newArrayList();
+		this.neighbors = Lists.newArrayList(end);
 		this.ringout = new SecureRandom().nextInt(32767) + 1;
-		this.init = System.currentTimeMillis();
+		this.init = SwitchHandler.time();
 	}
 
 	public long getSeenAt() {
@@ -177,6 +181,14 @@ public class Line {
 
 	public void setTapLast(int tapLast) {
 		this.tapLast = tapLast;
+	}
+
+	public IoSession getSession() {
+		return session;
+	}
+
+	public void setSession(IoSession session) {
+		this.session = session;
 	}
 	
 }
