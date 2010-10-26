@@ -82,6 +82,15 @@ function flag(id)
 		
 	<h4>_headers</h4>
 	<p>A key/value pair containing metadata relating specifically to the Telex or shared state of the sending/receiving Switches.  Headers always start with a "_" character.
+	
+	<h4>example</h4>
+<pre>
+{
+	"+sig":"0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33",
+	".cmd":["foo","bar"],
+	"_hdr":42
+}
+</pre>
 </blockquote>
 
 
@@ -101,6 +110,16 @@ function flag(id)
 	<p>Once a _ring has been received, a _line is always sent by both sides that is the product of both _ring values. The "line" is an active relationship between two Switches. (times out after 60 sec of inactivity)
 	<h4>_hop</h4>
 	<p>When a Telex contains signals and is being relayed from one Switch to another, include and increment the _hop value as it's sent.
+	<h4>examples</h4>
+<pre>
+{
+	"_to":"1.2.3.4:5678",
+	"_br":1042,
+	"_ring":5240,
+	"_line":398570153,
+	"_hop":2
+}
+</pre>
 </blockquote>
 
 <p>Switches are generally performing one of two primary roles, either announcing signals into the network, or listening for specific incoming signals on the network. Outside of the common network patterns, they may be connected to other Switches and doing additional things specific to an application.

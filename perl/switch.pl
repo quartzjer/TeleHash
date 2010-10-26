@@ -68,6 +68,33 @@ sub in_stdin
 	my $buff;
 	sysread(STDIN, $buff,8192) || die("stdin $!");
 	printf STDERR "\nSTDIN %s\n",$buff;
+	
+	my $j = $json->from_json($buff) || return;
+	
+	# process special instructions from STDIN
+
+	# track an active tap to another switch
+	if($j->{"-tap"})
+	{
+		
+	}
+
+	# keep a line open and send back status changes
+	if($j->{"-line"})
+	{
+		
+	}
+	
+	# convenience, do the dialing work
+	if($j->{"-dial"})
+	{
+		
+	}
+	
+
+	# default send, strip any other instructions we don't know
+	my %t = map { $_ => $j->{$_} } grep(/^[^\-]+/, keys %$j);
+	tsend(\%t) if($t{"_to"});
 }
 
 # every second or so do maintenance checks
@@ -97,7 +124,7 @@ sub in_udp
 	printf STDERR "\nRECV[%s]\t%s\n",$remoteipp,$buff;
 
 	# json parse check
-	my $j = $json->from_json($buff) || next;
+	my $j = $json->from_json($buff) || return;
 
 	# FIRST, if we're bootstrapping, discover our own ip:port
 	if(!$selfipp && $j->{"_to"})
@@ -111,7 +138,7 @@ sub in_udp
 		if($selfipp eq $remoteipp)
 		{
 			printf STDERR "\tWe're the seed!\n";
-			next;
+			return;
 		}
 	}
 
@@ -121,7 +148,7 @@ sub in_udp
 	if(!$lstat)
 	{
 		printf STDERR "\tLINE FAIL[%s]\n",$json->to_json($line);
-		next;
+		return;
 	}else{
 		printf STDERR "\tLINE STATUS %s\n",$j->{"_line"}?"OPEN":"RINGING";
 	}
