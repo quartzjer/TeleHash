@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="telehash"
+    nsURI="http://telehash.org/ecore/2010" nsPrefix="telehash">
+  <eClassifiers xsi:type="ecore:EClass" name="Telex">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="to" eType="#//Endpoint">
+      <eAnnotations source="JsonMetadata">
+        <details key="key" value="_to"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="end" eType="#//Hash">
+      <eAnnotations source="JsonMetadata">
+        <details key="key" value="+end"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="line" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        unsettable="true">
+      <eAnnotations source="JsonMetadata">
+        <details key="key" value="_line"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="ring" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        unsettable="true">
+      <eAnnotations source="JsonMetadata">
+        <details key="key" value="_ring"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="see" upperBound="-1" eType="#//Endpoint">
+      <eAnnotations source="JsonMetadata">
+        <details key="key" value=".see"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="bytesReceived" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt">
+      <eAnnotations source="JsonMetadata">
+        <details key="key" value="_br"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="Endpoint" instanceClassName="java.net.InetSocketAddress"/>
+  <eClassifiers xsi:type="ecore:EDataType" name="Hash" instanceClassName="org.telehash.Hash"/>
+</ecore:EPackage>

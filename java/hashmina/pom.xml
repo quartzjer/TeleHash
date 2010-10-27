@@ -50,7 +50,24 @@
 			    </execution>
 			   </executions>
         </plugin>
-      </plugins>
+      <plugin>
+        <groupId>net.sf.mapasuta.build.maven.plugins</groupId>
+        <artifactId>maven-emfgen-plugin</artifactId>
+        <configuration>
+          <genModel>telehash.genmodel</genModel>
+          <metaModels>
+            <metaModel>${basedir}/src/main/resources/telehash.ecore</metaModel>
+          </metaModels>
+          <outputDirectory>${basedir}/src/main/resources</outputDirectory>
+          <workspace>${basedir}/target/workspace</workspace>
+          <packageUris>
+            <packageUri>http://telehash.org/ecore/2010</packageUri>
+          </packageUris>
+          <modelProject>test-model-plugin</modelProject>
+        </configuration>
+        <goals><goal>generate</goal></goals>
+      </plugin>
+    </plugins>
   </build>
     
   <dependencies>
@@ -137,6 +154,13 @@
     	<groupId>org.codehaus.jackson</groupId>
     	<artifactId>jackson-core-asl</artifactId>
     	<version>1.6.1</version>
+    	<type>jar</type>
+    	<scope>compile</scope>
+    </dependency>
+    <dependency>
+    	<groupId>org.eclipse.emf</groupId>
+    	<artifactId>org.eclipse.emf.json</artifactId>
+    	<version>0.0.1-SNAPSHOT</version>
     	<type>jar</type>
     	<scope>compile</scope>
     </dependency>
