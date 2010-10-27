@@ -116,13 +116,41 @@ public interface TelehashPackage extends EPackage {
 	int TELEX__SEE = 4;
 
 	/**
+	 * The feature id for the '<em><b>Bytes Received</b></em>' attribute.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 * @ordered
+	 */
+	int TELEX__BYTES_RECEIVED = 5;
+
+	/**
 	 * The number of structural features of the '<em>Telex</em>' class.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
 	 * @generated
 	 * @ordered
 	 */
-	int TELEX_FEATURE_COUNT = 5;
+	int TELEX_FEATURE_COUNT = 6;
+
+	/**
+	 * The meta object id for the '{@link org.telehash.model.impl.TapRuleImpl <em>Tap Rule</em>}' class.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see org.telehash.model.impl.TapRuleImpl
+	 * @see org.telehash.model.impl.TelehashPackageImpl#getTapRule()
+	 * @generated
+	 */
+	int TAP_RULE = 1;
+
+	/**
+	 * The number of structural features of the '<em>Tap Rule</em>' class.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 * @ordered
+	 */
+	int TAP_RULE_FEATURE_COUNT = 0;
 
 	/**
 	 * The meta object id for the '<em>Endpoint</em>' data type.
@@ -132,7 +160,7 @@ public interface TelehashPackage extends EPackage {
 	 * @see org.telehash.model.impl.TelehashPackageImpl#getEndpoint()
 	 * @generated
 	 */
-	int ENDPOINT = 1;
+	int ENDPOINT = 2;
 
 	/**
 	 * The meta object id for the '<em>Hash</em>' data type.
@@ -142,7 +170,7 @@ public interface TelehashPackage extends EPackage {
 	 * @see org.telehash.model.impl.TelehashPackageImpl#getHash()
 	 * @generated
 	 */
-	int HASH = 2;
+	int HASH = 3;
 
 	/**
 	 * Returns the meta object for class '{@link org.telehash.model.Telex <em>Telex</em>}'.
@@ -208,6 +236,27 @@ public interface TelehashPackage extends EPackage {
 	 * @generated
 	 */
 	EAttribute getTelex_See();
+
+	/**
+	 * Returns the meta object for the attribute '{@link org.telehash.model.Telex#getBytesReceived <em>Bytes Received</em>}'.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @return the meta object for the attribute '<em>Bytes Received</em>'.
+	 * @see org.telehash.model.Telex#getBytesReceived()
+	 * @see #getTelex()
+	 * @generated
+	 */
+	EAttribute getTelex_BytesReceived();
+
+	/**
+	 * Returns the meta object for class '{@link org.telehash.model.TapRule <em>Tap Rule</em>}'.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @return the meta object for class '<em>Tap Rule</em>'.
+	 * @see org.telehash.model.TapRule
+	 * @generated
+	 */
+	EClass getTapRule();
 
 	/**
 	 * Returns the meta object for data type '{@link java.net.InetSocketAddress <em>Endpoint</em>}'.
@@ -302,6 +351,24 @@ public interface TelehashPackage extends EPackage {
 		 * @generated
 		 */
 		EAttribute TELEX__SEE = eINSTANCE.getTelex_See();
+
+		/**
+		 * The meta object literal for the '<em><b>Bytes Received</b></em>' attribute feature.
+		 * <!-- begin-user-doc -->
+		 * <!-- end-user-doc -->
+		 * @generated
+		 */
+		EAttribute TELEX__BYTES_RECEIVED = eINSTANCE.getTelex_BytesReceived();
+
+		/**
+		 * The meta object literal for the '{@link org.telehash.model.impl.TapRuleImpl <em>Tap Rule</em>}' class.
+		 * <!-- begin-user-doc -->
+		 * <!-- end-user-doc -->
+		 * @see org.telehash.model.impl.TapRuleImpl
+		 * @see org.telehash.model.impl.TelehashPackageImpl#getTapRule()
+		 * @generated
+		 */
+		EClass TAP_RULE = eINSTANCE.getTapRule();
 
 		/**
 		 * The meta object literal for the '<em>Endpoint</em>' data type.

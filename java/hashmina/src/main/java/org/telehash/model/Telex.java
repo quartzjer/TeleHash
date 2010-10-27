@@ -27,6 +27,7 @@ import org.telehash.Hash;
  *   <li>{@link org.telehash.model.Telex#getLine <em>Line</em>}</li>
  *   <li>{@link org.telehash.model.Telex#getRing <em>Ring</em>}</li>
  *   <li>{@link org.telehash.model.Telex#getSee <em>See</em>}</li>
+ *   <li>{@link org.telehash.model.Telex#getBytesReceived <em>Bytes Received</em>}</li>
  * </ul>
  * </p>
  *
@@ -47,7 +48,7 @@ public interface Telex extends EObject {
 	 * @see #setTo(InetSocketAddress)
 	 * @see org.telehash.model.TelehashPackage#getTelex_To()
 	 * @model dataType="org.telehash.model.Endpoint"
-	 *        annotation="JsonMetadata key='_to'"
+	 *        annotation="JsonMetadata keyType='header'"
 	 * @generated
 	 */
 	InetSocketAddress getTo();
@@ -74,7 +75,7 @@ public interface Telex extends EObject {
 	 * @see #setEnd(Hash)
 	 * @see org.telehash.model.TelehashPackage#getTelex_End()
 	 * @model dataType="org.telehash.model.Hash"
-	 *        annotation="JsonMetadata key='+end'"
+	 *        annotation="JsonMetadata keyType='signal'"
 	 * @generated
 	 */
 	Hash getEnd();
@@ -103,7 +104,7 @@ public interface Telex extends EObject {
 	 * @see #setLine(int)
 	 * @see org.telehash.model.TelehashPackage#getTelex_Line()
 	 * @model unsettable="true"
-	 *        annotation="JsonMetadata key='_line'"
+	 *        annotation="JsonMetadata keyType='header'"
 	 * @generated
 	 */
 	int getLine();
@@ -157,7 +158,7 @@ public interface Telex extends EObject {
 	 * @see #setRing(int)
 	 * @see org.telehash.model.TelehashPackage#getTelex_Ring()
 	 * @model unsettable="true"
-	 *        annotation="JsonMetadata key='_ring'"
+	 *        annotation="JsonMetadata keyType='header'"
 	 * @generated
 	 */
 	int getRing();
@@ -209,9 +210,35 @@ public interface Telex extends EObject {
 	 * @return the value of the '<em>See</em>' attribute list.
 	 * @see org.telehash.model.TelehashPackage#getTelex_See()
 	 * @model dataType="org.telehash.model.Endpoint"
-	 *        annotation="JsonMetadata key='.see'"
+	 *        annotation="JsonMetadata keyType='command'"
 	 * @generated
 	 */
 	EList<InetSocketAddress> getSee();
+
+	/**
+	 * Returns the value of the '<em><b>Bytes Received</b></em>' attribute.
+	 * <!-- begin-user-doc -->
+	 * <p>
+	 * If the meaning of the '<em>Bytes Received</em>' attribute isn't clear,
+	 * there really should be more of a description here...
+	 * </p>
+	 * <!-- end-user-doc -->
+	 * @return the value of the '<em>Bytes Received</em>' attribute.
+	 * @see #setBytesReceived(int)
+	 * @see org.telehash.model.TelehashPackage#getTelex_BytesReceived()
+	 * @model annotation="JsonMetadata keyType='header' key='_br'"
+	 * @generated
+	 */
+	int getBytesReceived();
+
+	/**
+	 * Sets the value of the '{@link org.telehash.model.Telex#getBytesReceived <em>Bytes Received</em>}' attribute.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @param value the new value of the '<em>Bytes Received</em>' attribute.
+	 * @see #getBytesReceived()
+	 * @generated
+	 */
+	void setBytesReceived(int value);
 
 } // Telex

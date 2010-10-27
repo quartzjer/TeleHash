@@ -6,37 +6,39 @@
   <eClassifiers xsi:type="ecore:EClass" name="Telex">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="to" eType="#//Endpoint">
       <eAnnotations source="JsonMetadata">
-        <details key="key" value="_to"/>
+        <details key="keyType" value="header"/>
       </eAnnotations>
     </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="end" eType="#//Hash">
       <eAnnotations source="JsonMetadata">
-        <details key="key" value="+end"/>
+        <details key="keyType" value="signal"/>
       </eAnnotations>
     </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="line" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
         unsettable="true">
       <eAnnotations source="JsonMetadata">
-        <details key="key" value="_line"/>
+        <details key="keyType" value="header"/>
       </eAnnotations>
     </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="ring" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
         unsettable="true">
       <eAnnotations source="JsonMetadata">
-        <details key="key" value="_ring"/>
+        <details key="keyType" value="header"/>
       </eAnnotations>
     </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="see" upperBound="-1" eType="#//Endpoint">
       <eAnnotations source="JsonMetadata">
-        <details key="key" value=".see"/>
+        <details key="keyType" value="command"/>
       </eAnnotations>
     </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="bytesReceived" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt">
       <eAnnotations source="JsonMetadata">
+        <details key="keyType" value="header"/>
         <details key="key" value="_br"/>
       </eAnnotations>
     </eStructuralFeatures>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EDataType" name="Endpoint" instanceClassName="java.net.InetSocketAddress"/>
   <eClassifiers xsi:type="ecore:EDataType" name="Hash" instanceClassName="org.telehash.Hash"/>
+  <eClassifiers xsi:type="ecore:EClass" name="TapRule"/>
 </ecore:EPackage>

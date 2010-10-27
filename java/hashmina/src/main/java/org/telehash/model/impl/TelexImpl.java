@@ -38,6 +38,7 @@ import org.telehash.model.Telex;
  *   <li>{@link org.telehash.model.impl.TelexImpl#getLine <em>Line</em>}</li>
  *   <li>{@link org.telehash.model.impl.TelexImpl#getRing <em>Ring</em>}</li>
  *   <li>{@link org.telehash.model.impl.TelexImpl#getSee <em>See</em>}</li>
+ *   <li>{@link org.telehash.model.impl.TelexImpl#getBytesReceived <em>Bytes Received</em>}</li>
  * </ul>
  * </p>
  *
@@ -151,6 +152,26 @@ public class TelexImpl extends EObjectImpl implements Telex {
 	 * @ordered
 	 */
 	protected EList<InetSocketAddress> see;
+
+	/**
+	 * The default value of the '{@link #getBytesReceived() <em>Bytes Received</em>}' attribute.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see #getBytesReceived()
+	 * @generated
+	 * @ordered
+	 */
+	protected static final int BYTES_RECEIVED_EDEFAULT = 0;
+
+	/**
+	 * The cached value of the '{@link #getBytesReceived() <em>Bytes Received</em>}' attribute.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see #getBytesReceived()
+	 * @generated
+	 * @ordered
+	 */
+	protected int bytesReceived = BYTES_RECEIVED_EDEFAULT;
 
 	/**
 	 * <!-- begin-user-doc -->
@@ -331,6 +352,29 @@ public class TelexImpl extends EObjectImpl implements Telex {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
+	public int getBytesReceived() {
+		return bytesReceived;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public void setBytesReceived(int newBytesReceived) {
+		int oldBytesReceived = bytesReceived;
+		bytesReceived = newBytesReceived;
+		if (eNotificationRequired())
+			eNotify(new ENotificationImpl(this, Notification.SET,
+					TelehashPackage.TELEX__BYTES_RECEIVED, oldBytesReceived,
+					bytesReceived));
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
 	@Override
 	public Object eGet(int featureID, boolean resolve, boolean coreType) {
 		switch (featureID) {
@@ -344,6 +388,8 @@ public class TelexImpl extends EObjectImpl implements Telex {
 			return getRing();
 		case TelehashPackage.TELEX__SEE:
 			return getSee();
+		case TelehashPackage.TELEX__BYTES_RECEIVED:
+			return getBytesReceived();
 		}
 		return super.eGet(featureID, resolve, coreType);
 	}
@@ -373,6 +419,9 @@ public class TelexImpl extends EObjectImpl implements Telex {
 			getSee().clear();
 			getSee().addAll((Collection<? extends InetSocketAddress>) newValue);
 			return;
+		case TelehashPackage.TELEX__BYTES_RECEIVED:
+			setBytesReceived((Integer) newValue);
+			return;
 		}
 		super.eSet(featureID, newValue);
 	}
@@ -400,6 +449,9 @@ public class TelexImpl extends EObjectImpl implements Telex {
 		case TelehashPackage.TELEX__SEE:
 			getSee().clear();
 			return;
+		case TelehashPackage.TELEX__BYTES_RECEIVED:
+			setBytesReceived(BYTES_RECEIVED_EDEFAULT);
+			return;
 		}
 		super.eUnset(featureID);
 	}
@@ -423,6 +475,8 @@ public class TelexImpl extends EObjectImpl implements Telex {
 			return isSetRing();
 		case TelehashPackage.TELEX__SEE:
 			return see != null && !see.isEmpty();
+		case TelehashPackage.TELEX__BYTES_RECEIVED:
+			return bytesReceived != BYTES_RECEIVED_EDEFAULT;
 		}
 		return super.eIsSet(featureID);
 	}
@@ -454,6 +508,8 @@ public class TelexImpl extends EObjectImpl implements Telex {
 			result.append("<unset>");
 		result.append(", see: ");
 		result.append(see);
+		result.append(", bytesReceived: ");
+		result.append(bytesReceived);
 		result.append(')');
 		return result.toString();
 	}

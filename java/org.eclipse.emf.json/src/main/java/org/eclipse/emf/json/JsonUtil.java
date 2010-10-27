@@ -1,83 +1,131 @@
 package org.eclipse.emf.json;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
+import org.eclipse.emf.common.util.BasicEList;
+import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EAttribute;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EDataType;
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.emf.ecore.EcorePackage;
+import org.eclipse.emf.ecore.util.EcoreUtil;
 
 public class JsonUtil {
 
-	static public EObject fromJson(String jsonTxt, EClass eClass) throws JsonParseException, IOException {
+	static public EObject fromJson(String jsonTxt, EClass eClass) {
+		JsonFactory f = new JsonFactory();
+		try {
+			JsonParser jp = f.createJsonParser(jsonTxt.getBytes());
+			return fromJson(jp, eClass);
+		}
+		catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	static public EObject fromJson(JsonParser jp, EClass eClass) throws JsonParseException, IOException {
 		EObject result = eClass.getEPackage().getEFactoryInstance().create(eClass);
 		Map<String, EStructuralFeature> fieldFeatureMap = getFieldFeatureMap(eClass);
 		
-		JsonFactory f = new JsonFactory();
-		JsonParser jp = f.createJsonParser(jsonTxt.getBytes());
-		
-		jp.nextToken();
+		jp.nextToken(); // should == START_OBJECT?
 		while (jp.nextToken() != JsonToken.END_OBJECT) {
+			
 			String fieldName = jp.getCurrentName();
 			EStructuralFeature feature = fieldFeatureMap.get(fieldName);
-			if (feature == null) {
-				continue; // ignore unmapped feature
-			}
-			else if (feature instanceof EAttribute) {
+			JsonToken nextToken = jp.nextToken();
+			
+			if (feature instanceof EAttribute) {
+				
 				EDataType dataType = (EDataType) feature.getEType();
-				if (feature.isMany()) {
-					// process list of EDataType
+				if (feature.isMany() && nextToken == JsonToken.START_ARRAY) {
+					EList values = new BasicEList();
+					while (jp.nextToken() != JsonToken.END_ARRAY) {
+						values.add(parseValueForDataType(jp, dataType));
+					}
+					result.eSet(feature, values);
 				}
 				else {
-					if (dataType.getEPackage() == EcorePackage.eINSTANCE) {
-						switch (dataType.getClassifierID()) {
-						case EcorePackage.EBOOLEAN:
-							result.eSet(feature, jp.getBooleanValue());
-							break;
-						case EcorePackage.EBYTE:
-							result.eSet(feature, jp.getByteValue());
-							break;
-						case EcorePackage.ESHORT:
-							result.eSet(feature, jp.getShortValue());
-							break;
-						case EcorePackage.EINT:
-							result.eSet(feature, jp.getIntValue());
-							break;
-						case EcorePackage.ELONG:
-							result.eSet(feature, jp.getLongValue());
-							break;
-						case EcorePackage.EFLOAT:
-							result.eSet(feature, jp.getFloatValue());
-							break;
-						case EcorePackage.EDOUBLE:
-							result.eSet(feature, jp.getDoubleValue());
-							break;
-						case EcorePackage.ESTRING:
-						default:
-							result.eSet(feature, jp.getText());
-							break;
-						}
-					}
-					else {
-						result.eSet(feature, jp.getText());
-					}
+					result.eSet(feature, parseValueForDataType(jp, dataType));
 				}
 			}
-			
+			else if (feature instanceof EReference) {
+				EReference eRef = (EReference) feature;
+				if (!eRef.isContainment()) {
+					continue; // Non-containment references are currently ignored
+				}
+				
+				if (feature.isMany() && nextToken == JsonToken.START_ARRAY) {
+					@SuppressWarnings("rawtypes")
+					EList values = new BasicEList();
+					while (jp.nextToken() != JsonToken.END_ARRAY) {
+						values.add(fromJson(jp, eRef.getEReferenceType()));
+					}
+					result.eSet(feature, values);
+				}
+				else {
+					result.eSet(feature, fromJson(jp, eRef.getEReferenceType()));
+				}
+			}
 		}
 		
 		return result;
 	}
 	
+	private static Object parseValueForDataType(JsonParser jp, EDataType dataType) throws JsonParseException, IOException {
+		if (dataType.getEPackage() == EcorePackage.eINSTANCE) {
+			switch (dataType.getClassifierID()) {
+			case EcorePackage.EBOOLEAN:
+				return jp.getBooleanValue();
+			case EcorePackage.EBYTE:
+				return jp.getByteValue();
+			case EcorePackage.ESHORT:
+				return jp.getShortValue();
+			case EcorePackage.EINT:
+				return jp.getIntValue();
+			case EcorePackage.ELONG:
+				return jp.getLongValue();
+			case EcorePackage.EFLOAT:
+				return jp.getFloatValue();
+			case EcorePackage.EDOUBLE:
+				return jp.getDoubleValue();
+			case EcorePackage.ESTRING:
+				return jp.getText();
+			}
+		}
+		return dataType.getEPackage().getEFactoryInstance().createFromString(dataType, jp.getText());
+	}
+
 	private static Map<String, EStructuralFeature> getFieldFeatureMap(EClass eClass) {
-		throw new UnsupportedOperationException();
+		Map<String, EStructuralFeature> map = new HashMap<String, EStructuralFeature>();
+		for (EStructuralFeature feature : eClass.getEAllStructuralFeatures()) {
+			String keyType = EcoreUtil.getAnnotation(feature, "JsonMetadata", "keyType");
+			StringBuilder keyBuilder = new StringBuilder();
+			if (keyType != null) {
+				if (keyType.equals("header")) {
+					keyBuilder.append("_");
+				}
+				else if (keyType.equals("signal")) {
+					keyBuilder.append("+");
+				}
+				else if (keyType.equals("command")) {
+					keyBuilder.append(".");
+				}
+			}
+			
+			String key = EcoreUtil.getAnnotation(feature, "JsonMetadata", "key");
+			keyBuilder.append(key == null ? feature.getName() : key);
+			map.put(keyBuilder.toString(), feature);
+		}
+		return map;
 	}
 
 	static public String toJson(EObject eObj) {

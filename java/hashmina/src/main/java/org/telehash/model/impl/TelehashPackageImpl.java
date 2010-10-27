@@ -17,6 +17,7 @@ import org.eclipse.emf.ecore.impl.EPackageImpl;
 
 import org.telehash.Hash;
 
+import org.telehash.model.TapRule;
 import org.telehash.model.TelehashFactory;
 import org.telehash.model.TelehashPackage;
 import org.telehash.model.Telex;
@@ -35,6 +36,13 @@ public class TelehashPackageImpl extends EPackageImpl implements
 	 * @generated
 	 */
 	private EClass telexEClass = null;
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	private EClass tapRuleEClass = null;
 
 	/**
 	 * <!-- begin-user-doc -->
@@ -174,6 +182,24 @@ public class TelehashPackageImpl extends EPackageImpl implements
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
+	public EAttribute getTelex_BytesReceived() {
+		return (EAttribute) telexEClass.getEStructuralFeatures().get(5);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EClass getTapRule() {
+		return tapRuleEClass;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
 	public EDataType getEndpoint() {
 		return endpointEDataType;
 	}
@@ -222,6 +248,9 @@ public class TelehashPackageImpl extends EPackageImpl implements
 		createEAttribute(telexEClass, TELEX__LINE);
 		createEAttribute(telexEClass, TELEX__RING);
 		createEAttribute(telexEClass, TELEX__SEE);
+		createEAttribute(telexEClass, TELEX__BYTES_RECEIVED);
+
+		tapRuleEClass = createEClass(TAP_RULE);
 
 		// Create data types
 		endpointEDataType = createEDataType(ENDPOINT);
@@ -276,6 +305,13 @@ public class TelehashPackageImpl extends EPackageImpl implements
 		initEAttribute(getTelex_See(), this.getEndpoint(), "see", null, 0, -1,
 				Telex.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
 				!IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
+		initEAttribute(getTelex_BytesReceived(), ecorePackage.getEInt(),
+				"bytesReceived", null, 0, 1, Telex.class, !IS_TRANSIENT,
+				!IS_VOLATILE, IS_CHANGEABLE, !IS_UNSETTABLE, !IS_ID, IS_UNIQUE,
+				!IS_DERIVED, IS_ORDERED);
+
+		initEClass(tapRuleEClass, TapRule.class, "TapRule", !IS_ABSTRACT,
+				!IS_INTERFACE, IS_GENERATED_INSTANCE_CLASS);
 
 		// Initialize data types
 		initEDataType(endpointEDataType, InetSocketAddress.class, "Endpoint",
@@ -299,11 +335,18 @@ public class TelehashPackageImpl extends EPackageImpl implements
 	 */
 	protected void createJsonMetadataAnnotations() {
 		String source = "JsonMetadata";
-		addAnnotation(getTelex_To(), source, new String[] { "key", "_to" });
-		addAnnotation(getTelex_End(), source, new String[] { "key", "+end" });
-		addAnnotation(getTelex_Line(), source, new String[] { "key", "_line" });
-		addAnnotation(getTelex_Ring(), source, new String[] { "key", "_ring" });
-		addAnnotation(getTelex_See(), source, new String[] { "key", ".see" });
+		addAnnotation(getTelex_To(), source,
+				new String[] { "keyType", "header" });
+		addAnnotation(getTelex_End(), source, new String[] { "keyType",
+				"signal" });
+		addAnnotation(getTelex_Line(), source, new String[] { "keyType",
+				"header" });
+		addAnnotation(getTelex_Ring(), source, new String[] { "keyType",
+				"header" });
+		addAnnotation(getTelex_See(), source, new String[] { "keyType",
+				"command" });
+		addAnnotation(getTelex_BytesReceived(), source, new String[] {
+				"keyType", "header", "key", "_br" });
 	}
 
 } //TelehashPackageImpl

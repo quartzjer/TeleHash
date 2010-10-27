@@ -18,6 +18,8 @@
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Telex/line"/>
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Telex/ring"/>
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Telex/see"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Telex/bytesReceived"/>
     </genClasses>
+    <genClasses ecoreClass="telehash.ecore#//TapRule"/>
   </genPackages>
 </genmodel:GenModel>
