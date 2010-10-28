@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="json"
+    nsURI="http://telehash.org/json/2010" nsPrefix="json">
+  <eClassifiers xsi:type="ecore:EDataType" name="AnySimpleType" instanceClassName="java.lang.Object"/>
+  <eClassifiers xsi:type="ecore:EClass" name="EStringToAnySimpleTypeMap" instanceClassName="java.util.Map$Entry">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="key" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value" eType="#//AnySimpleType"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="JSObject">
+    <eOperations name="get" eType="#//AnySimpleType">
+      <eParameters name="key" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eOperations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="contents" upperBound="-1"
+        eType="#//EStringToAnySimpleTypeMap" containment="true">
+      <eAnnotations source="JsonMetadata">
+        <details key="wildcard" value="true"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+</ecore:EPackage>

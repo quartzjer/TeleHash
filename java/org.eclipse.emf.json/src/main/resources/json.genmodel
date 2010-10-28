@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<genmodel:GenModel xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI" xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    xmlns:genmodel="http://www.eclipse.org/emf/2002/GenModel" modelDirectory="/org.eclipse.emf.json/src/main/java"
+    modelPluginID="" modelName="Json" updateClasspath="false" importerID="org.eclipse.emf.importer.ecore"
+    bundleManifest="false" complianceLevel="5.0" copyrightFields="false">
+  <foreignModel>json.ecore</foreignModel>
+  <genPackages prefix="Json" basePackage="org.eclipse.emf" disposableProviderFactory="true"
+      interfacePackageSuffix="model" metaDataPackageSuffix="model" classPackageSuffix="model.impl"
+      utilityPackageSuffix="model.util" providerPackageSuffix="model.provider" presentationPackageSuffix="model.presentation"
+      testsPackageSuffix="model.tests" ecorePackage="json.ecore#/">
+    <genDataTypes ecoreDataType="json.ecore#//AnySimpleType"/>
+    <genClasses ecoreClass="json.ecore#//EStringToAnySimpleTypeMap">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute json.ecore#//EStringToAnySimpleTypeMap/key"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute json.ecore#//EStringToAnySimpleTypeMap/value"/>
+    </genClasses>
+    <genClasses ecoreClass="json.ecore#//JSObject">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference json.ecore#//JSObject/contents"/>
+      <genOperations ecoreOperation="json.ecore#//JSObject/get">
+        <genParameters ecoreParameter="json.ecore#//JSObject/get/key"/>
+      </genOperations>
+    </genClasses>
+  </genPackages>
+</genmodel:GenModel>

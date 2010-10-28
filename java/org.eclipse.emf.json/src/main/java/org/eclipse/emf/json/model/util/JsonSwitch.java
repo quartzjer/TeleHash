@@ -4,15 +4,16 @@
  *
  * $Id$
  */
-package org.telehash.model.util;
+package org.eclipse.emf.json.model.util;
 
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
-
+import org.eclipse.emf.json.model.*;
 import org.eclipse.emf.json.model.JSObject;
-import org.telehash.model.*;
+import org.eclipse.emf.json.model.JsonPackage;
 
 /**
  * <!-- begin-user-doc -->
@@ -24,17 +25,17 @@ import org.telehash.model.*;
  * until a non-null result is returned,
  * which is the result of the switch.
  * <!-- end-user-doc -->
- * @see org.telehash.model.TelehashPackage
+ * @see org.eclipse.emf.json.model.JsonPackage
  * @generated
  */
-public class TelehashSwitch<T> {
+public class JsonSwitch<T> {
 	/**
 	 * The cached model package
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	protected static TelehashPackage modelPackage;
+	protected static JsonPackage modelPackage;
 
 	/**
 	 * Creates an instance of the switch.
@@ -42,9 +43,9 @@ public class TelehashSwitch<T> {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	public TelehashSwitch() {
+	public JsonSwitch() {
 		if (modelPackage == null) {
-			modelPackage = TelehashPackage.eINSTANCE;
+			modelPackage = JsonPackage.eINSTANCE;
 		}
 	}
 
@@ -69,10 +70,13 @@ public class TelehashSwitch<T> {
 	protected T doSwitch(EClass theEClass, EObject theEObject) {
 		if (theEClass.eContainer() == modelPackage) {
 			return doSwitch(theEClass.getClassifierID(), theEObject);
-		} else {
+		}
+		else {
 			List<EClass> eSuperTypes = theEClass.getESuperTypes();
-			return eSuperTypes.isEmpty() ? defaultCase(theEObject) : doSwitch(
-					eSuperTypes.get(0), theEObject);
+			return
+				eSuperTypes.isEmpty() ?
+					defaultCase(theEObject) :
+					doSwitch(eSuperTypes.get(0), theEObject);
 		}
 	}
 
@@ -85,32 +89,34 @@ public class TelehashSwitch<T> {
 	 */
 	protected T doSwitch(int classifierID, EObject theEObject) {
 		switch (classifierID) {
-		case TelehashPackage.TELEX: {
-			Telex telex = (Telex) theEObject;
-			T result = caseTelex(telex);
-			if (result == null)
-				result = caseJSObject(telex);
-			if (result == null)
-				result = defaultCase(theEObject);
-			return result;
-		}
-		default:
-			return defaultCase(theEObject);
+			case JsonPackage.ESTRING_TO_ANY_SIMPLE_TYPE_MAP: {
+				@SuppressWarnings("unchecked") Map.Entry<String, Object> eStringToAnySimpleTypeMap = (Map.Entry<String, Object>)theEObject;
+				T result = caseEStringToAnySimpleTypeMap(eStringToAnySimpleTypeMap);
+				if (result == null) result = defaultCase(theEObject);
+				return result;
+			}
+			case JsonPackage.JS_OBJECT: {
+				JSObject jsObject = (JSObject)theEObject;
+				T result = caseJSObject(jsObject);
+				if (result == null) result = defaultCase(theEObject);
+				return result;
+			}
+			default: return defaultCase(theEObject);
 		}
 	}
 
 	/**
-	 * Returns the result of interpreting the object as an instance of '<em>Telex</em>'.
+	 * Returns the result of interpreting the object as an instance of '<em>EString To Any Simple Type Map</em>'.
 	 * <!-- begin-user-doc -->
 	 * This implementation returns null;
 	 * returning a non-null result will terminate the switch.
 	 * <!-- end-user-doc -->
 	 * @param object the target of the switch.
-	 * @return the result of interpreting the object as an instance of '<em>Telex</em>'.
+	 * @return the result of interpreting the object as an instance of '<em>EString To Any Simple Type Map</em>'.
 	 * @see #doSwitch(org.eclipse.emf.ecore.EObject) doSwitch(EObject)
 	 * @generated
 	 */
-	public T caseTelex(Telex object) {
+	public T caseEStringToAnySimpleTypeMap(Map.Entry<String, Object> object) {
 		return null;
 	}
 
@@ -144,4 +150,4 @@ public class TelehashSwitch<T> {
 		return null;
 	}
 
-} //TelehashSwitch
+} //JsonSwitch

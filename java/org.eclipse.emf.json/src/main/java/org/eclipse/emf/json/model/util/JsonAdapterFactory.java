@@ -4,34 +4,34 @@
  *
  * $Id$
  */
-package org.telehash.model.util;
+package org.eclipse.emf.json.model.util;
+
+import java.util.Map;
 
 import org.eclipse.emf.common.notify.Adapter;
 import org.eclipse.emf.common.notify.Notifier;
-
 import org.eclipse.emf.common.notify.impl.AdapterFactoryImpl;
-
 import org.eclipse.emf.ecore.EObject;
-
+import org.eclipse.emf.json.model.*;
 import org.eclipse.emf.json.model.JSObject;
-import org.telehash.model.*;
+import org.eclipse.emf.json.model.JsonPackage;
 
 /**
  * <!-- begin-user-doc -->
  * The <b>Adapter Factory</b> for the model.
  * It provides an adapter <code>createXXX</code> method for each class of the model.
  * <!-- end-user-doc -->
- * @see org.telehash.model.TelehashPackage
+ * @see org.eclipse.emf.json.model.JsonPackage
  * @generated
  */
-public class TelehashAdapterFactory extends AdapterFactoryImpl {
+public class JsonAdapterFactory extends AdapterFactoryImpl {
 	/**
 	 * The cached model package.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	protected static TelehashPackage modelPackage;
+	protected static JsonPackage modelPackage;
 
 	/**
 	 * Creates an instance of the adapter factory.
@@ -39,9 +39,9 @@ public class TelehashAdapterFactory extends AdapterFactoryImpl {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	public TelehashAdapterFactory() {
+	public JsonAdapterFactory() {
 		if (modelPackage == null) {
-			modelPackage = TelehashPackage.eINSTANCE;
+			modelPackage = JsonPackage.eINSTANCE;
 		}
 	}
 
@@ -59,7 +59,7 @@ public class TelehashAdapterFactory extends AdapterFactoryImpl {
 			return true;
 		}
 		if (object instanceof EObject) {
-			return ((EObject) object).eClass().getEPackage() == modelPackage;
+			return ((EObject)object).eClass().getEPackage() == modelPackage;
 		}
 		return false;
 	}
@@ -70,22 +70,21 @@ public class TelehashAdapterFactory extends AdapterFactoryImpl {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	protected TelehashSwitch<Adapter> modelSwitch = new TelehashSwitch<Adapter>() {
-		@Override
-		public Adapter caseTelex(Telex object) {
-			return createTelexAdapter();
-		}
-
-		@Override
-		public Adapter caseJSObject(JSObject object) {
-			return createJSObjectAdapter();
-		}
-
-		@Override
-		public Adapter defaultCase(EObject object) {
-			return createEObjectAdapter();
-		}
-	};
+	protected JsonSwitch<Adapter> modelSwitch =
+		new JsonSwitch<Adapter>() {
+			@Override
+			public Adapter caseEStringToAnySimpleTypeMap(Map.Entry<String, Object> object) {
+				return createEStringToAnySimpleTypeMapAdapter();
+			}
+			@Override
+			public Adapter caseJSObject(JSObject object) {
+				return createJSObjectAdapter();
+			}
+			@Override
+			public Adapter defaultCase(EObject object) {
+				return createEObjectAdapter();
+			}
+		};
 
 	/**
 	 * Creates an adapter for the <code>target</code>.
@@ -97,20 +96,21 @@ public class TelehashAdapterFactory extends AdapterFactoryImpl {
 	 */
 	@Override
 	public Adapter createAdapter(Notifier target) {
-		return modelSwitch.doSwitch((EObject) target);
+		return modelSwitch.doSwitch((EObject)target);
 	}
 
+
 	/**
-	 * Creates a new adapter for an object of class '{@link org.telehash.model.Telex <em>Telex</em>}'.
+	 * Creates a new adapter for an object of class '{@link java.util.Map.Entry <em>EString To Any Simple Type Map</em>}'.
 	 * <!-- begin-user-doc -->
 	 * This default implementation returns null so that we can easily ignore cases;
 	 * it's useful to ignore a case when inheritance will catch all the cases anyway.
 	 * <!-- end-user-doc -->
 	 * @return the new adapter.
-	 * @see org.telehash.model.Telex
+	 * @see java.util.Map.Entry
 	 * @generated
 	 */
-	public Adapter createTelexAdapter() {
+	public Adapter createEStringToAnySimpleTypeMapAdapter() {
 		return null;
 	}
 
@@ -140,4 +140,4 @@ public class TelehashAdapterFactory extends AdapterFactoryImpl {
 		return null;
 	}
 
-} //TelehashAdapterFactory
+} //JsonAdapterFactory

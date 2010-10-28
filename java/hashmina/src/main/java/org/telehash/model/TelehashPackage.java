@@ -10,6 +10,7 @@ import org.eclipse.emf.ecore.EAttribute;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EDataType;
 import org.eclipse.emf.ecore.EPackage;
+import org.eclipse.emf.json.model.JsonPackage;
 
 /**
  * <!-- begin-user-doc -->
@@ -71,13 +72,22 @@ public interface TelehashPackage extends EPackage {
 	int TELEX = 0;
 
 	/**
+	 * The feature id for the '<em><b>Contents</b></em>' map.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 * @ordered
+	 */
+	int TELEX__CONTENTS = JsonPackage.JS_OBJECT__CONTENTS;
+
+	/**
 	 * The feature id for the '<em><b>To</b></em>' attribute.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
 	 * @generated
 	 * @ordered
 	 */
-	int TELEX__TO = 0;
+	int TELEX__TO = JsonPackage.JS_OBJECT_FEATURE_COUNT + 0;
 
 	/**
 	 * The feature id for the '<em><b>End</b></em>' attribute.
@@ -86,7 +96,7 @@ public interface TelehashPackage extends EPackage {
 	 * @generated
 	 * @ordered
 	 */
-	int TELEX__END = 1;
+	int TELEX__END = JsonPackage.JS_OBJECT_FEATURE_COUNT + 1;
 
 	/**
 	 * The feature id for the '<em><b>Line</b></em>' attribute.
@@ -95,7 +105,7 @@ public interface TelehashPackage extends EPackage {
 	 * @generated
 	 * @ordered
 	 */
-	int TELEX__LINE = 2;
+	int TELEX__LINE = JsonPackage.JS_OBJECT_FEATURE_COUNT + 2;
 
 	/**
 	 * The feature id for the '<em><b>Ring</b></em>' attribute.
@@ -104,7 +114,7 @@ public interface TelehashPackage extends EPackage {
 	 * @generated
 	 * @ordered
 	 */
-	int TELEX__RING = 3;
+	int TELEX__RING = JsonPackage.JS_OBJECT_FEATURE_COUNT + 3;
 
 	/**
 	 * The feature id for the '<em><b>See</b></em>' attribute list.
@@ -113,7 +123,7 @@ public interface TelehashPackage extends EPackage {
 	 * @generated
 	 * @ordered
 	 */
-	int TELEX__SEE = 4;
+	int TELEX__SEE = JsonPackage.JS_OBJECT_FEATURE_COUNT + 4;
 
 	/**
 	 * The feature id for the '<em><b>Bytes Received</b></em>' attribute.
@@ -122,7 +132,7 @@ public interface TelehashPackage extends EPackage {
 	 * @generated
 	 * @ordered
 	 */
-	int TELEX__BYTES_RECEIVED = 5;
+	int TELEX__BYTES_RECEIVED = JsonPackage.JS_OBJECT_FEATURE_COUNT + 5;
 
 	/**
 	 * The number of structural features of the '<em>Telex</em>' class.
@@ -131,26 +141,7 @@ public interface TelehashPackage extends EPackage {
 	 * @generated
 	 * @ordered
 	 */
-	int TELEX_FEATURE_COUNT = 6;
-
-	/**
-	 * The meta object id for the '{@link org.telehash.model.impl.TapRuleImpl <em>Tap Rule</em>}' class.
-	 * <!-- begin-user-doc -->
-	 * <!-- end-user-doc -->
-	 * @see org.telehash.model.impl.TapRuleImpl
-	 * @see org.telehash.model.impl.TelehashPackageImpl#getTapRule()
-	 * @generated
-	 */
-	int TAP_RULE = 1;
-
-	/**
-	 * The number of structural features of the '<em>Tap Rule</em>' class.
-	 * <!-- begin-user-doc -->
-	 * <!-- end-user-doc -->
-	 * @generated
-	 * @ordered
-	 */
-	int TAP_RULE_FEATURE_COUNT = 0;
+	int TELEX_FEATURE_COUNT = JsonPackage.JS_OBJECT_FEATURE_COUNT + 6;
 
 	/**
 	 * The meta object id for the '<em>Endpoint</em>' data type.
@@ -160,7 +151,7 @@ public interface TelehashPackage extends EPackage {
 	 * @see org.telehash.model.impl.TelehashPackageImpl#getEndpoint()
 	 * @generated
 	 */
-	int ENDPOINT = 2;
+	int ENDPOINT = 1;
 
 	/**
 	 * The meta object id for the '<em>Hash</em>' data type.
@@ -170,7 +161,7 @@ public interface TelehashPackage extends EPackage {
 	 * @see org.telehash.model.impl.TelehashPackageImpl#getHash()
 	 * @generated
 	 */
-	int HASH = 3;
+	int HASH = 2;
 
 	/**
 	 * Returns the meta object for class '{@link org.telehash.model.Telex <em>Telex</em>}'.
@@ -247,16 +238,6 @@ public interface TelehashPackage extends EPackage {
 	 * @generated
 	 */
 	EAttribute getTelex_BytesReceived();
-
-	/**
-	 * Returns the meta object for class '{@link org.telehash.model.TapRule <em>Tap Rule</em>}'.
-	 * <!-- begin-user-doc -->
-	 * <!-- end-user-doc -->
-	 * @return the meta object for class '<em>Tap Rule</em>'.
-	 * @see org.telehash.model.TapRule
-	 * @generated
-	 */
-	EClass getTapRule();
 
 	/**
 	 * Returns the meta object for data type '{@link java.net.InetSocketAddress <em>Endpoint</em>}'.
@@ -359,16 +340,6 @@ public interface TelehashPackage extends EPackage {
 		 * @generated
 		 */
 		EAttribute TELEX__BYTES_RECEIVED = eINSTANCE.getTelex_BytesReceived();
-
-		/**
-		 * The meta object literal for the '{@link org.telehash.model.impl.TapRuleImpl <em>Tap Rule</em>}' class.
-		 * <!-- begin-user-doc -->
-		 * <!-- end-user-doc -->
-		 * @see org.telehash.model.impl.TapRuleImpl
-		 * @see org.telehash.model.impl.TelehashPackageImpl#getTapRule()
-		 * @generated
-		 */
-		EClass TAP_RULE = eINSTANCE.getTapRule();
 
 		/**
 		 * The meta object literal for the '<em>Endpoint</em>' data type.

@@ -1,13 +1,16 @@
 package org.eclipse.emf.json;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
+import org.codehaus.jackson.map.MappingJsonFactory;
 import org.eclipse.emf.common.util.BasicEList;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EAttribute;
@@ -18,11 +21,12 @@ import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.emf.ecore.EcorePackage;
 import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.emf.json.model.JSObject;
 
 public class JsonUtil {
 
 	static public EObject fromJson(String jsonTxt, EClass eClass) {
-		JsonFactory f = new JsonFactory();
+		JsonFactory f = new MappingJsonFactory();
 		try {
 			JsonParser jp = f.createJsonParser(jsonTxt.getBytes());
 			return fromJson(jp, eClass);
@@ -75,11 +79,45 @@ public class JsonUtil {
 					result.eSet(feature, fromJson(jp, eRef.getEReferenceType()));
 				}
 			}
+			else if (result instanceof JSObject) {
+				JSObject jsObj = (JSObject) result;
+				jsObj.getContents().put(fieldName, parseValueForUnmapped(nextToken, jp));
+			}
 		}
 		
 		return result;
 	}
 	
+	private static Object parseValueForUnmapped(JsonToken nextToken, JsonParser jp) 
+	throws JsonParseException, IOException {
+		if (nextToken == JsonToken.VALUE_FALSE || nextToken == JsonToken.VALUE_TRUE) {
+			return jp.getBooleanValue();
+		}
+		else if (nextToken == JsonToken.VALUE_STRING) {
+			return jp.getText();
+		}
+		else if (nextToken == JsonToken.VALUE_NUMBER_INT) {
+			return jp.getIntValue();
+		}
+		else if (nextToken == JsonToken.VALUE_NUMBER_FLOAT) {
+			return jp.getFloatValue();
+		}
+		else if (nextToken == JsonToken.START_OBJECT) {
+			return jp.readValueAs(Map.class);
+		}
+		else if (nextToken == JsonToken.START_ARRAY) {
+			List<Object> list = new ArrayList<Object>();
+			for (JsonToken listToken = jp.nextToken(); listToken != JsonToken.END_ARRAY; 
+					listToken = jp.nextToken()) {
+				list.add(parseValueForUnmapped(listToken, jp));
+			}
+			return list;
+		}
+		else {
+			return jp.getText();
+		}
+	}
+
 	private static Object parseValueForDataType(JsonParser jp, EDataType dataType) throws JsonParseException, IOException {
 		if (dataType.getEPackage() == EcorePackage.eINSTANCE) {
 			switch (dataType.getClassifierID()) {

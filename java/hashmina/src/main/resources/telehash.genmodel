@@ -4,7 +4,7 @@
     xmlns:genmodel="http://www.eclipse.org/emf/2002/GenModel" modelDirectory="/hashmina/src/main/java"
     modelPluginID="" modelName="Telehash" updateClasspath="false" codeFormatting="true"
     importerID="org.eclipse.emf.importer.ecore" bundleManifest="false" complianceLevel="6.0"
-    copyrightFields="false" language="">
+    copyrightFields="false" language="" usedGenPackages="../../../../org.eclipse.emf.json/src/main/resources/json.genmodel#//json">
   <foreignModel>telehash.ecore</foreignModel>
   <genPackages prefix="Telehash" basePackage="org" disposableProviderFactory="true"
       interfacePackageSuffix="model" metaDataPackageSuffix="model" classPackageSuffix="model.impl"
@@ -20,6 +20,5 @@
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Telex/see"/>
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Telex/bytesReceived"/>
     </genClasses>
-    <genClasses ecoreClass="telehash.ecore#//TapRule"/>
   </genPackages>
 </genmodel:GenModel>

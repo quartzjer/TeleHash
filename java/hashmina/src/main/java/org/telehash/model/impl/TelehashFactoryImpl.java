@@ -67,8 +67,6 @@ public class TelehashFactoryImpl extends EFactoryImpl implements
 		switch (eClass.getClassifierID()) {
 		case TelehashPackage.TELEX:
 			return createTelex();
-		case TelehashPackage.TAP_RULE:
-			return createTapRule();
 		default:
 			throw new IllegalArgumentException("The class '" + eClass.getName()
 					+ "' is not a valid classifier");
@@ -119,16 +117,6 @@ public class TelehashFactoryImpl extends EFactoryImpl implements
 	public Telex createTelex() {
 		TelexImpl telex = new TelexImpl();
 		return telex;
-	}
-
-	/**
-	 * <!-- begin-user-doc -->
-	 * <!-- end-user-doc -->
-	 * @generated
-	 */
-	public TapRule createTapRule() {
-		TapRuleImpl tapRule = new TapRuleImpl();
-		return tapRule;
 	}
 
 	/**

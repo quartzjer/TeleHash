@@ -12,12 +12,9 @@ import org.eclipse.emf.ecore.EAttribute;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EDataType;
 import org.eclipse.emf.ecore.EPackage;
-
 import org.eclipse.emf.ecore.impl.EPackageImpl;
-
+import org.eclipse.emf.json.model.JsonPackage;
 import org.telehash.Hash;
-
-import org.telehash.model.TapRule;
 import org.telehash.model.TelehashFactory;
 import org.telehash.model.TelehashPackage;
 import org.telehash.model.Telex;
@@ -36,13 +33,6 @@ public class TelehashPackageImpl extends EPackageImpl implements
 	 * @generated
 	 */
 	private EClass telexEClass = null;
-
-	/**
-	 * <!-- begin-user-doc -->
-	 * <!-- end-user-doc -->
-	 * @generated
-	 */
-	private EClass tapRuleEClass = null;
 
 	/**
 	 * <!-- begin-user-doc -->
@@ -107,6 +97,9 @@ public class TelehashPackageImpl extends EPackageImpl implements
 				.get(eNS_URI) : new TelehashPackageImpl());
 
 		isInited = true;
+
+		// Initialize simple dependencies
+		JsonPackage.eINSTANCE.eClass();
 
 		// Create package meta-data objects
 		theTelehashPackage.createPackageContents();
@@ -191,15 +184,6 @@ public class TelehashPackageImpl extends EPackageImpl implements
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	public EClass getTapRule() {
-		return tapRuleEClass;
-	}
-
-	/**
-	 * <!-- begin-user-doc -->
-	 * <!-- end-user-doc -->
-	 * @generated
-	 */
 	public EDataType getEndpoint() {
 		return endpointEDataType;
 	}
@@ -250,8 +234,6 @@ public class TelehashPackageImpl extends EPackageImpl implements
 		createEAttribute(telexEClass, TELEX__SEE);
 		createEAttribute(telexEClass, TELEX__BYTES_RECEIVED);
 
-		tapRuleEClass = createEClass(TAP_RULE);
-
 		// Create data types
 		endpointEDataType = createEDataType(ENDPOINT);
 		hashEDataType = createEDataType(HASH);
@@ -281,11 +263,16 @@ public class TelehashPackageImpl extends EPackageImpl implements
 		setNsPrefix(eNS_PREFIX);
 		setNsURI(eNS_URI);
 
+		// Obtain other dependent packages
+		JsonPackage theJsonPackage = (JsonPackage) EPackage.Registry.INSTANCE
+				.getEPackage(JsonPackage.eNS_URI);
+
 		// Create type parameters
 
 		// Set bounds for type parameters
 
 		// Add supertypes to classes
+		telexEClass.getESuperTypes().add(theJsonPackage.getJSObject());
 
 		// Initialize classes and features; add operations and parameters
 		initEClass(telexEClass, Telex.class, "Telex", !IS_ABSTRACT,
@@ -309,9 +296,6 @@ public class TelehashPackageImpl extends EPackageImpl implements
 				"bytesReceived", null, 0, 1, Telex.class, !IS_TRANSIENT,
 				!IS_VOLATILE, IS_CHANGEABLE, !IS_UNSETTABLE, !IS_ID, IS_UNIQUE,
 				!IS_DERIVED, IS_ORDERED);
-
-		initEClass(tapRuleEClass, TapRule.class, "TapRule", !IS_ABSTRACT,
-				!IS_INTERFACE, IS_GENERATED_INSTANCE_CLASS);
 
 		// Initialize data types
 		initEDataType(endpointEDataType, InetSocketAddress.class, "Endpoint",

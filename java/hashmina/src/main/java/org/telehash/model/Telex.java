@@ -10,8 +10,10 @@ import java.net.InetSocketAddress;
 
 import org.eclipse.emf.common.util.EList;
 
+import org.eclipse.emf.json.model.JSObject;
 import org.eclipse.emf.ecore.EObject;
 
+import org.eclipse.emf.ecore.util.FeatureMap;
 import org.telehash.Hash;
 
 /**
@@ -35,7 +37,7 @@ import org.telehash.Hash;
  * @model
  * @generated
  */
-public interface Telex extends EObject {
+public interface Telex extends JSObject {
 	/**
 	 * Returns the value of the '<em><b>To</b></em>' attribute.
 	 * <!-- begin-user-doc -->
