@@ -10,9 +10,9 @@ import java.util.List;
 
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
-
-import org.eclipse.emf.json.model.JSObject;
-import org.telehash.model.*;
+import org.eclipse.emf.json.model.JsObject;
+import org.telehash.model.TelehashPackage;
+import org.telehash.model.Telex;
 
 /**
  * <!-- begin-user-doc -->
@@ -89,7 +89,7 @@ public class TelehashSwitch<T> {
 			Telex telex = (Telex) theEObject;
 			T result = caseTelex(telex);
 			if (result == null)
-				result = caseJSObject(telex);
+				result = caseJsObject(telex);
 			if (result == null)
 				result = defaultCase(theEObject);
 			return result;
@@ -115,17 +115,17 @@ public class TelehashSwitch<T> {
 	}
 
 	/**
-	 * Returns the result of interpreting the object as an instance of '<em>JS Object</em>'.
+	 * Returns the result of interpreting the object as an instance of '<em>Js Object</em>'.
 	 * <!-- begin-user-doc -->
 	 * This implementation returns null;
 	 * returning a non-null result will terminate the switch.
 	 * <!-- end-user-doc -->
 	 * @param object the target of the switch.
-	 * @return the result of interpreting the object as an instance of '<em>JS Object</em>'.
+	 * @return the result of interpreting the object as an instance of '<em>Js Object</em>'.
 	 * @see #doSwitch(org.eclipse.emf.ecore.EObject) doSwitch(EObject)
 	 * @generated
 	 */
-	public T caseJSObject(JSObject object) {
+	public T caseJsObject(JsObject object) {
 		return null;
 	}
 

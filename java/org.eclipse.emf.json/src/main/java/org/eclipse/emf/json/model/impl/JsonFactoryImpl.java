@@ -14,8 +14,7 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.emf.ecore.impl.EFactoryImpl;
 import org.eclipse.emf.ecore.plugin.EcorePlugin;
-import org.eclipse.emf.json.model.*;
-import org.eclipse.emf.json.model.JSObject;
+import org.eclipse.emf.json.model.JsObject;
 import org.eclipse.emf.json.model.JsonFactory;
 import org.eclipse.emf.json.model.JsonPackage;
 
@@ -64,7 +63,7 @@ public class JsonFactoryImpl extends EFactoryImpl implements JsonFactory {
 	public EObject create(EClass eClass) {
 		switch (eClass.getClassifierID()) {
 			case JsonPackage.ESTRING_TO_ANY_SIMPLE_TYPE_MAP: return (EObject)createEStringToAnySimpleTypeMap();
-			case JsonPackage.JS_OBJECT: return createJSObject();
+			case JsonPackage.JS_OBJECT: return createJsObject();
 			default:
 				throw new IllegalArgumentException("The class '" + eClass.getName() + "' is not a valid classifier");
 		}
@@ -115,8 +114,8 @@ public class JsonFactoryImpl extends EFactoryImpl implements JsonFactory {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	public JSObject createJSObject() {
-		JSObjectImpl jsObject = new JSObjectImpl();
+	public JsObject createJsObject() {
+		JsObjectImpl jsObject = new JsObjectImpl();
 		return jsObject;
 	}
 

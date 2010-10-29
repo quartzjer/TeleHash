@@ -14,39 +14,39 @@ import org.eclipse.emf.ecore.InternalEObject;
 import org.eclipse.emf.ecore.impl.EObjectImpl;
 import org.eclipse.emf.ecore.util.EcoreEMap;
 import org.eclipse.emf.ecore.util.InternalEList;
-import org.eclipse.emf.json.model.JSObject;
+import org.eclipse.emf.json.model.JsObject;
 import org.eclipse.emf.json.model.JsonPackage;
 
 /**
  * <!-- begin-user-doc -->
- * An implementation of the model object '<em><b>JS Object</b></em>'.
+ * An implementation of the model object '<em><b>Js Object</b></em>'.
  * <!-- end-user-doc -->
  * <p>
  * The following features are implemented:
  * <ul>
- *   <li>{@link org.eclipse.emf.json.model.impl.JSObjectImpl#getContents <em>Contents</em>}</li>
+ *   <li>{@link org.eclipse.emf.json.model.impl.JsObjectImpl#getUnmatched <em>Unmatched</em>}</li>
  * </ul>
  * </p>
  *
  * @generated
  */
-public class JSObjectImpl extends EObjectImpl implements JSObject {
+public class JsObjectImpl extends EObjectImpl implements JsObject {
 	/**
-	 * The cached value of the '{@link #getContents() <em>Contents</em>}' map.
+	 * The cached value of the '{@link #getUnmatched() <em>Unmatched</em>}' map.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
-	 * @see #getContents()
+	 * @see #getUnmatched()
 	 * @generated
 	 * @ordered
 	 */
-	protected EMap<String, Object> contents;
+	protected EMap<String, Object> unmatched;
 
 	/**
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	protected JSObjectImpl() {
+	protected JsObjectImpl() {
 		super();
 	}
 
@@ -65,24 +65,22 @@ public class JSObjectImpl extends EObjectImpl implements JSObject {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	public EMap<String, Object> getContents() {
-		if (contents == null) {
-			contents = new EcoreEMap<String,Object>(JsonPackage.Literals.ESTRING_TO_ANY_SIMPLE_TYPE_MAP, EStringToAnySimpleTypeMapImpl.class, this, JsonPackage.JS_OBJECT__CONTENTS);
+	public EMap<String, Object> getUnmatched() {
+		if (unmatched == null) {
+			unmatched = new EcoreEMap<String,Object>(JsonPackage.Literals.ESTRING_TO_ANY_SIMPLE_TYPE_MAP, EStringToAnySimpleTypeMapImpl.class, this, JsonPackage.JS_OBJECT__UNMATCHED);
 		}
-		return contents;
+		return unmatched;
 	}
 
 	/**
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
-	 * @generated NOT
+	 * @generated
 	 */
 	public Object get(String key) {
-		EStructuralFeature feature = eClass().getEStructuralFeature(key);
-		if (feature != null) {
-			return eGet(feature);
-		}
-		return getContents().get(key);
+		// TODO: implement this method
+		// Ensure that you remove @generated or mark it @generated NOT
+		throw new UnsupportedOperationException();
 	}
 
 	/**
@@ -93,8 +91,8 @@ public class JSObjectImpl extends EObjectImpl implements JSObject {
 	@Override
 	public NotificationChain eInverseRemove(InternalEObject otherEnd, int featureID, NotificationChain msgs) {
 		switch (featureID) {
-			case JsonPackage.JS_OBJECT__CONTENTS:
-				return ((InternalEList<?>)getContents()).basicRemove(otherEnd, msgs);
+			case JsonPackage.JS_OBJECT__UNMATCHED:
+				return ((InternalEList<?>)getUnmatched()).basicRemove(otherEnd, msgs);
 		}
 		return super.eInverseRemove(otherEnd, featureID, msgs);
 	}
@@ -107,9 +105,9 @@ public class JSObjectImpl extends EObjectImpl implements JSObject {
 	@Override
 	public Object eGet(int featureID, boolean resolve, boolean coreType) {
 		switch (featureID) {
-			case JsonPackage.JS_OBJECT__CONTENTS:
-				if (coreType) return getContents();
-				else return getContents().map();
+			case JsonPackage.JS_OBJECT__UNMATCHED:
+				if (coreType) return getUnmatched();
+				else return getUnmatched().map();
 		}
 		return super.eGet(featureID, resolve, coreType);
 	}
@@ -119,12 +117,11 @@ public class JSObjectImpl extends EObjectImpl implements JSObject {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	@SuppressWarnings("unchecked")
 	@Override
 	public void eSet(int featureID, Object newValue) {
 		switch (featureID) {
-			case JsonPackage.JS_OBJECT__CONTENTS:
-				((EStructuralFeature.Setting)getContents()).set(newValue);
+			case JsonPackage.JS_OBJECT__UNMATCHED:
+				((EStructuralFeature.Setting)getUnmatched()).set(newValue);
 				return;
 		}
 		super.eSet(featureID, newValue);
@@ -138,8 +135,8 @@ public class JSObjectImpl extends EObjectImpl implements JSObject {
 	@Override
 	public void eUnset(int featureID) {
 		switch (featureID) {
-			case JsonPackage.JS_OBJECT__CONTENTS:
-				getContents().clear();
+			case JsonPackage.JS_OBJECT__UNMATCHED:
+				getUnmatched().clear();
 				return;
 		}
 		super.eUnset(featureID);
@@ -153,10 +150,10 @@ public class JSObjectImpl extends EObjectImpl implements JSObject {
 	@Override
 	public boolean eIsSet(int featureID) {
 		switch (featureID) {
-			case JsonPackage.JS_OBJECT__CONTENTS:
-				return contents != null && !contents.isEmpty();
+			case JsonPackage.JS_OBJECT__UNMATCHED:
+				return unmatched != null && !unmatched.isEmpty();
 		}
 		return super.eIsSet(featureID);
 	}
 
-} //JSObjectImpl
+} //JsObjectImpl

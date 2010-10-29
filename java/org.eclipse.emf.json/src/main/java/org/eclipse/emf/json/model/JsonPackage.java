@@ -98,26 +98,26 @@ public interface JsonPackage extends EPackage {
 	int ESTRING_TO_ANY_SIMPLE_TYPE_MAP_FEATURE_COUNT = 2;
 
 	/**
-	 * The meta object id for the '{@link org.eclipse.emf.json.model.impl.JSObjectImpl <em>JS Object</em>}' class.
+	 * The meta object id for the '{@link org.eclipse.emf.json.model.impl.JsObjectImpl <em>Js Object</em>}' class.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
-	 * @see org.eclipse.emf.json.model.impl.JSObjectImpl
-	 * @see org.eclipse.emf.json.model.impl.JsonPackageImpl#getJSObject()
+	 * @see org.eclipse.emf.json.model.impl.JsObjectImpl
+	 * @see org.eclipse.emf.json.model.impl.JsonPackageImpl#getJsObject()
 	 * @generated
 	 */
 	int JS_OBJECT = 1;
 
 	/**
-	 * The feature id for the '<em><b>Contents</b></em>' map.
+	 * The feature id for the '<em><b>Unmatched</b></em>' map.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
 	 * @generated
 	 * @ordered
 	 */
-	int JS_OBJECT__CONTENTS = 0;
+	int JS_OBJECT__UNMATCHED = 0;
 
 	/**
-	 * The number of structural features of the '<em>JS Object</em>' class.
+	 * The number of structural features of the '<em>Js Object</em>' class.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
 	 * @generated
@@ -171,25 +171,25 @@ public interface JsonPackage extends EPackage {
 	EAttribute getEStringToAnySimpleTypeMap_Value();
 
 	/**
-	 * Returns the meta object for class '{@link org.eclipse.emf.json.model.JSObject <em>JS Object</em>}'.
+	 * Returns the meta object for class '{@link org.eclipse.emf.json.model.JsObject <em>Js Object</em>}'.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
-	 * @return the meta object for class '<em>JS Object</em>'.
-	 * @see org.eclipse.emf.json.model.JSObject
+	 * @return the meta object for class '<em>Js Object</em>'.
+	 * @see org.eclipse.emf.json.model.JsObject
 	 * @generated
 	 */
-	EClass getJSObject();
+	EClass getJsObject();
 
 	/**
-	 * Returns the meta object for the map '{@link org.eclipse.emf.json.model.JSObject#getContents <em>Contents</em>}'.
+	 * Returns the meta object for the map '{@link org.eclipse.emf.json.model.JsObject#getUnmatched <em>Unmatched</em>}'.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
-	 * @return the meta object for the map '<em>Contents</em>'.
-	 * @see org.eclipse.emf.json.model.JSObject#getContents()
-	 * @see #getJSObject()
+	 * @return the meta object for the map '<em>Unmatched</em>'.
+	 * @see org.eclipse.emf.json.model.JsObject#getUnmatched()
+	 * @see #getJsObject()
 	 * @generated
 	 */
-	EReference getJSObject_Contents();
+	EReference getJsObject_Unmatched();
 
 	/**
 	 * Returns the meta object for data type '{@link java.lang.Object <em>Any Simple Type</em>}'.
@@ -251,22 +251,22 @@ public interface JsonPackage extends EPackage {
 		EAttribute ESTRING_TO_ANY_SIMPLE_TYPE_MAP__VALUE = eINSTANCE.getEStringToAnySimpleTypeMap_Value();
 
 		/**
-		 * The meta object literal for the '{@link org.eclipse.emf.json.model.impl.JSObjectImpl <em>JS Object</em>}' class.
+		 * The meta object literal for the '{@link org.eclipse.emf.json.model.impl.JsObjectImpl <em>Js Object</em>}' class.
 		 * <!-- begin-user-doc -->
 		 * <!-- end-user-doc -->
-		 * @see org.eclipse.emf.json.model.impl.JSObjectImpl
-		 * @see org.eclipse.emf.json.model.impl.JsonPackageImpl#getJSObject()
+		 * @see org.eclipse.emf.json.model.impl.JsObjectImpl
+		 * @see org.eclipse.emf.json.model.impl.JsonPackageImpl#getJsObject()
 		 * @generated
 		 */
-		EClass JS_OBJECT = eINSTANCE.getJSObject();
+		EClass JS_OBJECT = eINSTANCE.getJsObject();
 
 		/**
-		 * The meta object literal for the '<em><b>Contents</b></em>' map feature.
+		 * The meta object literal for the '<em><b>Unmatched</b></em>' map feature.
 		 * <!-- begin-user-doc -->
 		 * <!-- end-user-doc -->
 		 * @generated
 		 */
-		EReference JS_OBJECT__CONTENTS = eINSTANCE.getJSObject_Contents();
+		EReference JS_OBJECT__UNMATCHED = eINSTANCE.getJsObject_Unmatched();
 
 		/**
 		 * The meta object literal for the '<em>Any Simple Type</em>' data type.

@@ -272,7 +272,7 @@ public class TelehashPackageImpl extends EPackageImpl implements
 		// Set bounds for type parameters
 
 		// Add supertypes to classes
-		telexEClass.getESuperTypes().add(theJsonPackage.getJSObject());
+		telexEClass.getESuperTypes().add(theJsonPackage.getJsObject());
 
 		// Initialize classes and features; add operations and parameters
 		initEClass(telexEClass, Telex.class, "Telex", !IS_ABSTRACT,

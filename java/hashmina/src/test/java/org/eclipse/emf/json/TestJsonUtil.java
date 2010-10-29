@@ -18,7 +18,7 @@ public class TestJsonUtil extends TestCase {
 	 */
 	public void testSimpleTelex() {
 		Telex telex = (Telex)
-			JsonUtil.fromJson("{\"_to\": \"147.26.10.11:40401\", \"+end\": \"a9993e364706816aba3e25717850c26c9cd0d89d\"}",
+			JsonMapper.fromJson("{\"_to\": \"147.26.10.11:40401\", \"+end\": \"a9993e364706816aba3e25717850c26c9cd0d89d\"}",
 				TelehashPackage.Literals.TELEX);
 		assertEquals("147.26.10.11", telex.getTo().getAddress().getHostAddress());
 		assertEquals(40401, telex.getTo().getPort());
@@ -31,7 +31,7 @@ public class TestJsonUtil extends TestCase {
 	 */
 	public void testFallThru() {
 		Telex telex = (Telex)
-			JsonUtil.fromJson("{\"foo\": 1, \"bar\": true, \"baz\": {\"a\": [1,2,3]} }",
+			JsonMapper.fromJson("{\"foo\": 1, \"bar\": true, \"baz\": {\"a\": [1,2,3]} }",
 				TelehashPackage.Literals.TELEX);
 		assertEquals(1, ((Integer)telex.get("foo")).intValue());
 		assertEquals(true, ((Boolean)telex.get("bar")).booleanValue());

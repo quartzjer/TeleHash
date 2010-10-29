@@ -26,13 +26,13 @@ public interface JsonFactory extends EFactory {
 	JsonFactory eINSTANCE = org.eclipse.emf.json.model.impl.JsonFactoryImpl.init();
 
 	/**
-	 * Returns a new object of class '<em>JS Object</em>'.
+	 * Returns a new object of class '<em>Js Object</em>'.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
-	 * @return a new object of class '<em>JS Object</em>'.
+	 * @return a new object of class '<em>Js Object</em>'.
 	 * @generated
 	 */
-	JSObject createJSObject();
+	JsObject createJsObject();
 
 	/**
 	 * Returns the package supported by this factory.

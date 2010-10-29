@@ -15,7 +15,7 @@ import org.eclipse.emf.ecore.EOperation;
 import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.impl.EPackageImpl;
-import org.eclipse.emf.json.model.JSObject;
+import org.eclipse.emf.json.model.JsObject;
 import org.eclipse.emf.json.model.JsonFactory;
 import org.eclipse.emf.json.model.JsonPackage;
 
@@ -140,7 +140,7 @@ public class JsonPackageImpl extends EPackageImpl implements JsonPackage {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	public EClass getJSObject() {
+	public EClass getJsObject() {
 		return jsObjectEClass;
 	}
 
@@ -149,7 +149,7 @@ public class JsonPackageImpl extends EPackageImpl implements JsonPackage {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
-	public EReference getJSObject_Contents() {
+	public EReference getJsObject_Unmatched() {
 		return (EReference)jsObjectEClass.getEStructuralFeatures().get(0);
 	}
 
@@ -195,7 +195,7 @@ public class JsonPackageImpl extends EPackageImpl implements JsonPackage {
 		createEAttribute(eStringToAnySimpleTypeMapEClass, ESTRING_TO_ANY_SIMPLE_TYPE_MAP__VALUE);
 
 		jsObjectEClass = createEClass(JS_OBJECT);
-		createEReference(jsObjectEClass, JS_OBJECT__CONTENTS);
+		createEReference(jsObjectEClass, JS_OBJECT__UNMATCHED);
 
 		// Create data types
 		anySimpleTypeEDataType = createEDataType(ANY_SIMPLE_TYPE);
@@ -235,8 +235,8 @@ public class JsonPackageImpl extends EPackageImpl implements JsonPackage {
 		initEAttribute(getEStringToAnySimpleTypeMap_Key(), ecorePackage.getEString(), "key", null, 0, 1, Map.Entry.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE, !IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
 		initEAttribute(getEStringToAnySimpleTypeMap_Value(), this.getAnySimpleType(), "value", null, 0, 1, Map.Entry.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE, !IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
 
-		initEClass(jsObjectEClass, JSObject.class, "JSObject", !IS_ABSTRACT, !IS_INTERFACE, IS_GENERATED_INSTANCE_CLASS);
-		initEReference(getJSObject_Contents(), this.getEStringToAnySimpleTypeMap(), null, "contents", null, 0, -1, JSObject.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE, IS_COMPOSITE, !IS_RESOLVE_PROXIES, !IS_UNSETTABLE, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
+		initEClass(jsObjectEClass, JsObject.class, "JsObject", !IS_ABSTRACT, !IS_INTERFACE, IS_GENERATED_INSTANCE_CLASS);
+		initEReference(getJsObject_Unmatched(), this.getEStringToAnySimpleTypeMap(), null, "unmatched", null, 0, -1, JsObject.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE, IS_COMPOSITE, !IS_RESOLVE_PROXIES, !IS_UNSETTABLE, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
 
 		EOperation op = addEOperation(jsObjectEClass, this.getAnySimpleType(), "get", 0, 1, IS_UNIQUE, IS_ORDERED);
 		addEParameter(op, ecorePackage.getEString(), "key", 0, 1, IS_UNIQUE, IS_ORDERED);
@@ -261,7 +261,7 @@ public class JsonPackageImpl extends EPackageImpl implements JsonPackage {
 	protected void createJsonMetadataAnnotations() {
 		String source = "JsonMetadata";		
 		addAnnotation
-		  (getJSObject_Contents(), 
+		  (getJsObject_Unmatched(), 
 		   source, 
 		   new String[] {
 			 "wildcard", "true"

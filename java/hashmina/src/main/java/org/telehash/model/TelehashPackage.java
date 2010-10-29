@@ -72,13 +72,13 @@ public interface TelehashPackage extends EPackage {
 	int TELEX = 0;
 
 	/**
-	 * The feature id for the '<em><b>Contents</b></em>' map.
+	 * The feature id for the '<em><b>Unmatched</b></em>' map.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
 	 * @generated
 	 * @ordered
 	 */
-	int TELEX__CONTENTS = JsonPackage.JS_OBJECT__CONTENTS;
+	int TELEX__UNMATCHED = JsonPackage.JS_OBJECT__UNMATCHED;
 
 	/**
 	 * The feature id for the '<em><b>To</b></em>' attribute.

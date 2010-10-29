@@ -11,8 +11,7 @@ import java.util.Map;
 
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
-import org.eclipse.emf.json.model.*;
-import org.eclipse.emf.json.model.JSObject;
+import org.eclipse.emf.json.model.JsObject;
 import org.eclipse.emf.json.model.JsonPackage;
 
 /**
@@ -96,8 +95,8 @@ public class JsonSwitch<T> {
 				return result;
 			}
 			case JsonPackage.JS_OBJECT: {
-				JSObject jsObject = (JSObject)theEObject;
-				T result = caseJSObject(jsObject);
+				JsObject jsObject = (JsObject)theEObject;
+				T result = caseJsObject(jsObject);
 				if (result == null) result = defaultCase(theEObject);
 				return result;
 			}
@@ -121,17 +120,17 @@ public class JsonSwitch<T> {
 	}
 
 	/**
-	 * Returns the result of interpreting the object as an instance of '<em>JS Object</em>'.
+	 * Returns the result of interpreting the object as an instance of '<em>Js Object</em>'.
 	 * <!-- begin-user-doc -->
 	 * This implementation returns null;
 	 * returning a non-null result will terminate the switch.
 	 * <!-- end-user-doc -->
 	 * @param object the target of the switch.
-	 * @return the result of interpreting the object as an instance of '<em>JS Object</em>'.
+	 * @return the result of interpreting the object as an instance of '<em>Js Object</em>'.
 	 * @see #doSwitch(org.eclipse.emf.ecore.EObject) doSwitch(EObject)
 	 * @generated
 	 */
-	public T caseJSObject(JSObject object) {
+	public T caseJsObject(JsObject object) {
 		return null;
 	}
 

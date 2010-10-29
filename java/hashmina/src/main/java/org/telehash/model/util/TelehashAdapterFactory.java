@@ -8,13 +8,11 @@ package org.telehash.model.util;
 
 import org.eclipse.emf.common.notify.Adapter;
 import org.eclipse.emf.common.notify.Notifier;
-
 import org.eclipse.emf.common.notify.impl.AdapterFactoryImpl;
-
 import org.eclipse.emf.ecore.EObject;
-
-import org.eclipse.emf.json.model.JSObject;
-import org.telehash.model.*;
+import org.eclipse.emf.json.model.JsObject;
+import org.telehash.model.TelehashPackage;
+import org.telehash.model.Telex;
 
 /**
  * <!-- begin-user-doc -->
@@ -77,8 +75,8 @@ public class TelehashAdapterFactory extends AdapterFactoryImpl {
 		}
 
 		@Override
-		public Adapter caseJSObject(JSObject object) {
-			return createJSObjectAdapter();
+		public Adapter caseJsObject(JsObject object) {
+			return createJsObjectAdapter();
 		}
 
 		@Override
@@ -115,16 +113,16 @@ public class TelehashAdapterFactory extends AdapterFactoryImpl {
 	}
 
 	/**
-	 * Creates a new adapter for an object of class '{@link org.eclipse.emf.json.model.JSObject <em>JS Object</em>}'.
+	 * Creates a new adapter for an object of class '{@link org.eclipse.emf.json.model.JsObject <em>Js Object</em>}'.
 	 * <!-- begin-user-doc -->
 	 * This default implementation returns null so that we can easily ignore cases;
 	 * it's useful to ignore a case when inheritance will catch all the cases anyway.
 	 * <!-- end-user-doc -->
 	 * @return the new adapter.
-	 * @see org.eclipse.emf.json.model.JSObject
+	 * @see org.eclipse.emf.json.model.JsObject
 	 * @generated
 	 */
-	public Adapter createJSObjectAdapter() {
+	public Adapter createJsObjectAdapter() {
 		return null;
 	}
 

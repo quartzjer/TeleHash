@@ -14,10 +14,10 @@
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute json.ecore#//EStringToAnySimpleTypeMap/key"/>
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute json.ecore#//EStringToAnySimpleTypeMap/value"/>
     </genClasses>
-    <genClasses ecoreClass="json.ecore#//JSObject">
-      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference json.ecore#//JSObject/contents"/>
-      <genOperations ecoreOperation="json.ecore#//JSObject/get">
-        <genParameters ecoreParameter="json.ecore#//JSObject/get/key"/>
+    <genClasses ecoreClass="json.ecore#//JsObject">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference json.ecore#//JsObject/unmatched"/>
+      <genOperations ecoreOperation="json.ecore#//JsObject/get">
+        <genParameters ecoreParameter="json.ecore#//JsObject/get/key"/>
       </genOperations>
     </genClasses>
   </genPackages>

@@ -7,28 +7,15 @@
 package org.telehash.model.impl;
 
 import java.net.InetSocketAddress;
-
 import java.util.Collection;
 
 import org.eclipse.emf.common.notify.Notification;
-
-import org.eclipse.emf.common.notify.NotificationChain;
 import org.eclipse.emf.common.util.EList;
-
 import org.eclipse.emf.ecore.EClass;
-
-import org.eclipse.emf.ecore.InternalEObject;
 import org.eclipse.emf.ecore.impl.ENotificationImpl;
-import org.eclipse.emf.ecore.impl.EObjectImpl;
-
-import org.eclipse.emf.ecore.util.BasicFeatureMap;
 import org.eclipse.emf.ecore.util.EDataTypeUniqueEList;
-
-import org.eclipse.emf.json.model.impl.JSObjectImpl;
-import org.eclipse.emf.ecore.util.FeatureMap;
-import org.eclipse.emf.ecore.util.InternalEList;
+import org.eclipse.emf.json.model.impl.JsObjectImpl;
 import org.telehash.Hash;
-
 import org.telehash.model.TelehashPackage;
 import org.telehash.model.Telex;
 
@@ -50,7 +37,7 @@ import org.telehash.model.Telex;
  *
  * @generated
  */
-public class TelexImpl extends JSObjectImpl implements Telex {
+public class TelexImpl extends JsObjectImpl implements Telex {
 	/**
 	 * The default value of the '{@link #getTo() <em>To</em>}' attribute.
 	 * <!-- begin-user-doc -->
