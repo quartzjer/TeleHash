@@ -1,0 +1,11 @@
+/**
+<%{GenBase copyrightHolder = argument instanceof GenBase ? (GenBase)argument : argument instanceof Object[] && ((Object[])argument)[0] instanceof GenBase ? (GenBase)((Object[])argument)[0] : null;%>
+<%if (copyrightHolder != null && copyrightHolder.hasCopyright()) {%>
+ * <%=copyrightHolder.getCopyright(copyrightHolder.getGenModel().getIndentation(stringBuffer))%>
+<%} else {%>
+ * <copyright>
+ * </copyright>
+ *
+ * <%="$"%>Id<%="$"%>
+<%}}%>
+ */

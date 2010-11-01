@@ -1,0 +1,704 @@
+<%@ jet package="org.eclipse.emf.codegen.ecore.templates.editor" imports="org.eclipse.emf.codegen.ecore.genmodel.*" class="ActionBarContributor" version="$Id: ActionBarContributor.javajet,v 1.23 2008/03/10 19:10:25 emerks Exp $" %>
+<%
+/**
+ * <copyright>
+ *
+ * Copyright (c) 2002-2007 IBM Corporation and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *   IBM - Initial API and implementation
+ *
+ * </copyright>
+ */
+%>
+<%GenPackage genPackage = (GenPackage)argument; GenModel genModel=genPackage.getGenModel();%>
+<%
+String _CollectionOfAnything = null;
+String _CollectionOfIAction = null;
+String _ArrayListOfIAction = null;
+String _CollectionOfExtendsIAction = null;
+String _IteratorOfIAction = null;
+String _MapOfStringToCollectionOfIAction = null;
+String _MapEntryOfStringToCollectionOfIAction = null;
+String _LinkedHashMapOfStringToCollectionOfIAction = null;
+if (genModel.isCreationCommands())
+{
+  _CollectionOfAnything = genModel.getImportedName("Collection" + (genModel.useGenerics() ? "<?>" : ""));
+  _CollectionOfIAction = genModel.getImportedName(genModel.useGenerics() ? "java.util.Collection<org.eclipse.jface.action.IAction>" : "java.util.Collection");
+  _ArrayListOfIAction = genModel.getImportedName(genModel.useGenerics() ? "java.util.ArrayList<org.eclipse.jface.action.IAction>" : "java.util.ArrayList");
+  _CollectionOfExtendsIAction = genModel.getImportedName(genModel.useGenerics() ? "java.util.Collection<? extends org.eclipse.jface.action.IAction>" : "java.util.Collection");
+  if (genModel.isCreationSubmenus())
+  {
+    _IteratorOfIAction = genModel.getImportedName(genModel.useGenerics() ? "java.util.Iterator<org.eclipse.jface.action.IAction>" : "java.util.Iterator");
+    _MapOfStringToCollectionOfIAction = genModel.getImportedName("java.util.Map") + (genModel.useGenerics() ? ("<String, " + _CollectionOfIAction + ">") : "");
+    _MapEntryOfStringToCollectionOfIAction = genModel.getImportedName("java.util.Map") + ".Entry" + (genModel.useGenerics() ? ("<String, " + _CollectionOfIAction + ">") : "");
+    _LinkedHashMapOfStringToCollectionOfIAction = genModel.getImportedName("java.util.LinkedHashMap") + (genModel.useGenerics() ? ("<String, " + _CollectionOfIAction + ">") : "");
+  }
+}
+%>
+<%@ include file="../Header.javajetinc"%>
+package <%=genPackage.getPresentationPackageName()%>;
+
+<%genModel.markImportLocation(stringBuffer);%>
+
+/**
+ * This is the action bar contributor for the <%=genPackage.getPrefix()%> model editor.
+ * <!-- begin-user-doc -->
+ * <!-- end-user-doc -->
+ * @generated
+ */
+public class <%=genPackage.getActionBarContributorClassName()%>
+	extends <%=genModel.getImportedName("org.eclipse.emf.edit.ui.action.EditingDomainActionBarContributor")%>
+	implements <%=genModel.getImportedName("org.eclipse.jface.viewers.ISelectionChangedListener")%>
+{
+<%if (genModel.hasCopyrightField()) {%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public static final String copyright = <%=genModel.getCopyrightFieldLiteral()%>;<%=genModel.getNonNLS()%>
+
+<%}%>
+<%if (genModel.isRichClientPlatform() && genPackage.isGenerateModelWizard()) {%>
+	/**
+	 * Action to create objects from the <%=genPackage.getPrefix()%> model.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public static class NewAction extends <%=genModel.getImportedName("org.eclipse.emf.common.ui.action.WorkbenchWindowActionDelegate")%>
+	{
+		/**
+		 * @see org.eclipse.ui.IActionDelegate#run(org.eclipse.jface.action.IAction)
+		 * <!-- begin-user-doc -->
+		 * <!-- end-user-doc -->
+		 * @generated
+		 */
+		public void run(<%=genModel.getImportedName("org.eclipse.jface.action.IAction")%> action)
+		{
+			<%=genPackage.getModelWizardClassName()%> wizard = new <%=genPackage.getModelWizardClassName()%>();
+			wizard.init(getWindow().getWorkbench(), <%=genModel.getImportedName("org.eclipse.jface.viewers.StructuredSelection")%>.EMPTY);
+			<%=genModel.getImportedName("org.eclipse.jface.wizard.WizardDialog")%> wizardDialog = new <%=genModel.getImportedName("org.eclipse.jface.wizard.WizardDialog")%>(getWindow().getShell(), wizard);
+			wizardDialog.open();
+		}
+	}
+
+<%}%>
+	/**
+	 * This keeps track of the active editor.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected <%=genModel.getImportedName("org.eclipse.ui.IEditorPart")%> activeEditorPart;
+
+	/**
+	 * This keeps track of the current selection provider.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected <%=genModel.getImportedName("org.eclipse.jface.viewers.ISelectionProvider")%> selectionProvider;
+
+	/**
+	 * This action opens the Properties view.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected <%=genModel.getImportedName("org.eclipse.jface.action.IAction")%> showPropertiesViewAction =
+		new <%=genModel.getImportedName("org.eclipse.jface.action.Action")%>(<%=genPackage.getImportedEditorPluginClassName()%>.INSTANCE.getString("_UI_ShowPropertiesView_menu_item"))<%=genModel.getNonNLS()%>
+		{
+<%if (genModel.useClassOverrideAnnotation()) {%>
+			@Override
+<%}%>
+			public void run()
+			{
+				try
+				{
+					getPage().showView("org.eclipse.ui.views.PropertySheet");<%=genModel.getNonNLS()%>
+				}
+				catch (<%=genModel.getImportedName("org.eclipse.ui.PartInitException")%> exception)
+				{
+					<%=genPackage.getImportedEditorPluginClassName()%>.INSTANCE.log(exception);
+				}
+			}
+		};
+
+	/**
+	 * This action refreshes the viewer of the current editor if the editor
+	 * implements {@link org.eclipse.emf.common.ui.viewer.IViewerProvider}.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected <%=genModel.getImportedName("org.eclipse.jface.action.IAction")%> refreshViewerAction =
+		new <%=genModel.getImportedName("org.eclipse.jface.action.Action")%>(<%=genPackage.getImportedEditorPluginClassName()%>.INSTANCE.getString("_UI_RefreshViewer_menu_item"))<%=genModel.getNonNLS()%>
+		{
+<%if (genModel.useClassOverrideAnnotation()) {%>
+			@Override
+<%}%>
+			public boolean isEnabled()
+			{
+				return activeEditorPart instanceof <%=genModel.getImportedName("org.eclipse.emf.common.ui.viewer.IViewerProvider")%>;
+			}
+
+<%if (genModel.useClassOverrideAnnotation()) {%>
+			@Override
+<%}%>
+			public void run()
+			{
+				if (activeEditorPart instanceof <%=genModel.getImportedName("org.eclipse.emf.common.ui.viewer.IViewerProvider")%>)
+				{
+					<%=genModel.getImportedName("org.eclipse.jface.viewers.Viewer")%> viewer = ((<%=genModel.getImportedName("org.eclipse.emf.common.ui.viewer.IViewerProvider")%>)activeEditorPart).getViewer();
+					if (viewer != null)
+					{
+						viewer.refresh();
+					}
+				}
+			}
+		};
+
+<%if (genModel.isCreationCommands()) {%>
+	/**
+	 * This will contain one {@link org.eclipse.emf.edit.ui.action.CreateChildAction} corresponding to each descriptor
+	 * generated for the current selection by the item provider.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected <%=_CollectionOfIAction%> createChildActions;
+
+  <%if (genModel.isCreationSubmenus()) {%>
+	/**
+	 * This will contain a map of {@link org.eclipse.emf.edit.ui.action.CreateChildAction}s, keyed by sub-menu text.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected <%=_MapOfStringToCollectionOfIAction%> createChildSubmenuActions;
+
+  <%}%>
+	/**
+	 * This is the menu manager into which menu contribution items should be added for CreateChild actions.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected <%=genModel.getImportedName("org.eclipse.jface.action.IMenuManager")%> createChildMenuManager;
+
+	/**
+	 * This will contain one {@link org.eclipse.emf.edit.ui.action.CreateSiblingAction} corresponding to each descriptor
+	 * generated for the current selection by the item provider.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected <%=_CollectionOfIAction%> createSiblingActions;
+
+  <%if (genModel.isCreationSubmenus()) {%>
+	/**
+	 * This will contain a map of {@link org.eclipse.emf.edit.ui.action.CreateSiblingAction}s, keyed by submenu text.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected <%=_MapOfStringToCollectionOfIAction%> createSiblingSubmenuActions;
+
+  <%}%>
+	/**
+	 * This is the menu manager into which menu contribution items should be added for CreateSibling actions.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected <%=genModel.getImportedName("org.eclipse.jface.action.IMenuManager")%> createSiblingMenuManager;
+
+<%}%>
+	/**
+	 * This creates an instance of the contributor.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public <%=genPackage.getActionBarContributorClassName()%>()
+	{
+		super(ADDITIONS_LAST_STYLE);
+		loadResourceAction = new <%=genModel.getImportedName("org.eclipse.emf.edit.ui.action.LoadResourceAction")%>();
+		validateAction = new <%=genModel.getImportedName("org.eclipse.emf.edit.ui.action.ValidateAction")%>();
+		controlAction = new <%=genModel.getImportedName("org.eclipse.emf.edit.ui.action.ControlAction")%>();
+	}
+
+	/**
+	 * This adds Separators for editor additions to the tool bar.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+<%if (genModel.useClassOverrideAnnotation()) {%>
+	@Override
+<%}%>
+	public void contributeToToolBar(<%=genModel.getImportedName("org.eclipse.jface.action.IToolBarManager")%> toolBarManager)
+	{
+		toolBarManager.add(new <%=genModel.getImportedName("org.eclipse.jface.action.Separator")%>("<%=genPackage.getPrefix().toLowerCase(genModel.getLocale())%>-settings"));<%=genModel.getNonNLS()%>
+		toolBarManager.add(new <%=genModel.getImportedName("org.eclipse.jface.action.Separator")%>("<%=genPackage.getPrefix().toLowerCase(genModel.getLocale())%>-additions"));<%=genModel.getNonNLS()%>
+	}
+
+	/**
+	 * This adds to the menu bar a menu and some separators for editor additions,
+	 * as well as the sub-menus for object creation items.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+<%if (genModel.useClassOverrideAnnotation()) {%>
+	@Override
+<%}%>
+	public void contributeToMenu(<%=genModel.getImportedName("org.eclipse.jface.action.IMenuManager")%> menuManager)
+	{
+		super.contributeToMenu(menuManager);
+
+		<%=genModel.getImportedName("org.eclipse.jface.action.IMenuManager")%> submenuManager = new <%=genModel.getImportedName("org.eclipse.jface.action.MenuManager")%>(<%=genPackage.getImportedEditorPluginClassName()%>.INSTANCE.getString("_UI_<%=genPackage.getEditorClassName()%>_menu"), "<%=genPackage.getInterfacePackageName()%>MenuID");<%=genModel.getNonNLS()%><%=genModel.getNonNLS(2)%>
+		menuManager.insertAfter("additions", submenuManager);<%=genModel.getNonNLS()%>
+		submenuManager.add(new <%=genModel.getImportedName("org.eclipse.jface.action.Separator")%>("settings"));<%=genModel.getNonNLS()%>
+		submenuManager.add(new <%=genModel.getImportedName("org.eclipse.jface.action.Separator")%>("actions"));<%=genModel.getNonNLS()%>
+		submenuManager.add(new <%=genModel.getImportedName("org.eclipse.jface.action.Separator")%>("additions"));<%=genModel.getNonNLS()%>
+		submenuManager.add(new <%=genModel.getImportedName("org.eclipse.jface.action.Separator")%>("additions-end"));<%=genModel.getNonNLS()%>
+
+<%if (genModel.isCreationCommands()) {%>
+		// Prepare for CreateChild item addition or removal.
+		//
+		createChildMenuManager = new <%=genModel.getImportedName("org.eclipse.jface.action.MenuManager")%>(<%=genPackage.getImportedEditorPluginClassName()%>.INSTANCE.getString("_UI_CreateChild_menu_item"));<%=genModel.getNonNLS()%>
+		submenuManager.insertBefore("additions", createChildMenuManager);<%=genModel.getNonNLS()%>
+
+		// Prepare for CreateSibling item addition or removal.
+		//
+		createSiblingMenuManager = new <%=genModel.getImportedName("org.eclipse.jface.action.MenuManager")%>(<%=genPackage.getImportedEditorPluginClassName()%>.INSTANCE.getString("_UI_CreateSibling_menu_item"));<%=genModel.getNonNLS()%>
+		submenuManager.insertBefore("additions", createSiblingMenuManager);<%=genModel.getNonNLS()%>
+
+		// Force an update because Eclipse hides empty menus now.
+		//
+		submenuManager.addMenuListener
+			(new <%=genModel.getImportedName("org.eclipse.jface.action.IMenuListener")%>()
+			 {
+				 public void menuAboutToShow(<%=genModel.getImportedName("org.eclipse.jface.action.IMenuManager")%> menuManager)
+				 {
+					 menuManager.updateAll(true);
+				 }
+			 });
+
+<%} else {%>
+		// Add your contributions.
+		// Ensure that you remove @generated or mark it @generated NOT
+
+<%}%>
+		addGlobalActions(submenuManager);
+	}
+
+	/**
+	 * When the active editor changes, this remembers the change and registers with it as a selection provider.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+<%if (genModel.useClassOverrideAnnotation()) {%>
+	@Override
+<%}%>
+	public void setActiveEditor(<%=genModel.getImportedName("org.eclipse.ui.IEditorPart")%> part)
+	{
+		super.setActiveEditor(part);
+		activeEditorPart = part;
+
+		// Switch to the new selection provider.
+		//
+		if (selectionProvider != null)
+		{
+			selectionProvider.removeSelectionChangedListener(this);
+		}
+		if (part == null)
+		{
+			selectionProvider = null;
+		}
+		else
+		{
+			selectionProvider = part.getSite().getSelectionProvider();
+			selectionProvider.addSelectionChangedListener(this);
+
+			// Fake a selection changed event to update the menus.
+			//
+			if (selectionProvider.getSelection() != null)
+			{
+				selectionChanged(new <%=genModel.getImportedName("org.eclipse.jface.viewers.SelectionChangedEvent")%>(selectionProvider, selectionProvider.getSelection()));
+			}
+		}
+	}
+
+	/**
+	 * This implements {@link org.eclipse.jface.viewers.ISelectionChangedListener},
+	 * handling {@link org.eclipse.jface.viewers.SelectionChangedEvent}s by querying for the children and siblings
+	 * that can be added to the selected object and updating the menus accordingly.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public void selectionChanged(<%=genModel.getImportedName("org.eclipse.jface.viewers.SelectionChangedEvent")%> event)
+	{
+<%if (genModel.isCreationCommands()) {%>
+		// Remove any menu items for old selection.
+		//
+		if (createChildMenuManager != null)
+		{
+  <%if (genModel.isCreationSubmenus()) {%>
+			depopulateManager(createChildMenuManager, createChildSubmenuActions);
+  <%}%>
+			depopulateManager(createChildMenuManager, createChildActions);
+		}
+		if (createSiblingMenuManager != null)
+		{
+  <%if (genModel.isCreationSubmenus()) {%>
+			depopulateManager(createSiblingMenuManager, createSiblingSubmenuActions);
+  <%}%>
+			depopulateManager(createSiblingMenuManager, createSiblingActions);
+		}
+
+		// Query the new selection for appropriate new child/sibling descriptors
+		//
+		<%=_CollectionOfAnything%> newChildDescriptors = null;
+		<%=_CollectionOfAnything%> newSiblingDescriptors = null;
+
+		<%=genModel.getImportedName("org.eclipse.jface.viewers.ISelection")%> selection = event.getSelection();
+		if (selection instanceof <%=genModel.getImportedName("org.eclipse.jface.viewers.IStructuredSelection")%> && ((IStructuredSelection)selection).size() == 1)
+		{
+			Object object = ((<%=genModel.getImportedName("org.eclipse.jface.viewers.IStructuredSelection")%>)selection).getFirstElement();
+
+			<%=genModel.getImportedName("org.eclipse.emf.edit.domain.EditingDomain")%> domain = ((<%=genModel.getImportedName("org.eclipse.emf.edit.domain.IEditingDomainProvider")%>)activeEditorPart).getEditingDomain();
+
+			newChildDescriptors = domain.getNewChildDescriptors(object, null);
+			newSiblingDescriptors = domain.getNewChildDescriptors(null, object);
+		}
+
+		// Generate actions for selection; populate and redraw the menus.
+		//
+		createChildActions = generateCreateChildActions(newChildDescriptors, selection);
+  <%if (genModel.isCreationSubmenus()) {%>
+		createChildSubmenuActions = extractSubmenuActions(createChildActions);
+  <%}%>
+		createSiblingActions = generateCreateSiblingActions(newSiblingDescriptors, selection);
+  <%if (genModel.isCreationSubmenus()) {%>
+		createSiblingSubmenuActions = extractSubmenuActions(createSiblingActions);
+  <%}%>
+
+		if (createChildMenuManager != null)
+		{
+  <%if (genModel.isCreationSubmenus()) {%>
+			populateManager(createChildMenuManager, createChildSubmenuActions, null);
+  <%}%>
+			populateManager(createChildMenuManager, createChildActions, null);
+			createChildMenuManager.update(true);
+		}
+		if (createSiblingMenuManager != null)
+		{
+  <%if (genModel.isCreationSubmenus()) {%>
+			populateManager(createSiblingMenuManager, createSiblingSubmenuActions, null);
+  <%}%>
+			populateManager(createSiblingMenuManager, createSiblingActions, null);
+			createSiblingMenuManager.update(true);
+		}
+<%} else {%>
+		// Add your contributions.
+		// Ensure that you remove @generated or mark it @generated NOT
+<%}%>
+	}
+
+<%if (genModel.isCreationCommands()) {%>
+	/**
+	 * This generates a {@link org.eclipse.emf.edit.ui.action.CreateChildAction} for each object in <code>descriptors</code>,
+	 * and returns the collection of these actions.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected <%=_CollectionOfIAction%> generateCreateChildActions(<%=_CollectionOfAnything%> descriptors, <%=genModel.getImportedName("org.eclipse.jface.viewers.ISelection")%> selection)
+	{
+		<%=_CollectionOfIAction%> actions = new <%=_ArrayListOfIAction%>();
+		if (descriptors != null)
+		{
+<%if (genModel.useGenerics()) {%>
+			for (<%=genModel.getImportedName("java.lang.Object")%> descriptor : descriptors)
+<%} else {%>
+			for (<%=genModel.getImportedName("java.util.Iterator")%> i = descriptors.iterator(); i.hasNext(); )
+<%}%>
+			{
+				actions.add(new <%=genModel.getImportedName("org.eclipse.emf.edit.ui.action.CreateChildAction")%>(activeEditorPart, selection, <%if (genModel.useGenerics()) {%>descriptor<%} else {%>i.next()<%}%>));
+			}
+		}
+		return actions;
+	}
+
+	/**
+	 * This generates a {@link org.eclipse.emf.edit.ui.action.CreateSiblingAction} for each object in <code>descriptors</code>,
+	 * and returns the collection of these actions.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected <%=_CollectionOfIAction%> generateCreateSiblingActions(<%=_CollectionOfAnything%> descriptors, <%=genModel.getImportedName("org.eclipse.jface.viewers.ISelection")%> selection)
+	{
+		<%=_CollectionOfIAction%> actions = new <%=_ArrayListOfIAction%>();
+		if (descriptors != null)
+		{
+<%if (genModel.useGenerics()) {%>
+			for (<%=genModel.getImportedName("java.lang.Object")%> descriptor : descriptors)
+<%} else {%>
+			for (<%=genModel.getImportedName("java.util.Iterator")%> i = descriptors.iterator(); i.hasNext(); )
+<%}%>
+			{
+				actions.add(new <%=genModel.getImportedName("org.eclipse.emf.edit.ui.action.CreateSiblingAction")%>(activeEditorPart, selection, <%if (genModel.useGenerics()) {%>descriptor<%} else {%>i.next()<%}%>));
+			}
+		}
+		return actions;
+	}
+
+	/**
+	 * This populates the specified <code>manager</code> with {@link org.eclipse.jface.action.ActionContributionItem}s
+	 * based on the {@link org.eclipse.jface.action.IAction}s contained in the <code>actions</code> collection,
+	 * by inserting them before the specified contribution item <code>contributionID</code>.
+	 * If <code>contributionID</code> is <code>null</code>, they are simply added.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected void populateManager(<%=genModel.getImportedName("org.eclipse.jface.action.IContributionManager")%> manager, <%=_CollectionOfExtendsIAction%> actions, String contributionID)
+	{
+		if (actions != null)
+		{
+<%if (genModel.useGenerics()) {%>
+			for (<%=genModel.getImportedName("org.eclipse.jface.action.IAction")%> action : actions)
+<%} else {%>
+			for (<%=genModel.getImportedName("java.util.Iterator")%> i = actions.iterator(); i.hasNext(); )
+<%}%>
+			{
+<%if (!genModel.useGenerics()) {%>
+				<%=genModel.getImportedName("org.eclipse.jface.action.IAction")%> action = (IAction)i.next();
+<%}%>
+				if (contributionID != null)
+				{
+					manager.insertBefore(contributionID, action);
+				}
+				else
+				{
+					manager.add(action);
+				}
+			}
+		}
+	}
+		
+	/**
+	 * This removes from the specified <code>manager</code> all {@link org.eclipse.jface.action.ActionContributionItem}s
+	 * based on the {@link org.eclipse.jface.action.IAction}s contained in the <code>actions</code> collection.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected void depopulateManager(<%=genModel.getImportedName("org.eclipse.jface.action.IContributionManager")%> manager, <%=_CollectionOfExtendsIAction%> actions)
+	{
+		if (actions != null)
+		{
+			<%=genModel.getImportedName("org.eclipse.jface.action.IContributionItem")%>[] items = manager.getItems();
+			for (int i = 0; i < items.length; i++)
+			{
+				// Look into SubContributionItems
+				//
+				<%=genModel.getImportedName("org.eclipse.jface.action.IContributionItem")%> contributionItem = items[i];
+				while (contributionItem instanceof <%=genModel.getImportedName("org.eclipse.jface.action.SubContributionItem")%>)
+				{
+					contributionItem = ((<%=genModel.getImportedName("org.eclipse.jface.action.SubContributionItem")%>)contributionItem).getInnerItem();
+				}
+
+				// Delete the ActionContributionItems with matching action.
+				//
+				if (contributionItem instanceof <%=genModel.getImportedName("org.eclipse.jface.action.ActionContributionItem")%>)
+				{
+					<%=genModel.getImportedName("org.eclipse.jface.action.IAction")%> action = ((<%=genModel.getImportedName("org.eclipse.jface.action.ActionContributionItem")%>)contributionItem).getAction();
+					if (actions.contains(action))
+					{
+						manager.remove(contributionItem);
+					}
+				}
+			}
+		}
+	}
+
+  <%if (genModel.isCreationSubmenus()) {%>
+	/**
+	 * This extracts those actions in the <code>submenuActions</code> collection whose text is qualified and returns
+	 * a map of these actions, keyed by submenu text.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected <%=_MapOfStringToCollectionOfIAction%> extractSubmenuActions(<%=_CollectionOfIAction%> createActions)
+	{
+		<%=_MapOfStringToCollectionOfIAction%> createSubmenuActions = new <%=_LinkedHashMapOfStringToCollectionOfIAction%>();
+		if (createActions != null)
+		{
+			for (<%=_IteratorOfIAction%> actions = createActions.iterator(); actions.hasNext(); )
+			{
+				<%=genModel.getImportedName("org.eclipse.jface.action.IAction")%> action = <%if (!genModel.useGenerics()) {%>(<%=genModel.getImportedName("org.eclipse.jface.action.IAction")%>)<%}%>actions.next();
+				<%=genModel.getImportedName("java.util.StringTokenizer")%> st = new <%=genModel.getImportedName("java.util.StringTokenizer")%>(action.getText(), "|");<%=genModel.getNonNLS()%>
+				if (st.countTokens() == 2)
+				{
+					String text = st.nextToken().trim();
+					<%=_CollectionOfIAction%> submenuActions = <%if (!genModel.useGenerics()) {%>(<%=_CollectionOfIAction%>)<%}%>createSubmenuActions.get(text);
+					if (submenuActions == null)
+					{
+						createSubmenuActions.put(text, submenuActions = new <%=_ArrayListOfIAction%>());
+					}
+					action.setText(st.nextToken().trim());
+					submenuActions.add(action);
+					actions.remove();
+				}
+			}
+		}
+		return createSubmenuActions;
+	}
+
+	/**
+	 * This populates the specified <code>manager</code> with {@link org.eclipse.jface.action.MenuManager}s containing
+	 * {@link org.eclipse.jface.action.ActionContributionItem}s based on the {@link org.eclipse.jface.action.IAction}s
+	 * contained in the <code>submenuActions</code> collection, by inserting them before the specified contribution
+	 * item <code>contributionID</code>.
+	 * If <code>contributionID</code> is <code>null</code>, they are simply added.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected void populateManager(<%=genModel.getImportedName("org.eclipse.jface.action.IContributionManager")%> manager, <%=_MapOfStringToCollectionOfIAction%> submenuActions, String contributionID)
+	{
+		if (submenuActions != null)
+		{
+    <%if (genModel.getComplianceLevel().getValue() >= GenJDKLevel.JDK50) {%>
+			for (<%=_MapEntryOfStringToCollectionOfIAction%> entry : submenuActions.entrySet())
+			{
+    <%} else {%>
+			for (<%=genModel.getImportedName("java.util.Iterator")%> entries = submenuActions.entrySet().iterator(); entries.hasNext();)
+			{
+				<%=_MapEntryOfStringToCollectionOfIAction%> entry = (<%=_MapEntryOfStringToCollectionOfIAction%>)entries.next();
+    <%}%>
+				<%=genModel.getImportedName("org.eclipse.jface.action.MenuManager")%> submenuManager = new <%=genModel.getImportedName("org.eclipse.jface.action.MenuManager")%>(<%if (!genModel.useGenerics()) {%>(String)<%}%>entry.getKey());
+				if (contributionID != null)
+				{
+					manager.insertBefore(contributionID, submenuManager);
+				}
+				else
+				{
+					manager.add(submenuManager);
+				}
+				populateManager(submenuManager, <%if (!genModel.useGenerics()) {%>(<%=_CollectionOfIAction%>)<%}%>entry.getValue(), null);
+			}
+		}
+	}
+
+	/**
+	 * This removes from the specified <code>manager</code> all {@link org.eclipse.jface.action.MenuManager}s and their
+	 * {@link org.eclipse.jface.action.ActionContributionItem}s based on the {@link org.eclipse.jface.action.IAction}s
+	 * contained in the <code>submenuActions</code> map.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected void depopulateManager(<%=genModel.getImportedName("org.eclipse.jface.action.IContributionManager")%> manager, <%=_MapOfStringToCollectionOfIAction%> submenuActions)
+	{
+		if (submenuActions != null)
+		{
+			<%=genModel.getImportedName("org.eclipse.jface.action.IContributionItem")%>[] items = manager.getItems();
+			for (int i = 0; i < items.length; i++)
+			{
+				<%=genModel.getImportedName("org.eclipse.jface.action.IContributionItem")%> contributionItem = items[i];
+				if (contributionItem instanceof <%=genModel.getImportedName("org.eclipse.jface.action.MenuManager")%>)
+				{
+					<%=genModel.getImportedName("org.eclipse.jface.action.MenuManager")%> submenuManager = (<%=genModel.getImportedName("org.eclipse.jface.action.MenuManager")%>)contributionItem;
+					if (submenuActions.containsKey(submenuManager.getMenuText()))
+					{
+						depopulateManager(submenuManager, <%if (!genModel.useGenerics()) {%>(<%=_CollectionOfIAction%>)<%}%>submenuActions.get(contributionItem));
+						manager.remove(contributionItem);
+					}
+				}
+			}
+		}
+	}
+
+  <%}%>
+<%}%>
+	/**
+	 * This populates the pop-up menu before it appears.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+<%if (genModel.useClassOverrideAnnotation()) {%>
+	@Override
+<%}%>
+	public void menuAboutToShow(<%=genModel.getImportedName("org.eclipse.jface.action.IMenuManager")%> menuManager)
+	{
+		super.menuAboutToShow(menuManager);
+<%if (genModel.isCreationCommands()) {%>
+		<%=genModel.getImportedName("org.eclipse.jface.action.MenuManager")%> submenuManager = null;
+
+		submenuManager = new <%=genModel.getImportedName("org.eclipse.jface.action.MenuManager")%>(<%=genPackage.getImportedEditorPluginClassName()%>.INSTANCE.getString("_UI_CreateChild_menu_item"));<%=genModel.getNonNLS()%>
+  <%if (genModel.isCreationSubmenus()) {%>
+		populateManager(submenuManager, createChildSubmenuActions, null);
+  <%}%>
+		populateManager(submenuManager, createChildActions, null);
+		menuManager.insertBefore("edit", submenuManager);<%=genModel.getNonNLS()%>
+
+		submenuManager = new <%=genModel.getImportedName("org.eclipse.jface.action.MenuManager")%>(<%=genPackage.getImportedEditorPluginClassName()%>.INSTANCE.getString("_UI_CreateSibling_menu_item"));<%=genModel.getNonNLS()%>
+  <%if (genModel.isCreationSubmenus()) {%>
+		populateManager(submenuManager, createSiblingSubmenuActions, null);
+  <%}%>
+		populateManager(submenuManager, createSiblingActions, null);
+		menuManager.insertBefore("edit", submenuManager);<%=genModel.getNonNLS()%>
+<%}%>
+	}
+
+	/**
+	 * This inserts global actions before the "additions-end" separator.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+<%if (genModel.useClassOverrideAnnotation()) {%>
+	@Override
+<%}%>
+	protected void addGlobalActions(<%=genModel.getImportedName("org.eclipse.jface.action.IMenuManager")%> menuManager)
+	{
+		menuManager.insertAfter("additions-end", new <%=genModel.getImportedName("org.eclipse.jface.action.Separator")%>("ui-actions"));<%=genModel.getNonNLS()%><%=genModel.getNonNLS(2)%>
+		menuManager.insertAfter("ui-actions", showPropertiesViewAction);<%=genModel.getNonNLS()%>
+
+		refreshViewerAction.setEnabled(refreshViewerAction.isEnabled());		
+		menuManager.insertAfter("ui-actions", refreshViewerAction);<%=genModel.getNonNLS()%>
+
+		super.addGlobalActions(menuManager);
+	}
+
+	/**
+	 * This ensures that a delete action will clean up all references to deleted objects.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+<%if (genModel.useClassOverrideAnnotation()) {%>
+	@Override
+<%}%>
+	protected boolean removeAllReferencesOnDelete()
+	{
+		return true;
+	}
+
+}
+<%genModel.emitSortedImports();%>

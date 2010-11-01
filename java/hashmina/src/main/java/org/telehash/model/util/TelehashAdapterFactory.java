@@ -11,6 +11,10 @@ import org.eclipse.emf.common.notify.Notifier;
 import org.eclipse.emf.common.notify.impl.AdapterFactoryImpl;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.json.model.JsObject;
+import org.telehash.model.*;
+import org.telehash.model.Line;
+import org.telehash.model.TapRule;
+import org.telehash.model.TelehashObject;
 import org.telehash.model.TelehashPackage;
 import org.telehash.model.Telex;
 
@@ -70,8 +74,23 @@ public class TelehashAdapterFactory extends AdapterFactoryImpl {
 	 */
 	protected TelehashSwitch<Adapter> modelSwitch = new TelehashSwitch<Adapter>() {
 		@Override
+		public Adapter caseTelehashObject(TelehashObject object) {
+			return createTelehashObjectAdapter();
+		}
+
+		@Override
 		public Adapter caseTelex(Telex object) {
 			return createTelexAdapter();
+		}
+
+		@Override
+		public Adapter caseTapRule(TapRule object) {
+			return createTapRuleAdapter();
+		}
+
+		@Override
+		public Adapter caseLine(Line object) {
+			return createLineAdapter();
 		}
 
 		@Override
@@ -99,6 +118,20 @@ public class TelehashAdapterFactory extends AdapterFactoryImpl {
 	}
 
 	/**
+	 * Creates a new adapter for an object of class '{@link org.telehash.model.TelehashObject <em>Object</em>}'.
+	 * <!-- begin-user-doc -->
+	 * This default implementation returns null so that we can easily ignore cases;
+	 * it's useful to ignore a case when inheritance will catch all the cases anyway.
+	 * <!-- end-user-doc -->
+	 * @return the new adapter.
+	 * @see org.telehash.model.TelehashObject
+	 * @generated
+	 */
+	public Adapter createTelehashObjectAdapter() {
+		return null;
+	}
+
+	/**
 	 * Creates a new adapter for an object of class '{@link org.telehash.model.Telex <em>Telex</em>}'.
 	 * <!-- begin-user-doc -->
 	 * This default implementation returns null so that we can easily ignore cases;
@@ -109,6 +142,34 @@ public class TelehashAdapterFactory extends AdapterFactoryImpl {
 	 * @generated
 	 */
 	public Adapter createTelexAdapter() {
+		return null;
+	}
+
+	/**
+	 * Creates a new adapter for an object of class '{@link org.telehash.model.TapRule <em>Tap Rule</em>}'.
+	 * <!-- begin-user-doc -->
+	 * This default implementation returns null so that we can easily ignore cases;
+	 * it's useful to ignore a case when inheritance will catch all the cases anyway.
+	 * <!-- end-user-doc -->
+	 * @return the new adapter.
+	 * @see org.telehash.model.TapRule
+	 * @generated
+	 */
+	public Adapter createTapRuleAdapter() {
+		return null;
+	}
+
+	/**
+	 * Creates a new adapter for an object of class '{@link org.telehash.model.Line <em>Line</em>}'.
+	 * <!-- begin-user-doc -->
+	 * This default implementation returns null so that we can easily ignore cases;
+	 * it's useful to ignore a case when inheritance will catch all the cases anyway.
+	 * <!-- end-user-doc -->
+	 * @return the new adapter.
+	 * @see org.telehash.model.Line
+	 * @generated
+	 */
+	public Adapter createLineAdapter() {
 		return null;
 	}
 

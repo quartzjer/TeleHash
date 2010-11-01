@@ -1,0 +1,172 @@
+<%@ jet package="org.eclipse.emf.codegen.ecore.templates.model" imports="java.util.* org.eclipse.emf.codegen.ecore.genmodel.*" class="AdapterFactoryClass" version="$Id: AdapterFactoryClass.javajet,v 1.13 2008/12/13 15:53:17 emerks Exp $" %>
+<%
+/**
+ * <copyright>
+ *
+ * Copyright (c) 2002-2006 IBM Corporation and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *   IBM - Initial API and implementation
+ *
+ * </copyright>
+ */
+%>
+<%GenPackage genPackage = (GenPackage)argument; GenModel genModel=genPackage.getGenModel(); /* Trick to import java.util.* without warnings */Iterator.class.getName();%>
+<%@ include file="../Header.javajetinc"%>
+package <%=genPackage.getUtilitiesPackageName()%>;
+
+<%genModel.addImport("org.eclipse.emf.common.notify.Adapter");%>
+<%genModel.addImport("org.eclipse.emf.common.notify.Notifier");%>
+<%genModel.addImport("org.eclipse.emf.common.notify.impl.AdapterFactoryImpl");%>
+<%genModel.addImport("org.eclipse.emf.ecore.EObject");%>
+<%if (!genPackage.hasJavaLangConflict() && !genPackage.getUtilitiesPackageName().equals(genPackage.getInterfacePackageName())) genModel.addImport(genPackage.getInterfacePackageName() + ".*");%>
+<%String typeArgument = genModel.useGenerics() ? "<Adapter>" : "";%>
+<%String returnType = genModel.useGenerics() ? "Adapter" : genModel.getImportedName("java.lang.Object");%>
+<%String adapterCast = genModel.useGenerics() ? "" : "(Adapter)";%>
+<%genModel.markImportLocation(stringBuffer);%>
+
+/**
+ * <!-- begin-user-doc -->
+ * The <b>Adapter Factory</b> for the model.
+ * It provides an adapter <code>createXXX</code> method for each class of the model.
+ * <!-- end-user-doc -->
+ * @see <%=genPackage.getQualifiedPackageInterfaceName()%>
+ * @generated
+ */
+public class <%=genPackage.getAdapterFactoryClassName()%> extends AdapterFactoryImpl
+{
+<%if (genModel.hasCopyrightField()) {%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public static final <%=genModel.getImportedName("java.lang.String")%> copyright = <%=genModel.getCopyrightFieldLiteral()%>;<%=genModel.getNonNLS()%>
+
+<%}%>
+	/**
+	 * The cached model package.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected static <%=genPackage.getImportedPackageInterfaceName()%> modelPackage;
+
+	/**
+	 * Creates an instance of the adapter factory.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public <%=genPackage.getAdapterFactoryClassName()%>()
+	{
+		if (modelPackage == null)
+		{
+			modelPackage = <%=genPackage.getImportedPackageInterfaceName()%>.eINSTANCE;
+		}
+	}
+
+	/**
+	 * Returns whether this factory is applicable for the type of the object.
+	 * <!-- begin-user-doc -->
+	 * This implementation returns <code>true</code> if the object is either the model's package or is an instance object of the model.
+	 * <!-- end-user-doc -->
+	 * @return whether this factory is applicable for the type of the object.
+	 * @generated
+	 */
+  <%if (genModel.useClassOverrideAnnotation()) {%>
+	@Override
+  <%}%>
+	public boolean isFactoryForType(Object object)
+	{
+		if (object == modelPackage)
+		{
+			return true;
+		}
+		if (object instanceof EObject)
+		{
+			return ((EObject)object).eClass().getEPackage() == modelPackage;
+		}
+		return false;
+	}
+
+	/**
+	 * The switch that delegates to the <code>createXXX</code> methods.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected <%=genPackage.getSwitchClassName()%><%=typeArgument%> modelSwitch =
+		new <%=genPackage.getSwitchClassName()%><%=typeArgument%>()
+		{
+<%for (GenClass genClass : genPackage.getAllSwitchGenClasses()) {%>
+  <%if (genModel.useClassOverrideAnnotation()) {%>
+			@Override
+  <%}%>
+			public <%=genClass.getTypeParameters()%><%=returnType%> case<%=genPackage.getClassUniqueName(genClass)%>(<%=genClass.getImportedInterfaceName()%><%=genClass.getInterfaceTypeArguments()%> object)
+			{
+				return create<%=genPackage.getClassUniqueName(genClass)%>Adapter();
+			}
+<%}%>
+  <%if (genModel.useClassOverrideAnnotation()) {%>
+			@Override
+  <%}%>
+			public <%=returnType%> defaultCase(EObject object)
+			{
+				return create<%=genPackage.getClassUniqueName(null)%>Adapter();
+			}
+		};
+
+	/**
+	 * Creates an adapter for the <code>target</code>.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @param target the object to adapt.
+	 * @return the adapter for the <code>target</code>.
+	 * @generated
+	 */
+  <%if (genModel.useClassOverrideAnnotation()) {%>
+	@Override
+  <%}%>
+	public Adapter createAdapter(Notifier target)
+	{
+		return <%=adapterCast%>modelSwitch.doSwitch((EObject)target);
+	}
+
+<%for (GenClass genClass : genPackage.getAllSwitchGenClasses()) {%>
+
+	/**
+	 * Creates a new adapter for an object of class '{@link <%=genClass.getQualifiedInterfaceName()%> <em><%=genClass.getFormattedName()%></em>}'.
+	 * <!-- begin-user-doc -->
+	 * This default implementation returns null so that we can easily ignore cases;
+	 * it's useful to ignore a case when inheritance will catch all the cases anyway.
+	 * <!-- end-user-doc -->
+	 * @return the new adapter.
+	 * @see <%=genClass.getQualifiedInterfaceName()%>
+	 * @generated
+	 */
+	public Adapter create<%=genPackage.getClassUniqueName(genClass)%>Adapter()
+	{
+		return null;
+	}
+<%}%>
+
+	/**
+	 * Creates a new adapter for the default case.
+	 * <!-- begin-user-doc -->
+	 * This default implementation returns null.
+	 * <!-- end-user-doc -->
+	 * @return the new adapter.
+	 * @generated
+	 */
+	public Adapter create<%=genPackage.getClassUniqueName(null)%>Adapter()
+	{
+		return null;
+	}
+
+} //<%=genPackage.getAdapterFactoryClassName()%>
+<%genModel.emitSortedImports();%>

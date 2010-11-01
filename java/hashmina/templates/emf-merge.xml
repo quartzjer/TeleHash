@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<merge:options 
+  indent="  "  
+  braceStyle="matching"  
+  redirect="Gen"
+  block="\s*@\s*generated\s*NOT\s*(?:\n\r?|\r\n?)"
+  noImport="\s*//\s*import\s+([\w.*]*)\s*;\s*(?:\n\r?|\r\n?)"
+  xmlns:merge="http://www.eclipse.org/org/eclipse/emf/codegen/jmerge/Options">
+
+<!-- Tabbed Standard
+
+  indent="&#x9;"  
+  braceStyle="standard"  
+
+-->
+
+  <!-- this accepts both new and old style markup. -->
+
+  <merge:dictionaryPattern
+    name="modelMembers" 
+    select="Member/getComment" 
+    match="@\s*(model)"/>
+
+  <merge:dictionaryPattern
+    name="generatedUnmodifiableMembers" 
+    select="Member/getComment" 
+    match="@\s*(gen)erated\s*(This field/method[^(?:\n\r?|\r\n?)]*)*(?:\n\r?|\r\n?)"/>
+
+  <merge:dictionaryPattern
+    name="generatedModifiableMembers" 
+    select="Member/getComment" 
+    match="@\s*generated\s*(modifiable)\s*(?:\n\r?|\r\n?)"/>
+
+  <!-- This is like the above, but for backward compatibility -->
+  <merge:dictionaryPattern
+    name="generatedLastGenMembers" 
+    select="Member/getComment" 
+    match="@\s*(lastgen).*(?:\n\r?|\r\n?)"/>
+
+  <merge:dictionaryPattern
+    name="orderedMembers" 
+    select="Member/getComment" 
+    match="@\s*(ordered)\s*(?:\n\r?|\r\n?)"/>
+
+  <!-- Only push Annotations for the Members marked by gen-->
+  <merge:push targetParentMarkup="^gen$" select="Annotation"/>
+
+  <merge:pull 
+    sourceMarkup="^modifiable$"
+    sourceGet="Member/getComment"
+    sourceTransfer="(\s*&lt;!--\s*begin-user-doc.*?end-user-doc\s*-->\s*)(?:\n\r?|\r\n?)"
+    targetMarkup="^modifiable$"
+    targetPut="Member/setComment"/>
+  <merge:pull 
+    sourceMarkup="^gen$"
+    sourceGet="Member/getComment"
+    sourceTransfer="(\s*&lt;!--\s*begin-user-doc.*?end-user-doc\s*-->\s*)(?:\n\r?|\r\n?)"
+    targetMarkup="^gen$"
+    targetPut="Member/setComment"/>
+  <merge:pull 
+    sourceGet="Member/getFlags"
+    targetMarkup="^gen$"
+    equals="Member/getName"
+    targetPut="Member/setFlags"/>
+
+  <merge:pull 
+    sourceMarkup="^gen$"
+    sourceGet="AbstractType/getComment"
+    sourceTransfer="(\s*&lt;!--\s*begin-user-doc.*?end-user-doc\s*-->\s*)(?:\n\r?|\r\n?)"
+    targetMarkup="^modifiable$"
+    targetPut="AbstractType/setComment"/>
+
+  <merge:pull 
+    sourceGet="Type/getTypeParameters"
+    targetMarkup="^lastgen$|^gen$|^modifiable$|^model$"
+    targetPut="Type/setTypeParameters"/>
+  <merge:pull 
+    sourceGet="Type/getSuperclass"
+    targetMarkup="^lastgen$|^gen$|^modifiable$|^model$"
+    targetPut="Type/setSuperclass"/>
+  <merge:pull 
+    sourceGet="Type/getSuperInterfaces"
+    sourceTransfer="(\s*@\s*extends|\s*@\s*implements)(.*?)(?:&lt;!--|(?:\n\r?|\r\n?))"
+    targetMarkup="^lastgen$|^gen$|^modifiable$|^model$"
+    targetPut="Type/addSuperInterface"/>
+
+  <merge:pull 
+    sourceGet="Enum/getSuperInterfaces"
+    sourceTransfer="(\s*@\s*extends|\s*@\s*implements)(.*?)(?:&lt;!--|(?:\n\r?|\r\n?))"
+    targetMarkup="^lastgen$|^gen$|^modifiable$|^model$"
+    targetPut="Enum/addSuperInterface"/>
+
+  <merge:pull 
+    sourceGet="EnumConstant/getArguments"
+    targetMarkup="^lastgen$|^gen$|^modifiable$|^model$"
+    targetPut="EnumConstant/setArguments"/>
+  <merge:pull 
+    sourceGet="EnumConstant/getBody"
+    targetMarkup="^lastgen$|^gen$|^modifiable$|^model$$"
+    targetPut="EnumConstant/setBody"/>
+
+  <merge:pull 
+    sourceGet="AnnotationTypeMember/getType"
+    targetMarkup="^gen$"
+    targetPut="AnnotationTypeMember/setType"/>
+  <merge:pull 
+    sourceGet="AnnotationTypeMember/getDefaultValue"
+    targetMarkup="^gen$"
+    targetPut="AnnotationTypeMember/setDefaultValue"/>
+
+  <merge:pull 
+    sourceGet="Initializer/getBody"
+    targetMarkup="^gen$"
+    targetPut="Initializer/setBody"/>
+
+  <merge:pull 
+    sourceGet="Field/getType"
+    targetMarkup="^gen$"
+    targetPut="Field/setType"/>
+  <merge:pull 
+    sourceGet="Field/getInitializer"
+    targetMarkup="^gen$"
+    targetPut="Field/setInitializer"/>
+
+  <merge:pull 
+    sourceGet="Method/getTypeParameters"
+    targetMarkup="^gen$"
+    targetPut="Method/setTypeParameters"/>
+  <merge:pull 
+    sourceGet="Method/getReturnType"
+    targetMarkup="^gen$|^model$"
+    targetPut="Method/setReturnType"/>
+  <merge:pull 
+    sourceGet="Method/getParameters"
+    targetMarkup="^gen$"
+    targetPut="Method/setParameters"/>
+  <merge:pull 
+    sourceGet="Method/getBody"
+    targetMarkup="^gen$"
+    targetPut="Method/setBody"/>
+  <merge:pull 
+    sourceGet="Method/getExceptions"
+    targetMarkup="^gen$"
+    targetPut="Method/addException"/>
+
+  <merge:sweep markup="^gen$" select="Member"/>
+  <merge:sweep markup="^org.eclipse.emf.ecore.EMetaObject$" select="Import"/>
+  <merge:sweep markup="^org.eclipse.emf.ecore.impl.EMetaObjectImpl$" select="Import"/>
+  <merge:sweep markup="^org.eclipse.emf.ecore.util.EObjectCompositeEList$" select="Import"/>
+  <merge:sweep markup="^org.eclipse.emf.ecore.util.EObjectCompositeWithInverseEList$" select="Import"/>
+  <merge:sweep markup="^org.eclipse.emf.common.util.AbstractEnumerator$" select="Import"/>
+
+  <merge:sort markup="^ordered$" select="Field"/>
+  <merge:sort markup="^ordered$" select="EnumConstant"/>
+
+<!-- Basic Rules
+
+    <merge:pull 
+      sourceGet="CompilationUnit/getHeader"
+      targetPut="CompilationUnit/setHeader"/>
+
+    <merge:pull 
+      sourceGet="Package/getName"
+      targetPut="Package/setName"/>
+
+    <merge:pull 
+      sourceGet="Member/getFlags"
+      targetPut="Member/setFlags"/>
+    <merge:pull 
+      sourceGet="Member/getComment"
+      targetPut="Member/setComment"/>
+
+    <merge:pull 
+      sourceGet="Type/getSuperclass"
+      targetPut="Type/setSuperclass"/>
+    <merge:pull 
+      sourceGet="Type/getSuperInterfaces"
+      targetPut="Type/addSuperInterface"/>
+
+    <merge:pull 
+      sourceGet="Initializer/getBody"
+      targetPut="Initializer/setBody"/>
+
+    <merge:pull 
+      sourceGet="Field/getType"
+      targetPut="Field/setType"/>
+    <merge:pull 
+      sourceGet="Field/getInitializer"
+      targetPut="Field/setInitializer"/>
+
+    <merge:pull 
+      sourceGet="Method/getBody"
+      targetPut="Method/setBody"/>
+    <merge:pull 
+      sourceGet="Method/getReturnType"
+      targetPut="Method/setReturnType"/>
+    <merge:pull 
+      sourceGet="Method/getExceptions"
+      targetPut="Method/addException"/>
+-->
+
+<!-- Push Enum Constants only for generated Enums -->
+<!-- 
+  <merge:push targetParentMarkup="^gen$" select="EnumConstant"/>
+-->
+
+<!-- Push Annotation Type Members only for generated Annotation Types -->
+<!--
+  <merge:push targetParentMarkup="^gen$" select="AnnotationTypeMember"/>
+-->
+
+<!-- Sets the content of annotations if the parent is marked with gen --> 
+<!--
+    <merge:pull 
+      sourceGet="Annotation/getContents"
+      targetParentMarkup="^gen$"
+      targetPut="Annotation/setContents"/>
+-->      
+
+<!-- Remove annotations of generated target nodes if the annotation is not in the source -->
+<!--
+  <merge:sweep parentMarkup="^gen$" select="Annotation"/>
+-->    
+
+<!-- 
+    <merge:pull 
+      sourceMarkup="^modifiable$"
+      sourceGet="Member/getComment"
+      targetMarkup="^gen$"
+      targetPut="Member/setComment"/>
+-->
+
+</merge:options>

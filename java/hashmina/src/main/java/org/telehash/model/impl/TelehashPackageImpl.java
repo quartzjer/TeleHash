@@ -8,14 +8,20 @@ package org.telehash.model.impl;
 
 import java.net.InetSocketAddress;
 
+import org.apache.mina.core.session.IoSession;
 import org.eclipse.emf.ecore.EAttribute;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EDataType;
+import org.eclipse.emf.ecore.EOperation;
 import org.eclipse.emf.ecore.EPackage;
+import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.impl.EPackageImpl;
 import org.eclipse.emf.json.model.JsonPackage;
 import org.telehash.Hash;
+import org.telehash.model.Line;
+import org.telehash.model.TapRule;
 import org.telehash.model.TelehashFactory;
+import org.telehash.model.TelehashObject;
 import org.telehash.model.TelehashPackage;
 import org.telehash.model.Telex;
 
@@ -32,7 +38,28 @@ public class TelehashPackageImpl extends EPackageImpl implements
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
+	private EClass telehashObjectEClass = null;
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
 	private EClass telexEClass = null;
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	private EClass tapRuleEClass = null;
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	private EClass lineEClass = null;
 
 	/**
 	 * <!-- begin-user-doc -->
@@ -47,6 +74,13 @@ public class TelehashPackageImpl extends EPackageImpl implements
 	 * @generated
 	 */
 	private EDataType hashEDataType = null;
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	private EDataType ioSessionEDataType = null;
 
 	/**
 	 * Creates an instance of the model <b>Package</b>, registered with
@@ -121,6 +155,15 @@ public class TelehashPackageImpl extends EPackageImpl implements
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
+	public EClass getTelehashObject() {
+		return telehashObjectEClass;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
 	public EClass getTelex() {
 		return telexEClass;
 	}
@@ -167,7 +210,16 @@ public class TelehashPackageImpl extends EPackageImpl implements
 	 * @generated
 	 */
 	public EAttribute getTelex_See() {
-		return (EAttribute) telexEClass.getEStructuralFeatures().get(4);
+		return (EAttribute) telexEClass.getEStructuralFeatures().get(5);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EReference getTelex_Tap() {
+		return (EReference) telexEClass.getEStructuralFeatures().get(6);
 	}
 
 	/**
@@ -176,7 +228,214 @@ public class TelehashPackageImpl extends EPackageImpl implements
 	 * @generated
 	 */
 	public EAttribute getTelex_BytesReceived() {
-		return (EAttribute) telexEClass.getEStructuralFeatures().get(5);
+		return (EAttribute) telexEClass.getEStructuralFeatures().get(4);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EClass getTapRule() {
+		return tapRuleEClass;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EReference getTapRule_Is() {
+		return (EReference) tapRuleEClass.getEStructuralFeatures().get(0);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getTapRule_Has() {
+		return (EAttribute) tapRuleEClass.getEStructuralFeatures().get(1);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EClass getLine() {
+		return lineEClass;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_Address() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(0);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_End() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(1);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_Neighbors() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(2);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_RingIn() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(3);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_RingOut() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(4);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_Init() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(5);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_SeenAt() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(6);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_SentAt() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(7);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_LineAt() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(8);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_TapLastAt() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(9);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_Br() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(10);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_BrIn() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(11);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_BrOut() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(12);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_Bsent() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(13);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_LineId() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(14);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_Visible() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(15);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_Advertised() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(16);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EReference getLine_Tap() {
+		return (EReference) lineEClass.getEStructuralFeatures().get(17);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EAttribute getLine_Session() {
+		return (EAttribute) lineEClass.getEStructuralFeatures().get(18);
 	}
 
 	/**
@@ -195,6 +454,15 @@ public class TelehashPackageImpl extends EPackageImpl implements
 	 */
 	public EDataType getHash() {
 		return hashEDataType;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EDataType getIoSession() {
+		return ioSessionEDataType;
 	}
 
 	/**
@@ -226,17 +494,46 @@ public class TelehashPackageImpl extends EPackageImpl implements
 		isCreated = true;
 
 		// Create classes and their features
+		telehashObjectEClass = createEClass(TELEHASH_OBJECT);
+
 		telexEClass = createEClass(TELEX);
 		createEAttribute(telexEClass, TELEX__TO);
 		createEAttribute(telexEClass, TELEX__END);
 		createEAttribute(telexEClass, TELEX__LINE);
 		createEAttribute(telexEClass, TELEX__RING);
-		createEAttribute(telexEClass, TELEX__SEE);
 		createEAttribute(telexEClass, TELEX__BYTES_RECEIVED);
+		createEAttribute(telexEClass, TELEX__SEE);
+		createEReference(telexEClass, TELEX__TAP);
+
+		tapRuleEClass = createEClass(TAP_RULE);
+		createEReference(tapRuleEClass, TAP_RULE__IS);
+		createEAttribute(tapRuleEClass, TAP_RULE__HAS);
+
+		lineEClass = createEClass(LINE);
+		createEAttribute(lineEClass, LINE__ADDRESS);
+		createEAttribute(lineEClass, LINE__END);
+		createEAttribute(lineEClass, LINE__NEIGHBORS);
+		createEAttribute(lineEClass, LINE__RING_IN);
+		createEAttribute(lineEClass, LINE__RING_OUT);
+		createEAttribute(lineEClass, LINE__INIT);
+		createEAttribute(lineEClass, LINE__SEEN_AT);
+		createEAttribute(lineEClass, LINE__SENT_AT);
+		createEAttribute(lineEClass, LINE__LINE_AT);
+		createEAttribute(lineEClass, LINE__TAP_LAST_AT);
+		createEAttribute(lineEClass, LINE__BR);
+		createEAttribute(lineEClass, LINE__BR_IN);
+		createEAttribute(lineEClass, LINE__BR_OUT);
+		createEAttribute(lineEClass, LINE__BSENT);
+		createEAttribute(lineEClass, LINE__LINE_ID);
+		createEAttribute(lineEClass, LINE__VISIBLE);
+		createEAttribute(lineEClass, LINE__ADVERTISED);
+		createEReference(lineEClass, LINE__TAP);
+		createEAttribute(lineEClass, LINE__SESSION);
 
 		// Create data types
 		endpointEDataType = createEDataType(ENDPOINT);
 		hashEDataType = createEDataType(HASH);
+		ioSessionEDataType = createEDataType(IO_SESSION);
 	}
 
 	/**
@@ -272,9 +569,54 @@ public class TelehashPackageImpl extends EPackageImpl implements
 		// Set bounds for type parameters
 
 		// Add supertypes to classes
-		telexEClass.getESuperTypes().add(theJsonPackage.getJsObject());
+		telehashObjectEClass.getESuperTypes().add(theJsonPackage.getJsObject());
+		telexEClass.getESuperTypes().add(this.getTelehashObject());
+		tapRuleEClass.getESuperTypes().add(theJsonPackage.getJsObject());
 
 		// Initialize classes and features; add operations and parameters
+		initEClass(telehashObjectEClass, TelehashObject.class,
+				"TelehashObject", IS_ABSTRACT, !IS_INTERFACE,
+				IS_GENERATED_INSTANCE_CLASS);
+
+		EOperation op = addEOperation(telehashObjectEClass,
+				theJsonPackage.getAnySimpleType(), "getHeader", 0, 1,
+				IS_UNIQUE, IS_ORDERED);
+		addEParameter(op, ecorePackage.getEString(), "key", 0, 1, IS_UNIQUE,
+				IS_ORDERED);
+
+		op = addEOperation(telehashObjectEClass,
+				theJsonPackage.getAnySimpleType(), "getCommand", 0, 1,
+				IS_UNIQUE, IS_ORDERED);
+		addEParameter(op, ecorePackage.getEString(), "key", 0, 1, IS_UNIQUE,
+				IS_ORDERED);
+
+		op = addEOperation(telehashObjectEClass,
+				theJsonPackage.getAnySimpleType(), "getSignal", 0, 1,
+				IS_UNIQUE, IS_ORDERED);
+		addEParameter(op, ecorePackage.getEString(), "key", 0, 1, IS_UNIQUE,
+				IS_ORDERED);
+
+		op = addEOperation(telehashObjectEClass, this.getTelehashObject(),
+				"withHeader", 0, 1, IS_UNIQUE, IS_ORDERED);
+		addEParameter(op, ecorePackage.getEString(), "key", 0, 1, IS_UNIQUE,
+				IS_ORDERED);
+		addEParameter(op, theJsonPackage.getAnySimpleType(), "value", 0, 1,
+				IS_UNIQUE, IS_ORDERED);
+
+		op = addEOperation(telehashObjectEClass, this.getTelehashObject(),
+				"withCommand", 0, 1, IS_UNIQUE, IS_ORDERED);
+		addEParameter(op, ecorePackage.getEString(), "key", 0, 1, IS_UNIQUE,
+				IS_ORDERED);
+		addEParameter(op, theJsonPackage.getAnySimpleType(), "value", 0, 1,
+				IS_UNIQUE, IS_ORDERED);
+
+		op = addEOperation(telehashObjectEClass, this.getTelehashObject(),
+				"withSignal", 0, 1, IS_UNIQUE, IS_ORDERED);
+		addEParameter(op, ecorePackage.getEString(), "key", 0, 1, IS_UNIQUE,
+				IS_ORDERED);
+		addEParameter(op, theJsonPackage.getAnySimpleType(), "value", 0, 1,
+				IS_UNIQUE, IS_ORDERED);
+
 		initEClass(telexEClass, Telex.class, "Telex", !IS_ABSTRACT,
 				!IS_INTERFACE, IS_GENERATED_INSTANCE_CLASS);
 		initEAttribute(getTelex_To(), this.getEndpoint(), "to", null, 0, 1,
@@ -282,26 +624,113 @@ public class TelehashPackageImpl extends EPackageImpl implements
 				!IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
 		initEAttribute(getTelex_End(), this.getHash(), "end", null, 0, 1,
 				Telex.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
-				!IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
+				IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
 		initEAttribute(getTelex_Line(), ecorePackage.getEInt(), "line", null,
 				0, 1, Telex.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
 				IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
 		initEAttribute(getTelex_Ring(), ecorePackage.getEInt(), "ring", null,
 				0, 1, Telex.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
 				IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
-		initEAttribute(getTelex_See(), this.getEndpoint(), "see", null, 0, -1,
-				Telex.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
-				!IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
 		initEAttribute(getTelex_BytesReceived(), ecorePackage.getEInt(),
 				"bytesReceived", null, 0, 1, Telex.class, !IS_TRANSIENT,
 				!IS_VOLATILE, IS_CHANGEABLE, !IS_UNSETTABLE, !IS_ID, IS_UNIQUE,
 				!IS_DERIVED, IS_ORDERED);
+		initEAttribute(getTelex_See(), this.getEndpoint(), "see", null, 0, -1,
+				Telex.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
+				IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
+		initEReference(getTelex_Tap(), this.getTapRule(), null, "tap", null, 0,
+				-1, Telex.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
+				IS_COMPOSITE, !IS_RESOLVE_PROXIES, IS_UNSETTABLE, IS_UNIQUE,
+				!IS_DERIVED, IS_ORDERED);
+
+		initEClass(tapRuleEClass, TapRule.class, "TapRule", !IS_ABSTRACT,
+				!IS_INTERFACE, IS_GENERATED_INSTANCE_CLASS);
+		initEReference(getTapRule_Is(), this.getTelehashObject(), null, "is",
+				null, 0, 1, TapRule.class, !IS_TRANSIENT, !IS_VOLATILE,
+				IS_CHANGEABLE, IS_COMPOSITE, !IS_RESOLVE_PROXIES,
+				IS_UNSETTABLE, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
+		initEAttribute(getTapRule_Has(), ecorePackage.getEString(), "has",
+				null, 0, -1, TapRule.class, !IS_TRANSIENT, !IS_VOLATILE,
+				IS_CHANGEABLE, IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED,
+				IS_ORDERED);
+
+		initEClass(lineEClass, Line.class, "Line", !IS_ABSTRACT, !IS_INTERFACE,
+				IS_GENERATED_INSTANCE_CLASS);
+		initEAttribute(getLine_Address(), this.getEndpoint(), "address", null,
+				0, 1, Line.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
+				!IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
+		initEAttribute(getLine_End(), this.getHash(), "end", null, 0, 1,
+				Line.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
+				!IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
+		initEAttribute(getLine_Neighbors(), this.getHash(), "neighbors", null,
+				0, -1, Line.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
+				!IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
+		initEAttribute(getLine_RingIn(), ecorePackage.getEInt(), "ringIn",
+				null, 0, 1, Line.class, !IS_TRANSIENT, !IS_VOLATILE,
+				IS_CHANGEABLE, IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED,
+				IS_ORDERED);
+		initEAttribute(getLine_RingOut(), ecorePackage.getEInt(), "ringOut",
+				null, 0, 1, Line.class, !IS_TRANSIENT, !IS_VOLATILE,
+				IS_CHANGEABLE, IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED,
+				IS_ORDERED);
+		initEAttribute(getLine_Init(), ecorePackage.getELong(), "init", null,
+				0, 1, Line.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
+				IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
+		initEAttribute(getLine_SeenAt(), ecorePackage.getELong(), "seenAt",
+				null, 0, 1, Line.class, !IS_TRANSIENT, !IS_VOLATILE,
+				IS_CHANGEABLE, IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED,
+				IS_ORDERED);
+		initEAttribute(getLine_SentAt(), ecorePackage.getELong(), "sentAt",
+				null, 0, 1, Line.class, !IS_TRANSIENT, !IS_VOLATILE,
+				IS_CHANGEABLE, IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED,
+				IS_ORDERED);
+		initEAttribute(getLine_LineAt(), ecorePackage.getELong(), "lineAt",
+				null, 0, 1, Line.class, !IS_TRANSIENT, !IS_VOLATILE,
+				IS_CHANGEABLE, IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED,
+				IS_ORDERED);
+		initEAttribute(getLine_TapLastAt(), ecorePackage.getEInt(),
+				"tapLastAt", null, 0, 1, Line.class, !IS_TRANSIENT,
+				!IS_VOLATILE, IS_CHANGEABLE, IS_UNSETTABLE, !IS_ID, IS_UNIQUE,
+				!IS_DERIVED, IS_ORDERED);
+		initEAttribute(getLine_Br(), ecorePackage.getEInt(), "br", "0", 0, 1,
+				Line.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
+				!IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
+		initEAttribute(getLine_BrIn(), ecorePackage.getEInt(), "brIn", "0", 0,
+				1, Line.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
+				!IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
+		initEAttribute(getLine_BrOut(), ecorePackage.getEInt(), "brOut", "0",
+				0, 1, Line.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
+				!IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
+		initEAttribute(getLine_Bsent(), ecorePackage.getEInt(), "bsent", "0",
+				0, 1, Line.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
+				!IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
+		initEAttribute(getLine_LineId(), ecorePackage.getEInt(), "lineId",
+				null, 0, 1, Line.class, !IS_TRANSIENT, !IS_VOLATILE,
+				IS_CHANGEABLE, IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED,
+				IS_ORDERED);
+		initEAttribute(getLine_Visible(), ecorePackage.getEBoolean(),
+				"visible", "false", 0, 1, Line.class, !IS_TRANSIENT,
+				!IS_VOLATILE, IS_CHANGEABLE, !IS_UNSETTABLE, !IS_ID, IS_UNIQUE,
+				!IS_DERIVED, IS_ORDERED);
+		initEAttribute(getLine_Advertised(), ecorePackage.getEBoolean(),
+				"advertised", "false", 0, 1, Line.class, !IS_TRANSIENT,
+				!IS_VOLATILE, IS_CHANGEABLE, !IS_UNSETTABLE, !IS_ID, IS_UNIQUE,
+				!IS_DERIVED, IS_ORDERED);
+		initEReference(getLine_Tap(), this.getTapRule(), null, "tap", null, 0,
+				-1, Line.class, !IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
+				IS_COMPOSITE, !IS_RESOLVE_PROXIES, IS_UNSETTABLE, IS_UNIQUE,
+				!IS_DERIVED, IS_ORDERED);
+		initEAttribute(getLine_Session(), this.getIoSession(), "session", null,
+				0, 1, Line.class, IS_TRANSIENT, !IS_VOLATILE, IS_CHANGEABLE,
+				!IS_UNSETTABLE, !IS_ID, IS_UNIQUE, !IS_DERIVED, IS_ORDERED);
 
 		// Initialize data types
 		initEDataType(endpointEDataType, InetSocketAddress.class, "Endpoint",
 				IS_SERIALIZABLE, !IS_GENERATED_INSTANCE_CLASS);
 		initEDataType(hashEDataType, Hash.class, "Hash", IS_SERIALIZABLE,
 				!IS_GENERATED_INSTANCE_CLASS);
+		initEDataType(ioSessionEDataType, IoSession.class, "IoSession",
+				!IS_SERIALIZABLE, !IS_GENERATED_INSTANCE_CLASS);
 
 		// Create resource
 		createResource(eNS_URI);
@@ -327,10 +756,14 @@ public class TelehashPackageImpl extends EPackageImpl implements
 				"header" });
 		addAnnotation(getTelex_Ring(), source, new String[] { "keyType",
 				"header" });
+		addAnnotation(getTelex_BytesReceived(), source, new String[] {
+				"keyType", "header", "key", "br" });
 		addAnnotation(getTelex_See(), source, new String[] { "keyType",
 				"command" });
-		addAnnotation(getTelex_BytesReceived(), source, new String[] {
-				"keyType", "header", "key", "_br" });
+		addAnnotation(getTelex_Tap(), source, new String[] { "keyType",
+				"command" });
+		addAnnotation(getLine_Tap(), source, new String[] { "keyType",
+				"command" });
 	}
 
 } //TelehashPackageImpl

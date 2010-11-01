@@ -52,4 +52,12 @@ public interface JsObject extends EObject {
 	 */
 	Object get(String key);
 
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @model valueDataType="org.eclipse.emf.json.model.AnySimpleType"
+	 * @generated
+	 */
+	JsObject with(String key, Object value);
+
 } // JsObject

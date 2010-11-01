@@ -1,19 +1,18 @@
 package org.telehash;
 
-import static org.telehash.TelexBuilder.formatAddress;
-import static org.telehash.TelexBuilder.parseAddress;
-
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
+import org.eclipse.emf.ecore.EDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.telehash.model.Line;
+import org.telehash.model.TelehashFactory;
+import org.telehash.model.TelehashPackage;
+import org.telehash.model.Telex;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -21,18 +20,19 @@ public class EndSignalHandler implements TelexHandler {
 
 	static private Logger logger = LoggerFactory.getLogger(SeeHandler.class);
 	
-	static private Set<String> MATCHING_KEYS = ImmutableSet.of("+end");
+	static private final TelehashFactory tf = TelehashFactory.eINSTANCE;
+	static private final EDataType ENDPOINT = TelehashPackage.Literals.ENDPOINT;
 	
 	@Override
-	public Set<String> getMatchingKeys() {
-		return MATCHING_KEYS;
+	public boolean isMatch(Telex telex) {
+		return telex.isSetEnd();
 	}
 
 	@Override
-	public void telexReceived(final SwitchHandler switchHandler, Line line,
-			Map<String, ?> telex) {
-	    int hop = telex.containsKey("_hop") ? (Integer)telex.get("_hop") : 0;
-	    Hash endHash = new Hash((String)telex.get("+end"));
+	public void telexReceived(final SwitchHandler switchHandler, Line line, Telex telex) {
+		Integer maybeHop = (Integer) telex.getHeader("hop");
+	    int hop = maybeHop != null ? maybeHop.intValue() : 0;
+	    Hash endHash = telex.getEnd();
 	    
 	    if (hop == 0) {
 	    	// start from a visible switch (should use cached result someday)
@@ -44,46 +44,45 @@ public class EndSignalHandler implements TelexHandler {
 //	      console.log("+end hashes: " + JSON.stringify(hashes));
 	        
 	        // convert back to address strings
-	        List<String> closestAddrs = Lists.newArrayList();
+	        List<InetSocketAddress> closestAddrs = Lists.newArrayList();
 	        Iterables.addAll(closestAddrs,
 	        	Iterables.limit(
 		        	Iterables.filter(
-			        	Iterables.transform(closestNeighbors, new Function<Hash, String>() {
+			        	Iterables.transform(closestNeighbors, new Function<Hash, InetSocketAddress>() {
 			        		@Override
-			        		public String apply(Hash hash) {
-			        			return formatAddress(switchHandler.getLine(hash).getAddress());
+			        		public InetSocketAddress apply(Hash hash) {
+			        			return switchHandler.getLine(hash).getAddress();
 			        		}
 						}),
-						String.class),
+						InetSocketAddress.class),
 					5));
 	        
 //	      console.log("+end ipps: " + JSON.stringify(ipps));
 	        
 	        // TODO: this is where dampening should happen to not advertise switches that might be too busy
 	        if (!line.isAdvertised()) {
-	            closestAddrs.add(formatAddress(switchHandler.getAddress()));  // mark ourselves visible at least once
+	            closestAddrs.add(switchHandler.getAddress());  // mark ourselves visible at least once
 	            line.setAdvertised(true);
 	        }
 	        
 	        if (!closestAddrs.isEmpty()) {
-	        	Map<String, ?> telexOut =
-		        	TelexBuilder.to(line)
-		        		.with(".see", closestAddrs).build();
-	        	
+	        	Telex telexOut = tf.createTelex().withTo(line);
+	        	telexOut.getSee().addAll(closestAddrs);
 	        	switchHandler.send(telexOut);
 	        }
 	    }
 	    
 	    // this is our .tap, requests to +pop for NATs
-	    if (endHash.equals(switchHandler.getAddressHash()) && telex.containsKey("+pop")) {
-	    	String pop = (String) telex.get("+pop");
+	    if (endHash.equals(switchHandler.getAddressHash()) && telex.getSignal("pop") != null) {
+	    	String pop = (String) telex.getSignal("pop");
 	        logger.info("POP? " + pop);
 	        
             // should we verify that this came from a switch we actually have a tap on?
 	        if (pop.startsWith("th:")) {
-	        	InetSocketAddress popToAddr = parseAddress(pop.substring(3));
+	        	InetSocketAddress popToAddr = 
+	        		(InetSocketAddress) tf.createFromString(ENDPOINT, pop.substring(3));
 	        	logger.info("POP to " + popToAddr);
-	        	switchHandler.send(TelexBuilder.to(popToAddr).build());
+	        	switchHandler.send(tf.createTelex().withTo(popToAddr));
 	        }
 	    }
 	}

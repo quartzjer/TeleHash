@@ -1,0 +1,232 @@
+<%@ jet package="org.eclipse.emf.codegen.ecore.templates.edit" imports="java.util.* org.eclipse.emf.codegen.ecore.genmodel.*" class="Plugin" version="$Id: Plugin.javajet,v 1.12 2010/08/24 16:59:37 emerks Exp $" %>
+<%
+/**
+ * <copyright>
+ *
+ * Copyright (c) 2002-2010 IBM Corporation and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *   IBM - Initial API and implementation
+ *
+ * </copyright>
+ */
+%>
+<%GenModel genModel = (GenModel)argument; /* Trick to import java.util.* without warnings */Iterator.class.getName();%>
+<%@ include file="../Header.javajetinc"%>
+package <%=genModel.getEditPluginPackageName()%>;
+
+<%genModel.addImport("org.eclipse.emf.common.EMFPlugin");%>
+<%genModel.addImport("org.eclipse.emf.common.util.ResourceLocator");%>
+<%genModel.markImportLocation(stringBuffer);%>
+
+/**
+ * This is the central singleton for the <%=genModel.getModelName()%> edit plugin.
+ * <!-- begin-user-doc -->
+ * <!-- end-user-doc -->
+ * @generated
+ */
+public final class <%=genModel.getEditPluginClassName()%> extends EMFPlugin
+{
+<%if (genModel.hasCopyrightField()) {%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public static final <%=genModel.getImportedName("java.lang.String")%> copyright = <%=genModel.getCopyrightFieldLiteral()%>;<%=genModel.getNonNLS()%>
+
+<%}%>
+	/**
+	 * Keep track of the singleton.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public static final <%=genModel.getEditPluginClassName()%> INSTANCE = new <%=genModel.getEditPluginClassName()%>();
+
+<%if (genModel.getRuntimePlatform() != GenRuntimePlatform.GWT) {%>
+	/**
+	 * Keep track of the singleton.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	private static Implementation plugin;
+
+<%}%>
+	/**
+	 * Create the instance.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public <%=genModel.getEditPluginClassName()%>()
+	{
+		super
+		  (new ResourceLocator [] 
+		   {
+<%for (String pluginClassName : genModel.getEditResourceDelegateImportedPluginClassNames()) {%>
+		     <%=pluginClassName%>.INSTANCE,
+<%}%>
+		   });
+	}
+
+	/**
+	 * Returns the singleton instance of the Eclipse plugin.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @return the singleton instance.
+	 * @generated
+	 */
+<%if (genModel.useClassOverrideAnnotation()) {%>
+	@Override
+<%}%>
+	public ResourceLocator getPluginResourceLocator()
+	{
+<%if (genModel.getRuntimePlatform() == GenRuntimePlatform.GWT) {%>
+		return null;
+<%} else {%>
+		return plugin;
+<%}%>
+	}
+
+<%if (genModel.getRuntimePlatform() != GenRuntimePlatform.GWT) {%>
+	/**
+	 * Returns the singleton instance of the Eclipse plugin.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @return the singleton instance.
+	 * @generated
+	 */
+	public static Implementation getPlugin()
+	{
+		return plugin;
+	}
+
+	/**
+	 * The actual implementation of the Eclipse <b>Plugin</b>.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public static class Implementation extends EclipsePlugin
+	{
+		/**
+		 * Creates an instance.
+		 * <!-- begin-user-doc -->
+		 * <!-- end-user-doc -->
+<%if (genModel.needsRuntimeCompatibility()) {%>
+		 * @param descriptor the description of the plugin.
+<%}%>
+		 * @generated
+		 */
+		public Implementation(<%if (genModel.needsRuntimeCompatibility()) {%><%=genModel.getImportedName("org.eclipse.core.runtime.IPluginDescriptor")%> descriptor<%}%>)
+		{
+			super(<%if (genModel.needsRuntimeCompatibility()) {%>descriptor<%}%>);
+
+			// Remember the static instance.
+			//
+			plugin = this;
+		}
+	}
+
+<%} else {%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected static final <%=genModel.getImportedName(genModel.getQualifiedEditPluginClassName() + "Properties")%> PROPERTIES = <%=genModel.getImportedName("com.google.gwt.core.client.GWT")%>.create(<%=genModel.getImportedName(genModel.getQualifiedEditPluginClassName() + "Properties")%>.class);
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Override
+	public String getString(String key, boolean translate)
+	{
+<%boolean first = true; for (GenPackage genPackage : genModel.getAllGenAndUsedGenPackagesWithClassifiers()) {%>
+  <%if (genPackage.getGenModel() == genModel || !genPackage.getGenModel().hasEditSupport()) { %>
+    <%for (GenClass genClass : genPackage.getGenClasses()) {%>
+		<%if (first) { first = false; } else {%>else <%}%>if ("_UI_<%=genClass.getName()%>_type".equals(key)) return PROPERTIES.<%=genClass.getUncapName()%>Type();
+    <%}%>
+  <%}%>
+<%}%>
+		<%if (first) { first = false; } else {%>else <%}%> if ("_UI_Unknown_type".equals(key)) return PROPERTIES.unknownType();
+		else if ("_UI_Unknown_datatype".equals(key)) return PROPERTIES.unknownDatatype();
+<%for (GenFeature genFeature : genModel.getFilteredAllGenFeatures()) { String description = genFeature.getPropertyDescription();%>
+		else if ("_UI_<%=genFeature.getGenClass().getName()%>_<%=genFeature.getName()%>_feature".equals(key)) return PROPERTIES.<%=genFeature.getGenClass().getUncapName()%>_<%=genFeature.getCapName()%>Feature();
+  <%if (description != null && description.length() > 0) {%>
+		else if ("_UI_<%=genFeature.getGenClass().getName()%>_<%=genFeature.getName()%>_description".equals(key)) return PROPERTIES.<%=genFeature.getGenClass().getUncapName()%>_<%=genFeature.getCapName()%>Description();
+  <%}%>
+<%}%>
+		else if ("_UI_Unknown_feature".equals(key)) return PROPERTIES.unknownFeature();
+<%for (GenPackage genPackage : genModel.getAllGenAndUsedGenPackagesWithClassifiers()) {%>
+  <%if (genPackage.getGenModel() == genModel || !genPackage.getGenModel().hasEditSupport()) {%>
+    <%for (GenEnum genEnum : genPackage.getGenEnums()) {%>
+      <%for (GenEnumLiteral genEnumLiteral : genEnum.getGenEnumLiterals()) {%>
+		else if ("_UI_<%=genEnum.getName()%>_<%=genEnumLiteral.getName()%>_literal".equals(key)) return PROPERTIES.<%=genEnum.getSafeUncapName()%>_<%=genEnumLiteral.getName()%>Literal();
+      <%}%>
+    <%}%>
+  <%}%>
+<%}%>
+<%for (String category : genModel.getPropertyCategories()) {%>
+<%=genModel.getPropertyCategoryKey(category)%> = <%=category%>
+		else if ("<%=genModel.getPropertyCategoryKey(category)%>".equals(key)) return PROPERTIES.<%=genModel.getPropertyCategoryKey(category)%>();
+<%}%>
+		else return key;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Override
+	public String getString(String key, Object [] substitutions, boolean translate)
+	{
+<%if (genModel.isCreationCommands()) {%>
+		if ("_UI_CreateChild_text".equals(key)) return PROPERTIES.createChildText(substitutions[0]);
+		else if ("_UI_CreateChild_text2".equals(key)) return PROPERTIES.createChildText2(substitutions[0], substitutions[1]);
+		else if ("_UI_CreateChild_text3".equals(key)) return PROPERTIES.createChildText3(substitutions[1]);
+		else if ("_UI_CreateChild_tooltip".equals(key)) return PROPERTIES.createChildTooltip(substitutions[0], substitutions[1]);
+		else if ("_UI_CreateChild_description".equals(key)) return PROPERTIES.createChildDescripition(substitutions[0], substitutions[1], substitutions[2]);
+		else if ("_UI_CreateSibling_description".equals(key)) return PROPERTIES.createSiblingDescription(substitutions[0], substitutions[1], substitutions[2]);
+<%}%>
+		<%if (!genModel.isCreationCommands()) {%>else <%}%>if ("_UI_PropertyDescriptor_description".equals(key)) return PROPERTIES.propertyDescriptorDescription(substitutions[0], substitutions[1]);
+		else return key;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected static final <%=genModel.getImportedName(genModel.getQualifiedEditPluginClassName() + "Images")%> IMAGES = <%=genModel.getImportedName("com.google.gwt.core.client.GWT")%>.create(<%=genModel.getImportedName(genModel.getQualifiedEditPluginClassName() + "Images")%>.class);
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Override
+	public Object getImage(String key)
+	{
+<%first = true; for (GenPackage genPackage : genModel.getAllGenAndUsedGenPackagesWithClassifiers()) {%>
+  <%for (GenClass genClass : genPackage.getGenClasses()) {%>
+    <%if (genClass.isImage()) { String image = genClass.getItemIconFileName(); image = image.substring(image.lastIndexOf("/icons/") + 7, image.length() - 4); %>
+		<%if (first) { first = false; } else {%>else <%}%>if ("<%=image%>".equals(key)) return IMAGES.<%=genClass.getSafeUncapName()%>();
+    <%}%>
+  <%}%>
+<%}%>
+		<%if (first) { first = false; } else {%>else <%}%>return key;
+	}
+
+<%}%>
+}
+<%genModel.emitSortedImports();%>

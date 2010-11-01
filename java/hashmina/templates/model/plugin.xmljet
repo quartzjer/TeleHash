@@ -1,0 +1,101 @@
+<%@ jet package="org.eclipse.emf.codegen.ecore.templates.model" imports="java.util.* org.eclipse.emf.codegen.ecore.genmodel.*" class="PluginXML" version="$Id: plugin.xmljet,v 1.17 2008/12/13 15:53:17 emerks Exp $" %>
+<%
+/**
+ * <copyright>
+ *
+ * Copyright (c) 2002-2005 IBM Corporation and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors: 
+ *   IBM - Initial API and implementation
+ *
+ * </copyright>
+ */
+%>
+<%GenModel genModel = (GenModel)argument; /* Trick to import java.util.* without warnings */Iterator.class.getName();%>
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.0"?>
+
+<%@ include file="../Header.xmljetinc"%>
+
+<%if (genModel.isBundleManifest()) {%>
+<plugin>
+<%} else {%>
+<plugin
+      name="%pluginName"
+      id="<%=genModel.getModelPluginID()%>"
+      version="1.0.0"
+  <%if (genModel.hasModelPluginClass()) { %>
+      provider-name="%providerName"
+      class="<%=genModel.getQualifiedModelPluginClassName()%>$Implementation">
+  <%} else {%>
+      provider-name="%providerName">
+  <%}%>
+
+   <requires>
+  <%for (String pluginID : genModel.getModelRequiredPlugins()) {%>
+      <import plugin="<%=pluginID%>"<%if (!pluginID.startsWith("org.eclipse.core.runtime")) {%> export="true"<%}%>/>
+  <%}%>
+   </requires>
+
+   <runtime>
+  <%if (genModel.isRuntimeJar()) {%>
+      <library name="<%=genModel.getModelPluginID()%>.jar">
+  <%} else {%>
+      <library name=".">
+  <%}%>
+         <export name="*"/>
+      </library>
+   </runtime>
+<%}%>
+<%for (GenPackage genPackage : genModel.getAllGenPackagesWithClassifiers()) {%>
+
+   <extension point="org.eclipse.emf.ecore.generated_package">
+      <package
+            uri="<%=genPackage.getNSURI()%>"
+  <%if (genModel.hasLocalGenModel()) {%>
+            class="<%=genPackage.getQualifiedPackageInterfaceName()%>"
+            genModel="<%=genModel.getRelativeGenModelLocation()%>"/>
+  <%} else {%>
+            class="<%=genPackage.getQualifiedPackageInterfaceName()%>"/>
+  <%}%>
+   </extension>
+  <%if (genPackage.isContentType()) {%>
+
+   <extension point="org.eclipse.emf.ecore.content_parser">
+      <parser
+            contentTypeIdentifier="<%=genPackage.getContentTypeIdentifier()%>"
+            class="<%=genPackage.getQualifiedEffectiveResourceFactoryClassName()%>"/>
+   </extension>
+
+   <extension point="org.eclipse.core.contenttype.contentTypes">
+      <content-type
+            base-type="<%=genPackage.isXMIResource() ? "org.eclipse.emf.ecore.xmi" : "org.eclipse.core.runtime.xml"%>"
+            file-extensions="<%=genPackage.getFileExtensions()%>"
+            id="<%=genPackage.getContentTypeIdentifier()%>"
+            name="%_UI_<%=genPackage.getPrefix()%>_content_type"
+            priority="normal">
+         <describer class="org.eclipse.emf.ecore.xmi.impl.RootXMLContentHandlerImpl$Describer">
+    <%if (genPackage.hasTargetNamespace()) {%>
+            <parameter name="namespace" value="<%=genPackage.getNSURI()%>"/>
+    <%}%>
+    <%if (genPackage.isXMIResource()) {%>
+            <parameter name="kind" value="xmi"/>
+    <%}%>
+         </describer>
+      </content-type>
+   </extension>
+  <%} else if (genPackage.getResource() != GenResourceKind.NONE_LITERAL) {%>
+
+   <extension point="org.eclipse.emf.ecore.extension_parser">
+      <parser
+            type="<%=genPackage.getFileExtension()%>"
+            class="<%=genPackage.getQualifiedResourceFactoryClassName()%>"/>
+   </extension>
+  <%}%>
+<%}%>
+
+</plugin>

@@ -1,31 +1,27 @@
 package org.telehash;
 
-import static org.telehash.TelexBuilder.formatAddress;
-import static org.telehash.TelexBuilder.parseAddress;
-
 import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableSet;
+import org.telehash.model.Line;
+import org.telehash.model.TelehashFactory;
+import org.telehash.model.TelehashPackage;
+import org.telehash.model.Telex;
 
 public class SeeHandler implements TelexHandler {
 
 	static private Logger logger = LoggerFactory.getLogger(SeeHandler.class);
 	
-	static private Set<String> MATCHING_KEYS = ImmutableSet.of(".see");
+	static private TelehashFactory tf = TelehashFactory.eINSTANCE;
 	
 	@Override
-	public Set<String> getMatchingKeys() {
-		return MATCHING_KEYS;
+	public boolean isMatch(Telex telex) {
+		return telex.isSetSee();
 	}
-
+	
 	@Override
-	public void telexReceived(SwitchHandler switchHandler, Line line, Map<String, ?> telex) {
+	public void telexReceived(SwitchHandler switchHandler, Line line, Telex telex) {
 		SeeCommandHandler command = new SeeCommandHandler(switchHandler, line, telex);
 		command.execute();
 	}
@@ -34,24 +30,16 @@ public class SeeHandler implements TelexHandler {
 		
 		private SwitchHandler switchHandler;
 		private Line recvLine;
-		private Map<String, ?> telex;
+		private Telex telex;
 		
-		private SeeCommandHandler(SwitchHandler switchHandler, Line line, Map<String, ?> telex) {
+		private SeeCommandHandler(SwitchHandler switchHandler, Line line, Telex telex) {
 			this.switchHandler = switchHandler;
 			this.recvLine = line;
 			this.telex = telex;
 		}
 		
 		public void execute() {
-		    @SuppressWarnings("unchecked")
-			List<String> seeAddrStrs = (List<String>) telex.get(".see");
-		    if (seeAddrStrs == null) {
-		    	logger.warn("SeeHandler was dispatched a Telex without .see command!");
-		    	return;
-		    }
-		    
-		    for (String seeAddrStr : seeAddrStrs) {
-		    	InetSocketAddress seeAddr = parseAddress(seeAddrStr);
+		    for (InetSocketAddress seeAddr : telex.getSee()) {
 		    	if (seeAddr.equals(switchHandler.getAddress())) {
 		    		continue;
 		    	}
@@ -75,16 +63,15 @@ public class SeeHandler implements TelexHandler {
 		        if (bucketWant(seeAddr, seeHash)) {
 		            
 		            // send direct (should open our outgoing to them)
-		        	Map<String, Object> telexOut = TelexBuilder.to(seeAddr)
-		        		.with("+end", switchHandler.getAddressHash().toString())
-		        		.build();
-		        	switchHandler.send(telexOut);
+		        	Telex telexOut = tf.createTelex().withTo(seeAddr)
+		        		.withEnd(switchHandler.getAddressHash());
 		            
 		            // send pop signal back to the switch who .see'd us in case the new one is behind a nat
-		            telexOut = TelexBuilder.to(recvLine)
-		            	.end(seeHash)
-		            	.with("+pop", "th:" + formatAddress(switchHandler.getAddress()))
-		            	.with("_hop", 1).build();
+		            telexOut = (Telex) tf.createTelex().withTo(recvLine)
+		            	.withEnd(seeHash)
+		            	.withSignal("pop", "th:" + 
+		            			tf.convertToString(TelehashPackage.Literals.ENDPOINT, switchHandler.getAddress()))
+		            	.withHeader("hop", 1);
 		            switchHandler.send(telexOut);
 		        }
 		    }

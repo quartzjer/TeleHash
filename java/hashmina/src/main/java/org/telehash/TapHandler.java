@@ -1,29 +1,20 @@
 package org.telehash;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
+import org.telehash.model.Line;
+import org.telehash.model.Telex;
 
 public class TapHandler implements TelexHandler {
 
-	static private Set<String> MATCHING_KEYS = ImmutableSet.of(".tap");
-	
 	@Override
-	public Set<String> getMatchingKeys() {
-		return MATCHING_KEYS;
+	public boolean isMatch(Telex telex) {
+		return telex.isSetTap();
 	}
 
 	@Override
-	public void telexReceived(SwitchHandler switchHandler, Line line,
-			Map<String, ?> telex) {
+	public void telexReceived(SwitchHandler switchHandler, Line line, Telex telex) {
 	    // handle a tap command, add/replace rules
-		List<Map<String, ?>> tapRules = (List<Map<String, ?>>) telex.get(".tap");
-		if (tapRules != null) {
-	        line.getRules().clear();
-	        line.getRules().addAll(tapRules);
-	    }
+		line.getTap().clear();
+		line.getTap().addAll(telex.getTap());
 	}
 
 }

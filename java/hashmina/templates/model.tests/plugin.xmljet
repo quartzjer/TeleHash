@@ -1,0 +1,50 @@
+<%@ jet package="org.eclipse.emf.codegen.ecore.templates.model.tests" imports="java.util.* org.eclipse.emf.codegen.ecore.genmodel.*" class="PluginXML" %>
+<%
+/**
+ * <copyright>
+ *
+ * Copyright (c) 2005 IBM Corporation and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors: 
+ *   IBM - Initial API and implementation
+ *
+ * </copyright>
+ */
+%>
+<%GenModel genModel = (GenModel)argument; /* Trick to import java.util.* without warnings */Iterator.class.getName();%>
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.0"?>
+
+<%@ include file="../Header.xmljetinc"%>
+
+<%if (genModel.isBundleManifest()) {%>
+<plugin>
+<%} else {%>
+<plugin
+      name="%pluginName"
+      id="<%=genModel.getTestsPluginID()%>"
+      version="1.0.0"
+      provider-name="%providerName">
+
+   <requires>
+  <%for (String pluginID : genModel.getTestsRequiredPlugins()) {%>
+      <import plugin="<%=pluginID%>"<%if (!pluginID.startsWith("org.eclipse.core.runtime")) {%> export="true"<%}%>/>
+  <%}%>
+   </requires>
+
+   <runtime>
+  <%if (genModel.isRuntimeJar()) {%>
+      <library name="<%=genModel.getTestsPluginID()%>.jar">
+  <%} else {%>
+      <library name=".">
+  <%}%>
+         <export name="*"/>
+      </library>
+   </runtime>
+
+<%}%>
+</plugin>

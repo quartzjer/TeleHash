@@ -1,8 +1,6 @@
 package org.telehash;
 
-import static org.telehash.TelexBuilder.formatAddress;
-import static org.telehash.TelexBuilder.parseAddress;
-
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
@@ -11,9 +9,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.mina.core.buffer.IoBuffer;
@@ -25,19 +21,25 @@ import org.apache.mina.core.service.IoHandlerAdapter;
 import org.apache.mina.core.session.IoSession;
 import org.apache.mina.transport.socket.DatagramConnector;
 import org.apache.mina.transport.socket.nio.NioDatagramConnector;
+import org.eclipse.emf.json.JsonMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telehash.SwitchState.ConnectionStatus;
+import org.telehash.model.Line;
+import org.telehash.model.TelehashFactory;
+import org.telehash.model.TelehashPackage;
+import org.telehash.model.Telex;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 public class SwitchHandler extends IoHandlerAdapter {
 
 	static private Logger logger = LoggerFactory.getLogger(SwitchHandler.class);
 
+	static private TelehashFactory tf = TelehashFactory.eINSTANCE;
+	
 	private DatagramConnector connector;
 	private SimpleBufferAllocator allocator;
 
@@ -99,8 +101,8 @@ public class SwitchHandler extends IoHandlerAdapter {
 			public void run() {
 				state.setSeedAddress(seedAddress);
 				Line seedLine = state.getOrCreateLine(seedAddress);
-				send(TelexBuilder.to(seedLine)
-						.end(Hash.of(state.getSeedAddress()).toString()).build());
+				send(tf.createTelex().withTo(seedLine)
+						.withEnd(Hash.of(state.getSeedAddress())));
 			}
 		});
 	}
@@ -121,10 +123,8 @@ public class SwitchHandler extends IoHandlerAdapter {
 		scannerThread = null;
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public void send(final Map map) {
-		final InetSocketAddress toAddr = parseAddress((String)map.get("_to"));
-	    final Line line = state.getOrCreateLine(toAddr);
+	public void send(final Telex telex) {
+	    final Line line = state.getOrCreateLine(telex.getTo());
 	    
 	    // check br and drop if too much
 	    if (line.getBsent() - line.getBrIn() > 10000) {
@@ -133,53 +133,58 @@ public class SwitchHandler extends IoHandlerAdapter {
 	    }
 	    
 	    // if a line is open use that, else send a ring
-	    if (line.getLineId() != Line.NOT_SET) {
-	        map.put("_line", line.getLineId());
+	    if (line.isSetLineId()) {
+	        telex.setLine(line.getLineId());
 	    }
 	    else {
-	    	map.remove("_line");
-	        map.put("_ring", line.getRingout());
+	    	telex.unsetLine();
+	        telex.setRing(line.getRingOut());
 	    }
 	    
 	    // update our bytes tracking and send current state
 	    line.setBrOut(line.getBr());
-	    map.put("_br", line.getBr());
+	    telex.setBytesReceived(line.getBr());
 	    
-        final String msg = Json.toJson(map);
-        final byte[] bytes = msg.getBytes();
-        final IoBuffer buffer = allocator.allocate(bytes.length, true);
-        buffer.put(bytes);
-        buffer.flip();
-        
-        final IoFutureListener onWriteComplete = new IoFutureListener<IoFuture>() {
-        	public void operationComplete(IoFuture future) {
-            	line.setBsent(line.getBsent() + bytes.length);
-            	line.setSentAt(time());
-        	};
-		};
-		
-        if (line != null && line.getSession() != null && line.getSession().getAttribute("line") == line) {
-            logger.info("SEND[{}]: {} bytes: {}", new Object[]{
-            		line.getSession().getId(), bytes.length, msg});
-        	line.getSession().write(buffer).addListener(onWriteComplete);
-        }
-        else {
-	        ConnectFuture connFuture = connector.connect(toAddr);
-	        connFuture.addListener(new IoFutureListener<ConnectFuture>() {
-	        	@Override
-				public void operationComplete(ConnectFuture future) {
-	                if (future.isConnected()) {
-	                    IoSession session = future.getSession();
-	                    line.setSession(session);
-	                    session.setAttribute("line", line);
-	                    
-	                    logger.info("SEND[{}]: {} bytes: {}", new Object[]{
-	                    		session.getId(), bytes.length, msg});
-	                    session.write(buffer).addListener(onWriteComplete);
-	                }
-	            }
-	    	});
-        }
+	    try {
+	        final String msg = JsonMapper.toJson(telex);
+	        final byte[] bytes = msg.getBytes();
+	        final IoBuffer buffer = allocator.allocate(bytes.length, true);
+	        buffer.put(bytes);
+	        buffer.flip();
+	    
+	        final IoFutureListener<IoFuture> onWriteComplete = new IoFutureListener<IoFuture>() {
+	        	public void operationComplete(IoFuture future) {
+	            	line.setBsent(line.getBsent() + bytes.length);
+	            	line.setSentAt(time());
+	        	};
+			};
+			
+	        if (line != null && line.getSession() != null && line.getSession().getAttribute("line") == line) {
+	            logger.info("SEND[{}]: {} bytes: {}", new Object[]{
+	            		line.getSession().getId(), bytes.length, msg});
+	        	line.getSession().write(buffer).addListener(onWriteComplete);
+	        }
+	        else {
+		        ConnectFuture connFuture = connector.connect(telex.getTo());
+		        connFuture.addListener(new IoFutureListener<ConnectFuture>() {
+		        	@Override
+					public void operationComplete(ConnectFuture future) {
+		                if (future.isConnected()) {
+		                    IoSession session = future.getSession();
+		                    line.setSession(session);
+		                    session.setAttribute("line", line);
+		                    
+		                    logger.info("SEND[{}]: {} bytes: {}", new Object[]{
+		                    		session.getId(), bytes.length, msg});
+		                    session.write(buffer).addListener(onWriteComplete);
+		                }
+		            }
+		    	});
+	        }
+	    }
+	    catch (IOException e) {
+	    	logger.error("Failed to write Telex to JSON: " + e.getMessage(), e);
+	    }
 	}
 
     static private final CharsetDecoder decoder = Charset.forName("UTF-8").newDecoder();
@@ -194,7 +199,8 @@ public class SwitchHandler extends IoHandlerAdapter {
 			logger.info("RECV[{}] from {}: {} bytes: {}", new Object[]{
 					session.getId(),
 					(InetSocketAddress)session.getRemoteAddress(), br, response});
-			Map<String, ?> telex = Json.fromJson(response);
+			Telex telex = (Telex) 
+					JsonMapper.fromJson(response, TelehashPackage.Literals.TELEX);
 			switch (state.getConnectionStatus()) {
 			case SEEDING:
 				completeBootstrap(session, telex, br);
@@ -206,7 +212,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 		}
 	}
 
-	protected void processTelex(IoSession session, Map<String, ?> telex, int br) {
+	protected void processTelex(IoSession session, Telex telex, int br) {
 		Line line = (Line) session.getAttribute("line");
 		if (line == null) {
 			session.close(true);
@@ -216,16 +222,15 @@ public class SwitchHandler extends IoHandlerAdapter {
 		boolean lineStatus = checkLine(line, telex, br);
 		if (lineStatus) {
 			logger.info("LINE [{}] STATUS {}", line.getAddress(), 
-					telex.containsKey("_line") ? "OPEN" : "RINGING");
+					telex.isSetLine() ? "OPEN" : "RINGING");
 		}
 		else {
 			logger.info("LINE [{}] FAIL", line.getAddress());
 			return;
 		}
 		
-		Set<String> telexKeys = telex.keySet();
 		for (TelexHandler handler : telexHandlers) {
-			if (!Sets.intersection(handler.getMatchingKeys(), telexKeys).isEmpty()) {
+			if (handler.isMatch(telex)) {
 				handler.telexReceived(this, line, telex);
 			}
 		}
@@ -233,13 +238,12 @@ public class SwitchHandler extends IoHandlerAdapter {
 		// TODO: process taps & forward
 	}
 	
-	protected void completeBootstrap(final IoSession session, final Map<String, ?> telex, final int br) {
+	protected void completeBootstrap(final IoSession session, final Telex telex, final int br) {
 		state.connected(new Runnable(){
 			@Override
 			public void run() {
-				String selfAddrString = (String) telex.get("_to");
-				state.setSelfAddress(parseAddress(selfAddrString));
-				logger.info("SELF[" + selfAddrString + " = " + state.getSelfHash() + "]");
+				state.setSelfAddress(telex.getTo());
+				logger.info("SELF[{} = {}]", state.getSelfAddress(), state.getSelfHash());
 				
 				Line line = state.getOrCreateLine(state.getSelfAddress());
 				if (line == null) {
@@ -269,83 +273,81 @@ public class SwitchHandler extends IoHandlerAdapter {
 	 * Check a line's status.
 	 * True if open, false if ringing.
 	 */
-	public boolean checkLine(Line line, Map<String, ?> telex, int br) {
+	public boolean checkLine(Line line, Telex telex, int br) {
 	    if (line == null) {
 	        return false;
 	    }
 	    
-	    Integer _line = (Integer) telex.get("_line");
-	    if (_line == null) {
-	    	_line = Line.NOT_SET;
-	    }
+//	    Integer _line = (Integer) telex.get("_line");
+//	    if (_line == null) {
+//	    	_line = Line.NOT_SET;
+//	    }
 	    
 	    // first, if it's been more than 10 seconds after a line opened, 
 	    // be super strict, no more ringing allowed, _line absolutely required
 	    if (line.getLineAt() > 0 && time() - line.getLineAt() > 10) {
-	        if (_line != line.getLineId()) {
+	        if (!telex.isSetLine() || telex.getLine() != line.getLineId()) {
 	            return false;
 	        }
 	    }
 	    
 	    // second, process incoming _line
-	    if (_line != Line.NOT_SET) {
-	        if (line.getRingout() <= 0) {
+	    if (telex.isSetLine()) {
+	        if (line.getRingOut() <= 0) {
 	            return false;
 	        }
 	        
 	        // must match if exist
-	        if (line.getLineId() != Line.NOT_SET && _line != line.getLineId()) {
+	        if (line.isSetLineId() && telex.getLine() != line.getLineId()) {
 	            return false;
 	        }
 	        
 	        // must be a product of our sent ring!!
-	        if (_line % line.getRingout() != 0) {
+	        if (telex.getLine() % line.getRingOut() != 0) {
 	            return false;
 	        }
 	        
 	        // we can set up the line now if needed
 	        if (line.getLineAt() == 0) {
-	            line.setRingin(_line / line.getRingout()); // will be valid if the % = 0 above
-	            line.setLineId(_line);
+	            line.setRingIn(telex.getLine() / line.getRingOut()); // will be valid if the % = 0 above
+	            line.setLineId(telex.getLine());
 	            line.setLineAt(time());
 	        }
 	    }
 	    
-	    Integer _ring = (Integer) telex.get("_ring");
-	    if (_ring == null) {
-	    	_ring = Line.NOT_SET;
-	    }
+//	    Integer _ring = (Integer) telex.get("_ring");
+//	    if (_ring == null) {
+//	    	_ring = Line.NOT_SET;
+//	    }
 	    
 	    // last, process any incoming _ring's (remember, could be out of order, after a _line)
-	    if (_ring != Line.NOT_SET) {
+	    if (telex.isSetRing()) {
 	    	
 	        // already had a ring and this one doesn't match, should be rare
-	        if (line.getRingin() != Line.NOT_SET && _ring != line.getRingin()) {
+	        if (line.isSetRingIn() && telex.getRing() != line.getRingIn()) {
 	        	logger.info("unmatched _ring from " + line.getAddress());
 	            return false;
 	        }
 	        
 	        // make sure within valid range
-	        if (_ring <= 0 || _ring > 32768) {
+	        if (telex.getRing() <= 0 || telex.getRing() > 32768) {
 	            return false;
 	        }
 	        
 	        // we can set up the line now if needed
 	        if (line.getLineAt() == 0) {
-	            line.setRingin(_ring);
-	            line.setLineId(line.getRingin() * line.getRingout());
+	            line.setRingIn(telex.getRing());
+	            line.setLineId(line.getRingIn() * line.getRingOut());
 	            line.setLineAt(time());
 	        }
 	    }
 	    
-	    Integer _br = Integer.parseInt(telex.get("_br").toString());
-	    
 	    // we're valid at this point, line or otherwise, track bytes
 	    logger.info(
 	        "BR " + line.getAddress() + " [" + line.getBr() + " += " 
-	        	+ br + "] DIFF " + (line.getBsent() - _br));
+	        	+ br + "] DIFF " + (line.getBsent() - telex.getBytesReceived()));
 	    line.setBr(line.getBr() + br);
-	    line.setBrIn(_br);
+	    line.setBrIn(telex.getBytesReceived());
 	    
 	    // they can't send us that much more than what we've told them to, bad!
 	    if (line.getBr() - line.getBrOut() > 12000) {
@@ -393,19 +395,17 @@ public class SwitchHandler extends IoHandlerAdapter {
 	        if (state.getConnectionStatus() == ConnectionStatus.CONNECTED) {
 	        
 	            // +end ourselves to see if they know anyone closer as a ping
-	            Map<String, Object> telexOut = 
-	            	TelexBuilder.to(line)
-	            		.end(state.getSelfHash()).build();
+	        	Telex telexOut = tf.createTelex().withTo(line).withEnd(state.getSelfHash());
 	            
 	            // also .see ourselves if we haven't yet, default for now is to participate in the DHT
 	            if (!line.isAdvertised()) {
 	            	line.setAdvertised(true);
-	                telexOut.put(".see", Lists.newArrayList(formatAddress(
-	                		state.getSelfAddress())));
+	            	telexOut.getSee().add(state.getSelfAddress());
 	            }
 	            
 	            // also .tap our hash for +pop requests for NATs
-	            telexOut.put(".tap", Lists.newArrayList(TapRule.builder()
+	            telexOut.with(".tap", Lists.newArrayList(
+	            		TapRule.builder()
 	            		.is("+end", state.getSelfHash().toString())
 	            		.has("+pop").build()));
 	            send(telexOut);
@@ -511,7 +511,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	    return nearTo(endHash, getLine(firstSeeHash).getAddress());
 	}
 
-	public void taptap() {
+	public void taptap() throws IOException {
 		for (TapRule tapRule : tapRules) {
 			if (state.getConnectionStatus() != ConnectionStatus.CONNECTED) {
 				break;
@@ -526,15 +526,15 @@ public class SwitchHandler extends IoHandlerAdapter {
 	        for (Hash hash : Iterables.limit(nearTo(tapEnd, state.getSelfAddress()), 3)) {
 	            Line line = getLine(hash);
 	            
-	            if (line.getTapLast() != Line.NOT_SET && line.getTapLast() + 50 > time()) {
+	            if (line.isSetTapLastAt() && line.getTapLastAt() + 50 > time()) {
 	                return; // only tap every 50sec
 	            }
 	            
-	            line.setTapLast(time());
-	            Map<String, ?> telexOut = TelexBuilder.to(line)
-	            	.with(".tap", Lists.newArrayList(tapRule)).build(); // tap the closest ipp to our target end 
+	            line.setTapLastAt(time());
+	            Telex telexOut = (Telex) tf.createTelex().withTo(line)
+	            	.with(".tap", Lists.newArrayList(tapRule)); // tap the closest ipp to our target end 
 	            logger.info("TAPTAP to {} end {} tap {}", new Object[]{
-	            		line.getAddress(), tapEnd, Json.toJson(telexOut)});
+	            		line.getAddress(), tapEnd, JsonMapper.toJson(telexOut)});
 	            send(telexOut);
 	        }
 	    }

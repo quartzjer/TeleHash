@@ -1,0 +1,33 @@
+<%@ jet package="org.eclipse.emf.codegen.ecore.templates.model.tests" imports="org.eclipse.emf.codegen.ecore.genmodel.* java.util.*" class="BuildProperties" version="$Id: build.propertiesjet,v 1.10 2008/04/18 04:34:29 davidms Exp $" %>
+<%
+/**
+ * <copyright>
+ *
+ * Copyright (c) 2005-2008 IBM Corporation and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors: 
+ *   IBM - Initial API and implementation
+ *
+ * </copyright>
+ */
+%>
+<%GenModel genModel = (GenModel)argument;%>
+<%String pluginClassesLocation = genModel.isRuntimeJar() ? genModel.getTestsPluginID()+".jar" : ".";%>
+<%List<String> sourceFolders = genModel.getTestsSourceFolders();%>
+<%@ include file="../Header.propertiesjetinc"%>
+
+bin.includes = <%=pluginClassesLocation%>,\
+<%if (genModel.isBundleManifest()) {%>
+               META-INF/,\
+<%} else {%>
+               plugin.xml,\
+<%}%>
+               plugin.properties
+jars.compile.order = <%=pluginClassesLocation%>
+<% boolean first=true; for (Iterator<String> i = sourceFolders.iterator(); i.hasNext();) { String sourceFolder = i.next(); if (i.hasNext()){sourceFolder +=",\\";} if (first) {%>
+source.<%=pluginClassesLocation%> = <%=sourceFolder%><%first=false;} else {%><%=sourceFolder%><%}}%>
+output.<%=pluginClassesLocation%> = bin/

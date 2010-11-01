@@ -75,12 +75,30 @@ public class JsObjectImpl extends EObjectImpl implements JsObject {
 	/**
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
-	 * @generated
+	 * @generated NOT
 	 */
 	public Object get(String key) {
-		// TODO: implement this method
-		// Ensure that you remove @generated or mark it @generated NOT
-		throw new UnsupportedOperationException();
+		EStructuralFeature feature = eClass().getEStructuralFeature(key);
+		if (feature != null) {
+			return eGet(feature);
+		}
+		return getUnmatched().get(key);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated NOT
+	 */
+	public JsObject with(String key, Object value) {
+		EStructuralFeature feature = eClass().getEStructuralFeature(key);
+		if (feature != null) {
+			eSet(feature, value);
+		}
+		else {
+			getUnmatched().put(key, value);
+		}
+		return this;
 	}
 
 	/**

@@ -1,0 +1,318 @@
+<%@ jet package="org.eclipse.emf.codegen.ecore.templates.model.tests" imports="java.util.* org.eclipse.emf.codegen.ecore.genmodel.*" class="TestCase" %>
+<%
+/**
+ * <copyright>
+ *
+ * Copyright (c) 2005, 2007 IBM Corporation and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *   IBM - Initial API and implementation
+ *
+ * </copyright>
+ */
+%>
+<%GenClass genClass = (GenClass)argument; GenPackage genPackage = genClass.getGenPackage(); GenModel genModel=genPackage.getGenModel(); /* Trick to import java.util.* without warnings */Iterator.class.getName();%>
+<%@ include file="../Header.javajetinc"%>
+package <%=genPackage.getTestsPackageName()%>;
+
+<%genModel.markImportLocation(stringBuffer);%>
+
+/**
+ * <!-- begin-user-doc -->
+ * A test case for the model object '<em><b><%=genClass.getFormattedName()%></b></em>'.
+ * <!-- end-user-doc -->
+<%if (!genClass.getImplementedGenFeatures().isEmpty()) { boolean first = true;%>
+  <%for (GenFeature genFeature : genClass.getImplementedGenFeatures()) {%>
+    <%if (genFeature.isTested() && !genFeature.isSuppressedGetVisibility()) {%>
+      <%if (first) { first = false;%>
+ * <p>
+ * The following features are tested:
+ * <ul>
+      <%}%>
+ *   <li>{@link <%=genFeature.getGenClass().getQualifiedInterfaceName()%>#<%=genFeature.getGetAccessor()%>() <em><%=genFeature.getFormattedName()%></em>}</li>
+    <%}%>
+  <%}%>
+  <% if (!first) {%>
+ * </ul>
+ * </p>
+  <%}%>
+<%}%>
+<%if (!genClass.getImplementedGenOperations().isEmpty()) { boolean first = true;%>
+  <%for (GenOperation genOperation : genClass.getImplementedGenOperations()) {%>
+    <%if (first) { first = false;%>
+ * <p>
+ * The following operations are tested:
+ * <ul>
+    <%}%>
+ *   <li>{@link <%=genOperation.getGenClass().getQualifiedInterfaceName()%>#<%=genOperation.getName()%>(<%=genOperation.getParameterTypes(", ")%>) <em><%=genOperation.getFormattedName()%></em>}</li>
+  <%}%>
+  <% if (!first) {%>
+ * </ul>
+ * </p>
+  <%}%>
+<%}%>
+ * @generated
+ */
+public<%if (genClass.isAbstract()) {%> abstract<%}%> class <%=genClass.getTestCaseClassName()%> extends <%=genClass.isModelRoot() ? genModel.getImportedName("junit.framework.TestCase") : genClass.getClassExtendsGenClass().getImportedTestCaseClassName()%>
+{
+<%if (genModel.hasCopyrightField()) {%>
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public static final <%=genModel.getImportedName("java.lang.String")%> copyright = <%=genModel.getCopyrightFieldLiteral()%>;<%=genModel.getNonNLS()%>
+<%}%>
+<%if (genModel.getDriverNumber() != null) {%>
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public static final <%=genModel.getImportedName("java.lang.String")%> mofDriverNumber = "<%=genModel.getDriverNumber()%>";<%=genModel.getNonNLS()%>
+<%}%>
+<%if (genClass.isModelRoot()) {%>
+
+	/**
+	 * The fixture for this <%=genClass.getFormattedName()%> test case.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected <%=genClass.getImportedInterfaceName()%><%=genClass.getInterfaceWildTypeArguments()%> fixture = null;
+<%}%>
+<%if (!genClass.isAbstract()) {%>
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public static void main(String[] args)
+	{
+		<%=genModel.getImportedName("junit.textui.TestRunner")%>.run(<%=genClass.getTestCaseClassName()%>.class);
+	}
+<%}%>
+
+	/**
+	 * Constructs a new <%=genClass.getFormattedName()%> test case with the given name.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public <%=genClass.getTestCaseClassName()%>(String name)
+	{
+		super(name);
+	}
+<%if (genClass.isModelRoot()) {%>
+
+	/**
+	 * Sets the fixture for this <%=genClass.getFormattedName()%> test case.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected void setFixture(<%=genClass.getImportedInterfaceName()%><%=genClass.getInterfaceWildTypeArguments()%> fixture)
+	{
+		this.fixture = fixture;
+	}
+<%}%>
+
+	/**
+	 * Returns the fixture for this <%=genClass.getFormattedName()%> test case.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+<%if (!genClass.isModelRoot() && genModel.useClassOverrideAnnotation()) {%>
+	@Override
+<%}%>
+	<%if (genModel.useGenerics()) {%>protected<%} else {%>private<%}%> <%=genClass.getImportedInterfaceName()%><%=genClass.getInterfaceWildTypeArguments()%> getFixture()
+	{
+<%if (genClass.isModelRoot()) {%>
+		return fixture;
+<%} else {%>
+		return (<%=genClass.getImportedInterfaceName()%><%=genClass.getInterfaceWildTypeArguments()%>)fixture;
+<%}%>
+	}
+<%if (!genClass.isAbstract()) {%>
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see junit.framework.TestCase#setUp()
+	 * @generated
+	 */
+<%if (genModel.useClassOverrideAnnotation()) {%>
+	@Override
+<%}%>
+<%if (genModel.useGenerics() && genClass.isMapEntry()) {%>
+	@SuppressWarnings("unchecked")
+<%}%>
+	protected void setUp() throws Exception
+	{
+  <%if (genClass.isMapEntry()) {%>
+		setFixture((<%=genClass.getImportedInterfaceName()%><%=genClass.getInterfaceWildTypeArguments()%>)<%=genPackage.getQualifiedEFactoryInternalInstanceAccessor()%>.create(<%=genClass.getQualifiedClassifierAccessor()%>));
+  <%} else {%>
+		setFixture(<%=genPackage.getQualifiedEFactoryInternalInstanceAccessor()%>.create<%=genClass.getName()%>());
+  <%}%>
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see junit.framework.TestCase#tearDown()
+	 * @generated
+	 */
+<%if (genModel.useClassOverrideAnnotation()) {%>
+	@Override
+<%}%>
+	protected void tearDown() throws Exception
+	{
+		setFixture(null);
+	}
+<%}%>
+<%for (GenFeature genFeature : genClass.getImplementedGenFeatures()) {%>
+<%@ include file="TestCase/implementedGenFeature.override.javajetinc" fail="alternative" %>
+<%@ start %>
+  <%if (genFeature.isTested()) {%>
+    <%if (genFeature.isGet() && !genFeature.isSuppressedGetVisibility()) {%>
+<%@ include file="TestCase/getGenFeature.override.javajetinc" fail="alternative" %>
+<%@ start %>
+
+	/**
+	 * Tests the '{@link <%=genFeature.getGenClass().getQualifiedInterfaceName()%>#<%=genFeature.getGetAccessor()%>() <em><%=genFeature.getFormattedName()%></em>}' feature getter.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see <%=genFeature.getGenClass().getQualifiedInterfaceName()%>#<%=genFeature.getGetAccessor()%>()
+	 * @generated
+	 */
+      <%if (genModel.getComplianceLevel().getValue() >= GenJDKLevel.JDK50) { //TestCase/getGenFeature.annotations.insert.javajetinc%>
+<%@ include file="TestCase/getGenFeature.annotations.insert.javajetinc" fail="silent" %>
+      <%}%>
+	public void test<%=genModel.capName(genFeature.getGetAccessor())%>()
+	{
+<%@ include file="TestCase/getGenFeature.TODO.override.javajetinc" fail="alternative" %>
+<%@ start %>
+		// TODO: implement this feature getter test method
+		// Ensure that you remove @generated or mark it @generated NOT
+		fail();
+<%@ end %><%//TestCase/getGenFeature.todo.override.javajetinc%>
+	}
+<%@ end %><%//TestCase/getGenFeature.override.javajetinc%>
+    <%}%>
+    <%if (genFeature.isSet() && !genFeature.isSuppressedSetVisibility()) {%>
+<%@ include file="TestCase/setGenFeature.override.javajetinc" fail="alternative" %>
+<%@ start %>
+
+	/**
+	 * Tests the '{@link <%=genFeature.getGenClass().getQualifiedInterfaceName()%>#set<%=genFeature.getAccessorName()%>(<%=genFeature.getRawBoundType()%>) <em><%=genFeature.getFormattedName()%></em>}' feature setter.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see <%=genFeature.getGenClass().getQualifiedInterfaceName()%>#set<%=genFeature.getAccessorName()%>(<%=genFeature.getRawBoundType()%>)
+	 * @generated
+	 */
+      <%if (genModel.getComplianceLevel().getValue() >= GenJDKLevel.JDK50) { //TestCase/setGenFeature.annotations.insert.javajetinc%>
+<%@ include file="TestCase/setGenFeature.annotations.insert.javajetinc" fail="silent" %>
+      <%}%>
+	public void testSet<%=genFeature.getAccessorName()%>()
+	{
+<%@ include file="TestCase/setGenFeature.TODO.override.javajetinc" fail="alternative" %>
+<%@ start %>
+		// TODO: implement this feature setter test method
+		// Ensure that you remove @generated or mark it @generated NOT
+		fail();
+<%@ end %><%//TestCase/setGenFeature.todo.override.javajetinc%>
+	}
+<%@ end %><%//TestCase/setGenFeature.override.javajetinc%>
+    <%}%>
+    <%if (genFeature.isUnset() && !genFeature.isSuppressedUnsetVisibility()) {%>
+<%@ include file="TestCase/unsetGenFeature.override.javajetinc" fail="alternative" %>
+<%@ start %>
+
+	/**
+	 * Tests the '{@link <%=genFeature.getGenClass().getQualifiedInterfaceName()%>#unset<%=genFeature.getAccessorName()%>() <em>unset<%=genFeature.getAccessorName()%>()</em>}' method.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see <%=genFeature.getGenClass().getQualifiedInterfaceName()%>#unset<%=genFeature.getAccessorName()%>()
+	 * @generated
+	 */
+      <%if (genModel.getComplianceLevel().getValue() >= GenJDKLevel.JDK50) { //TestCase/unsetGenFeature.annotations.insert.javajetinc%>
+<%@ include file="TestCase/unsetGenFeature.annotations.insert.javajetinc" fail="silent" %>
+      <%}%>
+	public void testUnset<%=genFeature.getAccessorName()%>()
+	{
+<%@ include file="TestCase/unsetGenFeature.TODO.override.javajetinc" fail="alternative" %>
+<%@ start %>
+		// TODO: implement this test method
+		// Ensure that you remove @generated or mark it @generated NOT
+		fail();
+<%@ end %><%//TestCase/unsetGenFeature.todo.override.javajetinc%>
+	}
+<%@ end %><%//TestCase/unsetGenFeature.override.javajetinc%>
+    <%}%>
+    <%if (genFeature.isIsSet() && !genFeature.isSuppressedIsSetVisibility()) {%>
+<%@ include file="TestCase/isSetGenFeature.override.javajetinc" fail="alternative" %>
+<%@ start %>
+
+	/**
+	 * Tests the '{@link <%=genFeature.getGenClass().getQualifiedInterfaceName()%>#isSet<%=genFeature.getAccessorName()%>() <em>isSet<%=genFeature.getAccessorName()%>()</em>}' method.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see <%=genFeature.getGenClass().getQualifiedInterfaceName()%>#isSet<%=genFeature.getAccessorName()%>()
+	 * @generated
+	 */
+      <%if (genModel.getComplianceLevel().getValue() >= GenJDKLevel.JDK50) { //TestCase/isSetGenFeature.annotations.insert.javajetinc%>
+<%@ include file="TestCase/isSetGenFeature.annotations.insert.javajetinc" fail="silent" %>
+      <%}%>
+	public void testIsSet<%=genFeature.getAccessorName()%>()
+	{
+<%@ include file="TestCase/isSetGenFeature.TODO.override.javajetinc" fail="alternative" %>
+<%@ start %>
+		// TODO: implement this test method
+		// Ensure that you remove @generated or mark it @generated NOT
+		fail();
+<%@ end %><%//TestCase/isSetGenFeature.todo.override.javajetinc%>
+	}
+<%@ end %><%//TestCase/isSetGenFeature.override.javajetinc%>
+    <%}%>
+  <%}%>
+<%@ include file="TestCase/implementedGenFeature.insert.javajetinc" fail="silent" %>
+<%@ end %><%//TestCase/implementedGenFeature.override.javajetinc%>
+<%}%>
+<%for (GenOperation genOperation : genClass.getImplementedGenOperations()) {%>
+<%@ include file="TestCase/implementedGenOperation.override.javajetinc" fail="alternative" %>
+<%@ start %>
+
+	/**
+	 * Tests the '{@link <%=genOperation.getGenClass().getQualifiedInterfaceName()%>#<%=genOperation.getName()%>(<%=genOperation.getParameterTypes(", ")%>) <em><%=genOperation.getFormattedName()%></em>}' operation.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see <%=genOperation.getGenClass().getQualifiedInterfaceName()%>#<%=genOperation.getName()%>(<%=genOperation.getParameterTypes(", ")%>)
+	 * @generated
+	 */
+  <%if (genModel.getComplianceLevel().getValue() >= GenJDKLevel.JDK50) { //TestCase/genOperation.annotations.insert.javajetinc%>
+<%@ include file="TestCase/genOperation.annotations.insert.javajetinc" fail="silent" %>
+  <%}%>
+	public void test<%=genClass.getUniqueName(genOperation)%>()
+	{
+<%@ include file="TestCase/implementedGenOperation.TODO.override.javajetinc" fail="alternative" %>
+<%@ start %>
+		// TODO: implement this operation test method
+		// Ensure that you remove @generated or mark it @generated NOT
+		fail();
+<%@ end %><%//TestCase/implementedGenOperation.todo.override.javajetinc%>
+	}
+<%@ include file="TestCase/implementedGenOperation.insert.javajetinc" fail="silent" %>
+<%@ end %><%//TestCase/implementedGenOperation.override.javajetinc%>
+<%}%>
+
+<%@ include file="TestCase/insert.javajetinc" fail="silent" %>
+} //<%=genClass.getTestCaseClassName()%>
+<%genModel.emitSortedImports();%>

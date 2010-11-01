@@ -15,6 +15,9 @@ import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.emf.ecore.impl.EFactoryImpl;
 import org.eclipse.emf.ecore.plugin.EcorePlugin;
 import org.telehash.Hash;
+import org.telehash.model.*;
+import org.telehash.model.Line;
+import org.telehash.model.TapRule;
 import org.telehash.model.TelehashFactory;
 import org.telehash.model.TelehashPackage;
 import org.telehash.model.Telex;
@@ -66,6 +69,10 @@ public class TelehashFactoryImpl extends EFactoryImpl implements
 		switch (eClass.getClassifierID()) {
 		case TelehashPackage.TELEX:
 			return createTelex();
+		case TelehashPackage.TAP_RULE:
+			return createTapRule();
+		case TelehashPackage.LINE:
+			return createLine();
 		default:
 			throw new IllegalArgumentException("The class '" + eClass.getName()
 					+ "' is not a valid classifier");
@@ -116,6 +123,26 @@ public class TelehashFactoryImpl extends EFactoryImpl implements
 	public Telex createTelex() {
 		TelexImpl telex = new TelexImpl();
 		return telex;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public TapRule createTapRule() {
+		TapRuleImpl tapRule = new TapRuleImpl();
+		return tapRule;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public Line createLine() {
+		LineImpl line = new LineImpl();
+		return line;
 	}
 
 	/**

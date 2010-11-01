@@ -1,0 +1,118 @@
+<%@ jet package="org.eclipse.emf.codegen.ecore.templates.editor" imports="java.util.* org.eclipse.emf.codegen.ecore.genmodel.*" class="PluginProperties" version="$Id: plugin.propertiesjet,v 1.22 2010/08/24 16:59:38 emerks Exp $" %>
+<%
+/**
+ * <copyright>
+ *
+ * Copyright (c) 2002-2006 IBM Corporation and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors: 
+ *   IBM - Initial API and implementation
+ *
+ * </copyright>
+ */
+%>
+<%GenModel genModel = (GenModel)argument; /* Trick to import java.util.* without warnings */Iterator.class.getName();%>
+<%@ include file="../Header.propertiesjetinc"%>
+
+pluginName = <%=genModel.getModelName()%> Editor
+providerName = www.example.org
+<%if (genModel.getRuntimePlatform() != GenRuntimePlatform.GWT) {%>
+
+<%boolean hasMultiPageEditor = false;%>
+<%for (GenPackage genPackage : genModel.getAllGenPackagesWithClassifiers()) {if (genPackage.isMultipleEditorPages()) { hasMultiPageEditor = true; }%>
+_UI_<%=genPackage.getEditorClassName()%>_menu = &<%=genPackage.getPrefix()%> Editor
+<%}%>
+
+<%if (genModel.isCreationCommands()) {%>
+_UI_CreateChild_menu_item = &New Child
+_UI_CreateSibling_menu_item = N&ew Sibling
+
+<%}%>
+_UI_ShowPropertiesView_menu_item = Show &Properties View
+_UI_RefreshViewer_menu_item = &Refresh
+
+_UI_SelectionPage_label = Selection
+<%if (hasMultiPageEditor) {%>
+_UI_ParentPage_label = Parent
+_UI_ListPage_label = List
+_UI_TreePage_label = Tree
+_UI_TablePage_label = Table
+_UI_TreeWithColumnsPage_label = Tree with Columns
+_UI_ObjectColumn_label = Object
+_UI_SelfColumn_label = Self
+<%}%>
+
+_UI_NoObjectSelected = Selected Nothing
+_UI_SingleObjectSelected = Selected Object: {0}
+_UI_MultiObjectSelected = Selected {0} Objects
+
+_UI_OpenEditorError_label = Open Editor
+
+_UI_Wizard_category = Example EMF Model Creation Wizards
+
+_UI_CreateModelError_message = Problems encountered in file "{0}"
+
+<%for (GenPackage genPackage : genModel.getAllGenPackagesWithClassifiers()) {%>
+  <%if (genPackage.isGenerateModelWizard()) {%>
+_UI_<%=genPackage.getModelWizardClassName()%>_label = <%=genPackage.getPrefix()%> Model
+_UI_<%=genPackage.getModelWizardClassName()%>_description = Create a new <%=genPackage.getPrefix()%> model
+
+  <%}%>
+_UI_<%=genPackage.getEditorClassName()%>_label = <%=genPackage.getPrefix()%> Model Editor
+
+_UI_<%=genPackage.getEditorClassName()%>FilenameDefaultBase = My
+_UI_<%=genPackage.getEditorClassName()%>FilenameExtensions = <%=genPackage.isMultipleFileExtensions() ? genPackage.getFileExtensions() : genPackage.getFileExtension()%>
+
+<%}%>
+_UI_Wizard_label = New
+
+_WARN_FilenameExtension = The file name must end in ''.{0}''
+_WARN_FilenameExtensions = The file name must have one of the following extensions: {0}
+
+_UI_ModelObject = &Model Object
+_UI_XMLEncoding = &XML Encoding
+_UI_XMLEncodingChoices = <%=genModel.getXMLEncodingChoices()%>
+<%if (genModel.isRichClientPlatform()) {%>
+_UI_Wizard_initial_object_description = Specify a file name and select a model object to create
+<%} else {%>
+_UI_Wizard_initial_object_description = Select a model object to create
+<%}%>
+
+_UI_FileConflict_label = File Conflict
+_WARN_FileConflict = There are unsaved changes that conflict with changes made outside the editor.  Do you wish to discard this editor's changes?
+
+<%if (genModel.isRichClientPlatform()) {%>
+_UI_<%=genModel.getEditorAdvisorClassName()%>_ActionSet_label = <%=genModel.getModelName()%> Action Set
+_UI_Perspective_label = <%=genModel.getModelName()%>
+
+_UI_Browse_label = &Browse...
+_UI_File_label = &File
+_UI_Question_title = Question
+_WARN_FileConflict = The file "{0}" already exists.  Do you want to replace the existing file?
+_UI_Error_title = Error
+_WARN_No_Editor = There is no editor registered for the file "{0}".
+
+_UI_Application_title = <%=genModel.getModelName()%> Application
+_UI_Menu_File_label = &File
+_UI_Menu_New_label = &New
+_UI_Menu_Open_label = &Open...
+_UI_Menu_Open_description = Opens a model object file
+_UI_Menu_OpenURI_label = &Open URI...
+_UI_Menu_OpenURI_description = Opens a model object loading it from a URI
+_UI_Menu_Edit_label = &Edit
+_UI_Menu_Window_label = &Window
+_UI_Menu_Help_label = &Help
+_UI_Menu_About_label = <%=genModel.getModelName()%> &About...
+_UI_About_title = <%=genModel.getModelName()%> Application
+_UI_About_text = <%=genModel.getModelName()%> Application about box goes here.
+
+<%for (GenPackage genPackage : genModel.getAllGenPackagesWithClassifiers()) {if (genPackage.isGenerateModelWizard()) {%>
+_UI_<%=genPackage.getModelWizardClassName()%>_ActionSet_label = <%=genPackage.getPrefix()%> Model Action Set
+<%}}%>
+
+<%}%>
+<%}%>

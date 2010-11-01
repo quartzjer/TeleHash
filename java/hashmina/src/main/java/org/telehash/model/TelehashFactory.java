@@ -36,6 +36,24 @@ public interface TelehashFactory extends EFactory {
 	Telex createTelex();
 
 	/**
+	 * Returns a new object of class '<em>Tap Rule</em>'.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @return a new object of class '<em>Tap Rule</em>'.
+	 * @generated
+	 */
+	TapRule createTapRule();
+
+	/**
+	 * Returns a new object of class '<em>Line</em>'.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @return a new object of class '<em>Line</em>'.
+	 * @generated
+	 */
+	Line createLine();
+
+	/**
 	 * Returns the package supported by this factory.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->

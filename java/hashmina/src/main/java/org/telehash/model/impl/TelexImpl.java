@@ -10,12 +10,17 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 
 import org.eclipse.emf.common.notify.Notification;
+import org.eclipse.emf.common.notify.NotificationChain;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.InternalEObject;
 import org.eclipse.emf.ecore.impl.ENotificationImpl;
 import org.eclipse.emf.ecore.util.EDataTypeUniqueEList;
-import org.eclipse.emf.json.model.impl.JsObjectImpl;
+import org.eclipse.emf.ecore.util.EObjectContainmentEList;
+import org.eclipse.emf.ecore.util.InternalEList;
 import org.telehash.Hash;
+import org.telehash.model.Line;
+import org.telehash.model.TapRule;
 import org.telehash.model.TelehashPackage;
 import org.telehash.model.Telex;
 
@@ -30,14 +35,15 @@ import org.telehash.model.Telex;
  *   <li>{@link org.telehash.model.impl.TelexImpl#getEnd <em>End</em>}</li>
  *   <li>{@link org.telehash.model.impl.TelexImpl#getLine <em>Line</em>}</li>
  *   <li>{@link org.telehash.model.impl.TelexImpl#getRing <em>Ring</em>}</li>
- *   <li>{@link org.telehash.model.impl.TelexImpl#getSee <em>See</em>}</li>
  *   <li>{@link org.telehash.model.impl.TelexImpl#getBytesReceived <em>Bytes Received</em>}</li>
+ *   <li>{@link org.telehash.model.impl.TelexImpl#getSee <em>See</em>}</li>
+ *   <li>{@link org.telehash.model.impl.TelexImpl#getTap <em>Tap</em>}</li>
  * </ul>
  * </p>
  *
  * @generated
  */
-public class TelexImpl extends JsObjectImpl implements Telex {
+public class TelexImpl extends TelehashObjectImpl implements Telex {
 	/**
 	 * The default value of the '{@link #getTo() <em>To</em>}' attribute.
 	 * <!-- begin-user-doc -->
@@ -77,6 +83,15 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 	 * @ordered
 	 */
 	protected Hash end = END_EDEFAULT;
+
+	/**
+	 * This is true if the End attribute has been set.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 * @ordered
+	 */
+	protected boolean endESet;
 
 	/**
 	 * The default value of the '{@link #getLine() <em>Line</em>}' attribute.
@@ -137,16 +152,6 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 	protected boolean ringESet;
 
 	/**
-	 * The cached value of the '{@link #getSee() <em>See</em>}' attribute list.
-	 * <!-- begin-user-doc -->
-	 * <!-- end-user-doc -->
-	 * @see #getSee()
-	 * @generated
-	 * @ordered
-	 */
-	protected EList<InetSocketAddress> see;
-
-	/**
 	 * The default value of the '{@link #getBytesReceived() <em>Bytes Received</em>}' attribute.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
@@ -165,6 +170,26 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 	 * @ordered
 	 */
 	protected int bytesReceived = BYTES_RECEIVED_EDEFAULT;
+
+	/**
+	 * The cached value of the '{@link #getSee() <em>See</em>}' attribute list.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see #getSee()
+	 * @generated
+	 * @ordered
+	 */
+	protected EList<InetSocketAddress> see;
+
+	/**
+	 * The cached value of the '{@link #getTap() <em>Tap</em>}' containment reference list.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @see #getTap()
+	 * @generated
+	 * @ordered
+	 */
+	protected EList<TapRule> tap;
 
 	/**
 	 * <!-- begin-user-doc -->
@@ -199,6 +224,25 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
+	public Telex withTo(InetSocketAddress value) {
+		setTo(value);
+		return this;
+	}
+
+	public Telex withTo(Line line) {
+		setTo(line.getAddress());
+		if (line.isSetLineId()) {
+			return withLine(line.getLineId());
+		} else {
+			return withRing(line.getRingOut());
+		}
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
 	public void setTo(InetSocketAddress newTo) {
 		InetSocketAddress oldTo = to;
 		to = newTo;
@@ -221,12 +265,49 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
+	public Telex withEnd(Hash value) {
+		setEnd(value);
+		return this;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
 	public void setEnd(Hash newEnd) {
 		Hash oldEnd = end;
 		end = newEnd;
+		boolean oldEndESet = endESet;
+		endESet = true;
 		if (eNotificationRequired())
 			eNotify(new ENotificationImpl(this, Notification.SET,
-					TelehashPackage.TELEX__END, oldEnd, end));
+					TelehashPackage.TELEX__END, oldEnd, end, !oldEndESet));
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public void unsetEnd() {
+		Hash oldEnd = end;
+		boolean oldEndESet = endESet;
+		end = END_EDEFAULT;
+		endESet = false;
+		if (eNotificationRequired())
+			eNotify(new ENotificationImpl(this, Notification.UNSET,
+					TelehashPackage.TELEX__END, oldEnd, END_EDEFAULT,
+					oldEndESet));
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public boolean isSetEnd() {
+		return endESet;
 	}
 
 	/**
@@ -236,6 +317,16 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 	 */
 	public int getLine() {
 		return line;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public Telex withLine(int value) {
+		setLine(value);
+		return this;
 	}
 
 	/**
@@ -292,6 +383,16 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
+	public Telex withRing(int value) {
+		setRing(value);
+		return this;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
 	public void setRing(int newRing) {
 		int oldRing = ring;
 		ring = newRing;
@@ -334,7 +435,7 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 	 */
 	public EList<InetSocketAddress> getSee() {
 		if (see == null) {
-			see = new EDataTypeUniqueEList<InetSocketAddress>(
+			see = new EDataTypeUniqueEList.Unsettable<InetSocketAddress>(
 					InetSocketAddress.class, this, TelehashPackage.TELEX__SEE);
 		}
 		return see;
@@ -345,8 +446,84 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 	 * <!-- end-user-doc -->
 	 * @generated
 	 */
+	public void unsetSee() {
+		if (see != null)
+			((InternalEList.Unsettable<?>) see).unset();
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public boolean isSetSee() {
+		return see != null && ((InternalEList.Unsettable<?>) see).isSet();
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public EList<TapRule> getTap() {
+		if (tap == null) {
+			tap = new EObjectContainmentEList.Unsettable<TapRule>(
+					TapRule.class, this, TelehashPackage.TELEX__TAP);
+		}
+		return tap;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public void unsetTap() {
+		if (tap != null)
+			((InternalEList.Unsettable<?>) tap).unset();
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public boolean isSetTap() {
+		return tap != null && ((InternalEList.Unsettable<?>) tap).isSet();
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Override
+	public NotificationChain eInverseRemove(InternalEObject otherEnd,
+			int featureID, NotificationChain msgs) {
+		switch (featureID) {
+		case TelehashPackage.TELEX__TAP:
+			return ((InternalEList<?>) getTap()).basicRemove(otherEnd, msgs);
+		}
+		return super.eInverseRemove(otherEnd, featureID, msgs);
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
 	public int getBytesReceived() {
 		return bytesReceived;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public Telex withBytesReceived(int value) {
+		setBytesReceived(value);
+		return this;
 	}
 
 	/**
@@ -379,10 +556,12 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 			return getLine();
 		case TelehashPackage.TELEX__RING:
 			return getRing();
-		case TelehashPackage.TELEX__SEE:
-			return getSee();
 		case TelehashPackage.TELEX__BYTES_RECEIVED:
 			return getBytesReceived();
+		case TelehashPackage.TELEX__SEE:
+			return getSee();
+		case TelehashPackage.TELEX__TAP:
+			return getTap();
 		}
 		return super.eGet(featureID, resolve, coreType);
 	}
@@ -408,12 +587,16 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 		case TelehashPackage.TELEX__RING:
 			setRing((Integer) newValue);
 			return;
+		case TelehashPackage.TELEX__BYTES_RECEIVED:
+			setBytesReceived((Integer) newValue);
+			return;
 		case TelehashPackage.TELEX__SEE:
 			getSee().clear();
 			getSee().addAll((Collection<? extends InetSocketAddress>) newValue);
 			return;
-		case TelehashPackage.TELEX__BYTES_RECEIVED:
-			setBytesReceived((Integer) newValue);
+		case TelehashPackage.TELEX__TAP:
+			getTap().clear();
+			getTap().addAll((Collection<? extends TapRule>) newValue);
 			return;
 		}
 		super.eSet(featureID, newValue);
@@ -431,7 +614,7 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 			setTo(TO_EDEFAULT);
 			return;
 		case TelehashPackage.TELEX__END:
-			setEnd(END_EDEFAULT);
+			unsetEnd();
 			return;
 		case TelehashPackage.TELEX__LINE:
 			unsetLine();
@@ -439,11 +622,14 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 		case TelehashPackage.TELEX__RING:
 			unsetRing();
 			return;
-		case TelehashPackage.TELEX__SEE:
-			getSee().clear();
-			return;
 		case TelehashPackage.TELEX__BYTES_RECEIVED:
 			setBytesReceived(BYTES_RECEIVED_EDEFAULT);
+			return;
+		case TelehashPackage.TELEX__SEE:
+			unsetSee();
+			return;
+		case TelehashPackage.TELEX__TAP:
+			unsetTap();
 			return;
 		}
 		super.eUnset(featureID);
@@ -460,16 +646,17 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 		case TelehashPackage.TELEX__TO:
 			return TO_EDEFAULT == null ? to != null : !TO_EDEFAULT.equals(to);
 		case TelehashPackage.TELEX__END:
-			return END_EDEFAULT == null ? end != null : !END_EDEFAULT
-					.equals(end);
+			return isSetEnd();
 		case TelehashPackage.TELEX__LINE:
 			return isSetLine();
 		case TelehashPackage.TELEX__RING:
 			return isSetRing();
-		case TelehashPackage.TELEX__SEE:
-			return see != null && !see.isEmpty();
 		case TelehashPackage.TELEX__BYTES_RECEIVED:
 			return bytesReceived != BYTES_RECEIVED_EDEFAULT;
+		case TelehashPackage.TELEX__SEE:
+			return isSetSee();
+		case TelehashPackage.TELEX__TAP:
+			return isSetTap();
 		}
 		return super.eIsSet(featureID);
 	}
@@ -488,7 +675,10 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 		result.append(" (to: ");
 		result.append(to);
 		result.append(", end: ");
-		result.append(end);
+		if (endESet)
+			result.append(end);
+		else
+			result.append("<unset>");
 		result.append(", line: ");
 		if (lineESet)
 			result.append(line);
@@ -499,10 +689,10 @@ public class TelexImpl extends JsObjectImpl implements Telex {
 			result.append(ring);
 		else
 			result.append("<unset>");
-		result.append(", see: ");
-		result.append(see);
 		result.append(", bytesReceived: ");
 		result.append(bytesReceived);
+		result.append(", see: ");
+		result.append(see);
 		result.append(')');
 		return result.toString();
 	}

@@ -241,6 +241,10 @@ public class JsonPackageImpl extends EPackageImpl implements JsonPackage {
 		EOperation op = addEOperation(jsObjectEClass, this.getAnySimpleType(), "get", 0, 1, IS_UNIQUE, IS_ORDERED);
 		addEParameter(op, ecorePackage.getEString(), "key", 0, 1, IS_UNIQUE, IS_ORDERED);
 
+		op = addEOperation(jsObjectEClass, this.getJsObject(), "with", 0, 1, IS_UNIQUE, IS_ORDERED);
+		addEParameter(op, ecorePackage.getEString(), "key", 0, 1, IS_UNIQUE, IS_ORDERED);
+		addEParameter(op, this.getAnySimpleType(), "value", 0, 1, IS_UNIQUE, IS_ORDERED);
+
 		// Initialize data types
 		initEDataType(anySimpleTypeEDataType, Object.class, "AnySimpleType", IS_SERIALIZABLE, !IS_GENERATED_INSTANCE_CLASS);
 

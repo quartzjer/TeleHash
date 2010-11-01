@@ -1,5 +1,7 @@
 package org.telehash;
 
+import java.io.IOException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +27,13 @@ public class SwitchScanner extends Thread {
 	public void run() {
 		while (isRunning) {
 			switchHandler.scanLines();
-			switchHandler.taptap();
+			try {
+				switchHandler.taptap();
+			}
+			catch (IOException e) {
+				logger.error(e.getMessage(), e);
+			}
+			
 			try {
 				sleep(SCAN_DELAY);
 			}

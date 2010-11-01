@@ -1,0 +1,205 @@
+<%@ jet package="org.eclipse.emf.codegen.ecore.templates.model.tests" imports="org.eclipse.emf.codegen.ecore.genmodel.*" class="PackageExample" %>
+<%
+/**
+ * <copyright>
+ *
+ * Copyright (c) 2005-2007 IBM Corporation and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *   IBM - Initial API and implementation
+ *
+ * </copyright>
+ */
+%>
+<%GenPackage genPackage = (GenPackage)argument; GenModel genModel = genPackage.getGenModel();%>
+<%
+String _System = genModel.getImportedName("java.lang.System");
+String _String = genModel.getImportedName("java.lang.String");
+String _RuntimeException = genModel.getImportedName("java.lang.RuntimeException");
+String _File = genModel.getImportedName("java.io.File");
+String _Iterator = null;
+if (!genModel.useGenerics()) {
+  _Iterator = genModel.getImportedName("java.util.Iterator");
+}
+String _Diagnostic = genModel.getImportedName("org.eclipse.emf.common.util.Diagnostic");
+String _URI = genModel.getImportedName("org.eclipse.emf.common.util.URI");
+String _EObject = genModel.getImportedName("org.eclipse.emf.ecore.EObject");
+String _Diagnostician = genModel.getImportedName("org.eclipse.emf.ecore.util.Diagnostician");
+String _Resource = genModel.getImportedName("org.eclipse.emf.ecore.resource.Resource");
+String _ResourceSet = genModel.getImportedName("org.eclipse.emf.ecore.resource.ResourceSet");
+String _ResourceSetImpl = genModel.getImportedName("org.eclipse.emf.ecore.resource.impl.ResourceSetImpl");
+%>
+<%@ include file="../Header.javajetinc"%>
+package <%=genPackage.getTestsPackageName()%>;
+
+<%genModel.markImportLocation(stringBuffer);%>
+
+/**
+ * <!-- begin-user-doc -->
+ * A sample utility for the '<em><b><%=genPackage.getPackageName()%></b></em>' package.
+ * <!-- end-user-doc -->
+ * @generated
+ */
+public class <%=genPackage.getExampleClassName()%>
+{
+<%if (genModel.hasCopyrightField()) {%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public static final <%=_String%> copyright = <%=genModel.getCopyrightFieldLiteral()%>;<%=genModel.getNonNLS()%>
+	
+<%}%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * Load all the argument file paths or URIs as instances of the model.
+	 * <!-- end-user-doc -->
+	 * @param args the file paths or URIs.
+	 * @generated
+	 */
+	public static void main(String[] args)
+	{
+		// Create a resource set to hold the resources.
+		//
+		<%=_ResourceSet%> resourceSet = new <%=_ResourceSetImpl%>();
+		
+<%if (genPackage.isContentType()) {%>
+		// Register the appropriate resource factory to handle the content type.
+		//
+		resourceSet.getResourceFactoryRegistry().getContentTypeToFactoryMap().put
+			(<%=genPackage.getImportedPackageInterfaceName()%>.eCONTENT_TYPE,
+			 new <%=genModel.getImportedName(genPackage.getQualifiedEffectiveResourceFactoryClassName())%>());
+		
+		// Register the appropriate content handler for all file extensions and any element from the package's namespace.
+		//
+		resourceSet.getURIConverter().getContentHandlers().add
+			(new <%=genModel.getImportedName("org.eclipse.emf.ecore.xmi.impl.RootXMLContentHandlerImpl")%>(<%=genPackage.getImportedPackageInterfaceName()%>.eCONTENT_TYPE, null, null, <%if (genPackage.hasTargetNamespace()) {%><%=genPackage.getImportedPackageInterfaceName()%>.eNS_URI<%} else {%>(<%=_String%>)null<%}%>, null));
+<%} else {%>
+		// Register the appropriate resource factory to handle all file extensions.
+		//
+		resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put
+			(Resource.Factory.Registry.DEFAULT_EXTENSION, 
+			 new <%=genModel.getImportedName(genPackage.getQualifiedEffectiveResourceFactoryClassName())%>());
+<%}%>
+
+		// Register the package to ensure it is available during loading.
+		//
+		resourceSet.getPackageRegistry().put
+			(<%=genPackage.getImportedPackageInterfaceName()%>.eNS_URI, 
+			 <%=genPackage.getImportedPackageInterfaceName()%>.eINSTANCE);
+        
+		// If there are no arguments, emit an appropriate usage message.
+		//
+		if (args.length == 0)
+		{
+<%if (genPackage.getRootClass() != null) { GenClass rootClass = genPackage.getRootClass();%>
+			System.out.println("Enter a list of file paths or URIs that have content like this:");<%=genModel.getNonNLS()%>
+			try
+			{
+  <%if (genPackage.isContentType()) {%>
+				<%=_Resource%> resource = resourceSet.createResource(<%=_URI%>.createURI("http:///My.<%=genPackage.getFileExtension()%>"), <%=genPackage.getImportedPackageInterfaceName()%>.eCONTENT_TYPE);<%=genModel.getNonNLS()%>
+  <%} else {%>
+				<%=_Resource%> resource = resourceSet.createResource(<%=_URI%>.createURI("http:///My.<%=genPackage.getFileExtension()%>"));<%=genModel.getNonNLS()%>
+  <%}%>
+  <%if (genPackage.getRootFeature() != null) { GenFeature rootFeature = genPackage.getRootFeature(); GenClass documentRoot = rootFeature.getGenClass();%>
+				<%=documentRoot.getImportedInterfaceName()%> documentRoot = <%=genPackage.getQualifiedEFactoryInternalInstanceAccessor()%>.create<%=documentRoot.getName()%>();
+				<%=rootClass.getImportedInterfaceName()%> root = <%=rootClass.getGenPackage().getQualifiedEFactoryInternalInstanceAccessor()%>.create<%=rootClass.getName()%>();
+    <%if (documentRoot.isDynamic()) {%>
+				documentRoot.eSet(<%=rootFeature.getQualifiedFeatureAccessor()%>, root);
+    <%} else {%>
+				documentRoot.set<%=rootFeature.getCapName()%>(root);
+    <%}%>
+				resource.getContents().add(<%if (!documentRoot.isEObjectExtension()){%>(<%=_EObject%>)<%}%>documentRoot);
+  <%} else {%>
+				<%=rootClass.getImportedInterfaceName()%><%=rootClass.getInterfaceWildTypeArguments()%> root = <%=rootClass.getGenPackage().getQualifiedEFactoryInternalInstanceAccessor()%>.create<%=rootClass.getName()%>();
+				resource.getContents().add(<%if (!rootClass.isEObjectExtension()){%>(<%=_EObject%>)<%}%>root);
+  <%}%>
+				resource.save(<%=_System%>.out, null);
+			}
+			catch (<%=genModel.getImportedName("java.io.IOException")%> exception) 
+			{
+				exception.printStackTrace();
+			}
+<%} else {%>
+			System.out.println("Enter a list of file paths or URIs");
+<%}%>
+		}
+		else
+		{
+			// Iterate over all the arguments.
+			//
+			for (int i = 0; i < args.length; ++i)
+			{
+				// Construct the URI for the instance file.
+				// The argument is treated as a file path only if it denotes an existing file.
+				// Otherwise, it's directly treated as a URL.
+				//
+				<%=_File%> file = new <%=_File%>(args[i]);
+				<%=_URI%> uri = file.isFile() ? <%=_URI%>.createFileURI(file.getAbsolutePath()): URI.createURI(args[i]);
+
+				try
+				{
+					// Demand load resource for this file.
+					//
+					<%=_Resource%> resource = resourceSet.getResource(uri, true);
+					System.out.println("Loaded " + uri);<%=genModel.getNonNLS()%>
+
+					// Validate the contents of the loaded resource.
+					//
+<%if (genModel.useGenerics()) {%>
+					for (<%=_EObject%> eObject : resource.getContents())
+<%} else {%>
+					for (<%=_Iterator%> j = resource.getContents().iterator(); j.hasNext(); )
+<%}%>
+					{
+<%if (!genModel.useGenerics()) {%>
+						<%=_EObject%> eObject = (<%=_EObject%>)j.next();
+<%}%>
+						<%=_Diagnostic%> diagnostic = <%=_Diagnostician%>.INSTANCE.validate(eObject);
+						if (diagnostic.getSeverity() != Diagnostic.OK)
+						{
+							printDiagnostic(diagnostic, "");<%=genModel.getNonNLS()%>
+						}
+					}
+				}
+				catch (<%=_RuntimeException%> exception) 
+				{
+					System.out.println("Problem loading " + uri);<%=genModel.getNonNLS()%>
+					exception.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	/**
+	 * <!-- begin-user-doc -->
+	 * Prints diagnostics with indentation.
+	 * <!-- end-user-doc -->
+	 * @param diagnostic the diagnostic to print.
+	 * @param indent the indentation for printing.
+	 * @generated
+	 */
+	protected static void printDiagnostic(Diagnostic diagnostic, String indent)
+	{
+		System.out.print(indent);
+		System.out.println(diagnostic.getMessage());
+<%if (genModel.useGenerics()) {%>
+		for (Diagnostic child : diagnostic.getChildren())
+		{
+			printDiagnostic(child, indent + "  ");<%=genModel.getNonNLS()%>
+		}
+<%} else {%>
+		for (Iterator i = diagnostic.getChildren().iterator(); i.hasNext(); )
+		{
+			printDiagnostic((Diagnostic)i.next(), indent + "  ");<%=genModel.getNonNLS()%>
+		}
+<%}%>
+	}
+
+} //<%=genPackage.getExampleClassName()%>
+<%genModel.emitSortedImports();%>

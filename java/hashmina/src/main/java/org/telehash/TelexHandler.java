@@ -1,12 +1,12 @@
 package org.telehash;
 
-import java.util.Map;
-import java.util.Set;
+import org.telehash.model.Line;
+import org.telehash.model.Telex;
 
 public interface TelexHandler {
 	
-	Set<String> getMatchingKeys();
-	
-	void telexReceived(SwitchHandler switchHandler, Line line, Map<String, ?> telex);
+	void telexReceived(SwitchHandler switchHandler, Line line, Telex telex);
+
+	boolean isMatch(Telex telex);
 	
 }

@@ -1,0 +1,190 @@
+<%@ jet package="org.eclipse.emf.codegen.ecore.templates.edit" imports="java.util.* org.eclipse.emf.codegen.ecore.genmodel.*" class="Properties" version="$Id: Properties.javajet,v 1.1 2010/04/28 14:50:50 emerks Exp $" %>
+<%
+/**
+ * <copyright>
+ *
+ * Copyright (c) 2010 Ed Merks and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *   Ed Merks - Initial API and implementation
+ *
+ * </copyright>
+ */
+%>
+<%GenModel genModel = (GenModel)argument; /* Trick to import java.util.* without warnings */Iterator.class.getName();%>
+<%@ include file="../Header.javajetinc"%>
+package <%=genModel.getEditPluginPackageName()%>;
+
+<%genModel.markImportLocation(stringBuffer);%>
+
+/**
+ * <!-- begin-user-doc -->
+ * <!-- end-user-doc -->
+ * @generated
+ */
+public interface <%=genModel.getEditPluginClassName()%>Properties extends <%=genModel.getImportedName("com.google.gwt.i18n.client.Messages")%>
+{
+<%if (genModel.isCreationCommands()) {%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Key("_UI_CreateChild_text")
+	@DefaultMessage("{0}")
+	String createChildText(Object type);
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Key("_UI_CreateChild_text2")
+	@DefaultMessage("{1} <%if (genModel.isCreationSubmenus()) {%>| <%}%>{0}")
+	String createChildText2(Object type, Object feature);
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Key("_UI_CreateChild_text3")
+	@DefaultMessage("{0}")
+	String createChildText3(Object feature);
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Key("_UI_CreateChild_tooltip")
+	@DefaultMessage("Create New {0} Under {1} Feature")
+	String createChildTooltip(Object type, Object feature);
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Key("_UI_CreateChild_description")
+	@DefaultMessage("Create a new child of type {0} for the {1} feature of the selected {2}.")
+	String createChildDescripition(Object type, Object feature, Object selection);
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Key("_UI_CreateSibling_description")
+	@DefaultMessage("Create a new sibling of type {0} for the selected {2}, under the {1} feature of their parent.")
+	String createSiblingDescription(Object type, Object feature, Object selection);
+
+<%}%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Key("_UI_PropertyDescriptor_description")
+	@DefaultMessage("The {0} of the {1}")
+	String propertyDescriptorDescription(Object feature, Object type);
+
+<%for (GenPackage genPackage : genModel.getAllGenAndUsedGenPackagesWithClassifiers()) {%>
+  <%if (genPackage.getGenModel() == genModel || !genPackage.getGenModel().hasEditSupport()) { %>
+    <%for (GenClass genClass : genPackage.getGenClasses()) {%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Key("_UI_<%=genClass.getName()%>_type")
+	@DefaultMessage("<%=genClass.getFormattedName()%>")
+	String <%=genClass.getUncapName()%>Type();
+
+    <%}%>
+  <%}%>
+<%}%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Key("_UI_Unknown_type")
+	@DefaultMessage("Object")
+	String unknownType();
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Key("_UI_Unknown_datatype")
+	@DefaultMessage("Value")
+	String unknownDatatype();
+
+<%for (GenFeature genFeature : genModel.getFilteredAllGenFeatures()) { String description = genFeature.getPropertyDescription();%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Key("_UI_<%=genFeature.getGenClass().getName()%>_<%=genFeature.getName()%>_feature")
+	@DefaultMessage("<%=genFeature.getFormattedName()%>")
+	String <%=genFeature.getGenClass().getUncapName()%>_<%=genFeature.getCapName()%>Feature();
+
+  <%if (description != null && description.length() > 0) {%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Key("_UI_<%=genFeature.getGenClass().getName()%>_<%=genFeature.getName()%>_description")
+	@DefaultMessage("<%=description%>")
+	String <%=genFeature.getGenClass().getUncapName()%>_<%=genFeature.getCapName()%>Description();
+
+  <%}%>
+<%}%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Key("_UI_Unknown_feature")
+	@DefaultMessage("Unspecified")
+	String unknownFeature();
+
+<%for (GenPackage genPackage : genModel.getAllGenAndUsedGenPackagesWithClassifiers()) {%>
+  <%if (genPackage.getGenModel() == genModel || !genPackage.getGenModel().hasEditSupport()) {%>
+    <%for (GenEnum genEnum : genPackage.getGenEnums()) {%>
+      <%for (GenEnumLiteral genEnumLiteral : genEnum.getGenEnumLiterals()) {%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Key("_UI_<%=genEnum.getName()%>_<%=genEnumLiteral.getName()%>_literal")
+	@DefaultMessage("<%=genEnumLiteral.getLiteral()%>")
+	String <%=genEnum.getSafeUncapName()%>_<%=genEnumLiteral.getName()%>Literal();
+
+      <%}%>
+    <%}%>
+  <%}%>
+<%}%>
+<%for (String category : genModel.getPropertyCategories()) {%>
+<%=genModel.getPropertyCategoryKey(category)%> = <%=category%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Key("<%=genModel.getPropertyCategoryKey(category)%>")
+	@DefaultMessage("<%=category%>")
+	String <%=genModel.getPropertyCategoryKey(category)%>();
+
+<%}%>
+}
+<%genModel.emitSortedImports();%>

@@ -1,0 +1,79 @@
+<%@ jet package="org.eclipse.emf.codegen.ecore.templates.model.tests" imports="java.util.* org.eclipse.emf.codegen.ecore.genmodel.*" class="PackageTestSuite" %>
+<%
+/**
+ * <copyright>
+ *
+ * Copyright (c) 2005 IBM Corporation and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *   IBM - Initial API and implementation
+ *
+ * </copyright>
+ */
+%>
+<%GenPackage genPackage = (GenPackage)argument; GenModel genModel = genPackage.getGenModel(); /* Trick to import java.util.* without warnings */Iterator.class.getName();%>
+<%@ include file="../Header.javajetinc"%>
+package <%=genPackage.getTestsPackageName()%>;
+
+<%genModel.markImportLocation(stringBuffer);%>
+
+/**
+ * <!-- begin-user-doc -->
+ * A test suite for the '<em><b><%=genPackage.getPackageName()%></b></em>' package.
+ * <!-- end-user-doc -->
+ * @generated
+ */
+public class <%=genPackage.getTestSuiteClassName()%> extends <%=genModel.getImportedName("junit.framework.TestSuite")%>
+{
+<%if (genModel.hasCopyrightField()) {%>
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public static final <%=genModel.getImportedName("java.lang.String")%> copyright = <%=genModel.getCopyrightFieldLiteral()%>;<%=genModel.getNonNLS()%>
+<%}%>
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public static void main(String[] args)
+	{
+		<%=genModel.getImportedName("junit.textui.TestRunner")%>.run(suite());
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public static <%=genModel.getImportedName("junit.framework.Test")%> suite()
+	{
+		<%=genModel.getImportedName("junit.framework.TestSuite")%> suite = new <%=genPackage.getTestSuiteClassName()%>("<%=genPackage.getPackageName()%> Tests");<%=genModel.getNonNLS()%>
+<%for (GenClass genClass : genPackage.getGenClasses()) {%>
+  <%if (!genClass.isExternalInterface() && !genClass.isAbstract() && genClass.hasTests()) {%>
+		suite.addTestSuite(<%=genClass.getImportedTestCaseClassName()%>.class);
+  <%}%>
+<%}%>
+		return suite;
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public <%=genPackage.getTestSuiteClassName()%>(String name)
+	{
+		super(name);
+	}
+
+} //<%=genPackage.getTestSuiteClassName()%>
+<%genModel.emitSortedImports();%>

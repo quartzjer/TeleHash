@@ -1,0 +1,201 @@
+<%@ jet package="org.eclipse.emf.codegen.ecore.templates.model" imports="java.util.* org.eclipse.emf.codegen.ecore.genmodel.*" class="SwitchClass" version="$Id: SwitchClass.javajet,v 1.22 2008/06/04 21:42:39 emerks Exp $" %>
+<%
+/**
+ * <copyright>
+ *
+ * Copyright (c) 2002-2006 IBM Corporation and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *   IBM - Initial API and implementation
+ *
+ * </copyright>
+ */
+%>
+<%GenPackage genPackage = (GenPackage)argument; GenModel genModel=genPackage.getGenModel();%>
+<%@ include file="../Header.javajetinc"%>
+package <%=genPackage.getUtilitiesPackageName()%>;
+
+<%genModel.addImport("org.eclipse.emf.ecore.EClass");%>
+<%genModel.addImport("org.eclipse.emf.ecore.EObject");%>
+<%if (!genPackage.hasJavaLangConflict() && !genPackage.getUtilitiesPackageName().equals(genPackage.getInterfacePackageName())) genModel.addImport(genPackage.getInterfacePackageName() + ".*");%>
+<%
+String templateParameterName = null;
+if (genModel.useGenerics())
+{
+  Set<String> usedNames = new HashSet<String>();
+  for (GenEnum genEnum : genPackage.getGenEnums())
+  {
+    usedNames.add(genEnum.getName());
+  }
+  for (GenClass genClass : genPackage.getAllSwitchGenClasses())
+  {
+    if (!genClass.isDynamic() && !genClass.isExternalInterface())
+    {
+      usedNames.add(genClass.getName());
+    }
+    for (GenTypeParameter genTypeParameter : genClass.getGenTypeParameters())
+    {
+      usedNames.add(genTypeParameter.getName());
+    }
+  }
+  templateParameterName = "T";
+  for (int i = 1; usedNames.contains(templateParameterName); ++i)
+  {
+    templateParameterName = "T" + i;
+  }
+}
+%>
+<%String templateParameters = genModel.useGenerics() ? "<" + templateParameterName + ">" : "";%>
+<%String returnType = genModel.useGenerics() ? templateParameterName : genModel.getImportedName("java.lang.Object");%>
+<%genModel.markImportLocation(stringBuffer);%>
+
+/**
+ * <!-- begin-user-doc -->
+ * The <b>Switch</b> for the model's inheritance hierarchy.
+ * It supports the call {@link #doSwitch(EObject) doSwitch(object)}
+ * to invoke the <code>caseXXX</code> method for each class of the model,
+ * starting with the actual class of the object
+ * and proceeding up the inheritance hierarchy
+ * until a non-null result is returned,
+ * which is the result of the switch.
+ * <!-- end-user-doc -->
+ * @see <%=genPackage.getQualifiedPackageInterfaceName()%>
+ * @generated
+ */
+public class <%=genPackage.getSwitchClassName()%><%=templateParameters%>
+{
+<%if (genModel.hasCopyrightField()) {%>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public static final <%=genModel.getImportedName("java.lang.String")%> copyright = <%=genModel.getCopyrightFieldLiteral()%>;<%=genModel.getNonNLS()%>
+
+<%}%>
+	/**
+	 * The cached model package
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	protected static <%=genPackage.getImportedPackageInterfaceName()%> modelPackage;
+
+	/**
+	 * Creates an instance of the switch.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public <%=genPackage.getSwitchClassName()%>()
+	{
+		if (modelPackage == null)
+		{
+			modelPackage = <%=genPackage.getImportedPackageInterfaceName()%>.eINSTANCE;
+		}
+	}
+
+	/**
+	 * Calls <code>caseXXX</code> for each class of the model until one returns a non null result; it yields that result.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @return the first non-null result returned by a <code>caseXXX</code> call.
+	 * @generated
+	 */
+	public <%=returnType%> doSwitch(EObject theEObject)
+	{
+		return doSwitch(theEObject.eClass(), theEObject);
+	}
+
+	/**
+	 * Calls <code>caseXXX</code> for each class of the model until one returns a non null result; it yields that result.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @return the first non-null result returned by a <code>caseXXX</code> call.
+	 * @generated
+	 */
+	protected <%=returnType%> doSwitch(EClass theEClass, EObject theEObject)
+	{
+		if (theEClass.eContainer() == modelPackage)
+		{
+			return doSwitch(theEClass.getClassifierID(), theEObject);
+		}
+		else
+		{
+			<%=genModel.getImportedName("java.util.List")%><%if (genModel.useGenerics()) {%><<%=genModel.getImportedName("org.eclipse.emf.ecore.EClass")%>><%}%> eSuperTypes = theEClass.getESuperTypes();
+			return
+				eSuperTypes.isEmpty() ?
+					defaultCase(theEObject) :
+					doSwitch(<%if (!genModel.useGenerics()) {%>(EClass)<%}%>eSuperTypes.get(0), theEObject);
+		}
+	}
+
+	/**
+	 * Calls <code>caseXXX</code> for each class of the model until one returns a non null result; it yields that result.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @return the first non-null result returned by a <code>caseXXX</code> call.
+	 * @generated
+	 */
+	protected <%=returnType%> doSwitch(int classifierID, EObject theEObject)
+	{
+		switch (classifierID)
+		{
+<%for (GenClass genClass : genPackage.getGenClasses()) {%>
+<%if (!genClass.isExternalInterface() && !genClass.isEObject() || genClass.isMapEntry()) { String result = "result".equals(genClass.getSafeUncapName()) ? "theResult" : "result"; %>
+			case <%=genPackage.getImportedPackageInterfaceName()%>.<%=genPackage.getClassifierID(genClass)%>:
+			{
+				<%if (genClass.isUncheckedCast() || genClass.isMapEntry() && genModel.getComplianceLevel().getValue() >= GenJDKLevel.JDK50) {%>@SuppressWarnings("unchecked") <%}%><%=genClass.getImportedInterfaceName()%><%=genClass.getInterfaceWildTypeArguments()%> <%=genClass.getSafeUncapName()%> = (<%=genClass.getImportedInterfaceName()%><%=genClass.getInterfaceWildTypeArguments()%>)theEObject;
+				<%=returnType%> <%=result%> = case<%=genPackage.getClassUniqueName(genClass)%>(<%=genClass.getSafeUncapName()%>);
+<%for (GenClass baseGenClass : genClass.getSwitchGenClasses()) {%>
+				if (<%=result%> == null) <%=result%> = case<%=genPackage.getClassUniqueName(baseGenClass)%>(<%if (genClass.isMapEntry()) {%>(<%=baseGenClass.getImportedInterfaceName()%><%=baseGenClass.getInterfaceTypeArguments()%>)<%}%><%=genClass.getSafeUncapName()%>);
+<%}%>
+				if (<%=result%> == null) <%=result%> = defaultCase(theEObject);
+				return <%=result%>;
+			}
+<%}%>
+<%}%>
+			default: return defaultCase(theEObject);
+		}
+	}
+<%for (GenClass genClass : genPackage.getAllSwitchGenClasses()) {%>
+
+	/**
+	 * Returns the result of interpreting the object as an instance of '<em><%=genClass.getFormattedName()%></em>'.
+	 * <!-- begin-user-doc -->
+	 * This implementation returns null;
+	 * returning a non-null result will terminate the switch.
+	 * <!-- end-user-doc -->
+	 * @param object the target of the switch.
+	 * @return the result of interpreting the object as an instance of '<em><%=genClass.getFormattedName()%></em>'.
+	 * @see #doSwitch(org.eclipse.emf.ecore.EObject) doSwitch(EObject)
+	 * @generated
+	 */
+	public <%=genClass.getTypeParameters()%><%=returnType%> case<%=genPackage.getClassUniqueName(genClass)%>(<%=genClass.getImportedInterfaceName()%><%=genClass.getInterfaceTypeArguments()%> object)
+	{
+		return null;
+	}
+<%}%>
+
+	/**
+	 * Returns the result of interpreting the object as an instance of '<em>EObject</em>'.
+	 * <!-- begin-user-doc -->
+	 * This implementation returns null;
+	 * returning a non-null result will terminate the switch, but this is the last case anyway.
+	 * <!-- end-user-doc -->
+	 * @param object the target of the switch.
+	 * @return the result of interpreting the object as an instance of '<em>EObject</em>'.
+	 * @see #doSwitch(org.eclipse.emf.ecore.EObject)
+	 * @generated
+	 */
+	public <%=returnType%> defaultCase(EObject object)
+	{
+		return null;
+	}
+
+} //<%=genPackage.getSwitchClassName()%>
+<%genModel.emitSortedImports();%>

@@ -1,0 +1,46 @@
+<%@ jet package="org.eclipse.emf.codegen.ecore.templates.edit" imports="java.util.* org.eclipse.emf.codegen.ecore.genmodel.*" class="ManifestMF" version="$Id: manifest.mfjet,v 1.9 2010/04/28 20:38:09 khussey Exp $" %>
+<%
+/**
+ * <copyright>
+ *
+ * Copyright (c) 2005-2010 IBM Corporation and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors:
+ *   IBM - Initial API and implementation
+ *
+ * </copyright>
+ */
+%>
+<%GenModel genModel = (GenModel)argument;%>
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: %pluginName
+Bundle-SymbolicName: <%=genModel.getEditPluginID()%>;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-ClassPath: <%if (genModel.isRuntimeJar()) {%><%=genModel.getEditPluginID()%>.jar<%}else{%>.<%}%>
+<%if (genModel.getRuntimePlatform() != GenRuntimePlatform.GWT) {%>
+Bundle-Activator: <%=genModel.getQualifiedEditPluginClassName()%>$Implementation
+<%}%>
+Bundle-Vendor: %providerName
+Bundle-Localization: plugin
+<%if (genModel.getComplianceLevel() == GenJDKLevel.JDK50_LITERAL) {%>
+Bundle-RequiredExecutionEnvironment: J2SE-1.5
+<%} else if (genModel.getComplianceLevel() == GenJDKLevel.JDK60_LITERAL) {%>
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+<%}%>
+<%Iterator<String> packagesIterator = genModel.getEditQualifiedPackageNames().iterator(); if (packagesIterator.hasNext()) { String pack = packagesIterator.next();%>
+Export-Package: <%=pack%><%while(packagesIterator.hasNext()) { pack = packagesIterator.next();%>,
+ <%=pack%><%}%>
+<%}%>
+<%Iterator<String> requiredPluginIterator = genModel.getEditRequiredPlugins().iterator(); if (requiredPluginIterator.hasNext()) { String pluginID = requiredPluginIterator.next();%>
+Require-Bundle: <%=pluginID%><%if (!pluginID.startsWith("org.eclipse.core.runtime")){%>;visibility:=reexport<%} while(requiredPluginIterator.hasNext()) { pluginID = requiredPluginIterator.next();%>,
+ <%=pluginID%><%if (!pluginID.startsWith("org.eclipse.core.runtime")){%>;visibility:=reexport<%}}%>
+<%}%>
+<%if (genModel.getRuntimeVersion() == GenRuntimeVersion.EMF22 || genModel.getRuntimeVersion() == GenRuntimeVersion.EMF23) {%>
+Eclipse-LazyStart: true
+<%}%>
+Bundle-ActivationPolicy: lazy

@@ -5,12 +5,16 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.telehash.model.Line;
+import org.telehash.model.TelehashFactory;
 
 import com.google.common.collect.MapMaker;
 
 public class SwitchState {
 
 	static private Logger logger = LoggerFactory.getLogger(SwitchState.class);
+	
+	static private TelehashFactory tf = TelehashFactory.eINSTANCE;
 	
 	public enum ConnectionStatus {
 		SEEDING,
@@ -69,7 +73,7 @@ public class SwitchState {
 		Hash endHash = Hash.of(endpoint);
 		Line line = lines.get(endHash);
 		if (line == null || !line.getAddress().equals(endpoint)) {
-			line = new Line(endpoint, endHash);
+			line = tf.createLine().withAddress(endpoint).withEnd(endHash);
 			lines.put(endHash, line);
 		}
 		return line;

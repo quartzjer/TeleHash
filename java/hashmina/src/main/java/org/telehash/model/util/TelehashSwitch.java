@@ -11,6 +11,10 @@ import java.util.List;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.json.model.JsObject;
+import org.telehash.model.*;
+import org.telehash.model.Line;
+import org.telehash.model.TapRule;
+import org.telehash.model.TelehashObject;
 import org.telehash.model.TelehashPackage;
 import org.telehash.model.Telex;
 
@@ -85,11 +89,38 @@ public class TelehashSwitch<T> {
 	 */
 	protected T doSwitch(int classifierID, EObject theEObject) {
 		switch (classifierID) {
+		case TelehashPackage.TELEHASH_OBJECT: {
+			TelehashObject telehashObject = (TelehashObject) theEObject;
+			T result = caseTelehashObject(telehashObject);
+			if (result == null)
+				result = caseJsObject(telehashObject);
+			if (result == null)
+				result = defaultCase(theEObject);
+			return result;
+		}
 		case TelehashPackage.TELEX: {
 			Telex telex = (Telex) theEObject;
 			T result = caseTelex(telex);
 			if (result == null)
+				result = caseTelehashObject(telex);
+			if (result == null)
 				result = caseJsObject(telex);
+			if (result == null)
+				result = defaultCase(theEObject);
+			return result;
+		}
+		case TelehashPackage.TAP_RULE: {
+			TapRule tapRule = (TapRule) theEObject;
+			T result = caseTapRule(tapRule);
+			if (result == null)
+				result = caseJsObject(tapRule);
+			if (result == null)
+				result = defaultCase(theEObject);
+			return result;
+		}
+		case TelehashPackage.LINE: {
+			Line line = (Line) theEObject;
+			T result = caseLine(line);
 			if (result == null)
 				result = defaultCase(theEObject);
 			return result;
@@ -97,6 +128,21 @@ public class TelehashSwitch<T> {
 		default:
 			return defaultCase(theEObject);
 		}
+	}
+
+	/**
+	 * Returns the result of interpreting the object as an instance of '<em>Object</em>'.
+	 * <!-- begin-user-doc -->
+	 * This implementation returns null;
+	 * returning a non-null result will terminate the switch.
+	 * <!-- end-user-doc -->
+	 * @param object the target of the switch.
+	 * @return the result of interpreting the object as an instance of '<em>Object</em>'.
+	 * @see #doSwitch(org.eclipse.emf.ecore.EObject) doSwitch(EObject)
+	 * @generated
+	 */
+	public T caseTelehashObject(TelehashObject object) {
+		return null;
 	}
 
 	/**
@@ -111,6 +157,36 @@ public class TelehashSwitch<T> {
 	 * @generated
 	 */
 	public T caseTelex(Telex object) {
+		return null;
+	}
+
+	/**
+	 * Returns the result of interpreting the object as an instance of '<em>Tap Rule</em>'.
+	 * <!-- begin-user-doc -->
+	 * This implementation returns null;
+	 * returning a non-null result will terminate the switch.
+	 * <!-- end-user-doc -->
+	 * @param object the target of the switch.
+	 * @return the result of interpreting the object as an instance of '<em>Tap Rule</em>'.
+	 * @see #doSwitch(org.eclipse.emf.ecore.EObject) doSwitch(EObject)
+	 * @generated
+	 */
+	public T caseTapRule(TapRule object) {
+		return null;
+	}
+
+	/**
+	 * Returns the result of interpreting the object as an instance of '<em>Line</em>'.
+	 * <!-- begin-user-doc -->
+	 * This implementation returns null;
+	 * returning a non-null result will terminate the switch.
+	 * <!-- end-user-doc -->
+	 * @param object the target of the switch.
+	 * @return the result of interpreting the object as an instance of '<em>Line</em>'.
+	 * @see #doSwitch(org.eclipse.emf.ecore.EObject) doSwitch(EObject)
+	 * @generated
+	 */
+	public T caseLine(Line object) {
 		return null;
 	}
 

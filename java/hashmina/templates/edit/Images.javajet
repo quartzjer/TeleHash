@@ -1,0 +1,46 @@
+<%@ jet package="org.eclipse.emf.codegen.ecore.templates.edit" imports="java.util.* org.eclipse.emf.codegen.ecore.genmodel.*" class="Images" version="$Id: Images.javajet,v 1.1 2010/04/28 14:50:50 emerks Exp $" %>
+<%
+/**
+ * <copyright>
+ *
+ * Copyright (c) 2010 Ed Merks and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *   Ed Merks - Initial API and implementation
+ *
+ * </copyright>
+ */
+%>
+<%GenModel genModel = (GenModel)argument; /* Trick to import java.util.* without warnings */Iterator.class.getName();%>
+<%@ include file="../Header.javajetinc"%>
+package <%=genModel.getEditPluginPackageName()%>;
+
+<%genModel.markImportLocation(stringBuffer);%>
+
+/**
+ * <!-- begin-user-doc -->
+ * <!-- end-user-doc -->
+ * @generated
+ */
+public interface <%=genModel.getEditPluginClassName()%>Images extends <%=genModel.getImportedName("com.google.gwt.resources.client.ClientBundle")%>
+{
+<%for (GenPackage genPackage : genModel.getAllGenAndUsedGenPackagesWithClassifiers()) {%>
+  <%for (GenClass genClass : genPackage.getGenClasses()) {%>
+    <%if (genClass.isImage()) { String image = genClass.getItemIconFileName(); image = image.substring(image.lastIndexOf("/icons/") + 1); %>
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	@Source("<%=image%>")
+	<%=genModel.getImportedName("com.google.gwt.resources.client.ImageResource")%> <%=genClass.getSafeUncapName()%>();
+
+    <%}%>
+  <%}%>
+<%}%>
+}
+<%genModel.emitSortedImports();%>

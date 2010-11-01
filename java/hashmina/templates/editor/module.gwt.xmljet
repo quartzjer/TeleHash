@@ -1,0 +1,35 @@
+<%@ jet package="org.eclipse.emf.codegen.ecore.templates.editor" imports="java.util.* org.eclipse.emf.codegen.ecore.genmodel.*" class="ModuleGWTXML" version="$Id: module.gwt.xmljet,v 1.1 2010/08/24 16:59:38 emerks Exp $" %>
+<%
+/**
+ * <copyright>
+ *
+ * Copyright (c) 2010 Ed Merks and others.
+ * All rights reserved.   This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors: 
+ *   Ed Merks - Initial API and implementation
+ *
+ * </copyright>
+ */
+%>
+<%GenModel genModel = (GenModel)argument; /* Trick to import java.util.* without warnings */Iterator.class.getName();%>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit 2.0.1//EN" "http://google-web-toolkit.googlecode.com/svn/tags/2.0.1/distro-source/core/src/gwt-module.dtd">
+
+<%@ include file="../Header.xmljetinc"%>
+
+<module>
+  <inherits name='com.google.gwt.user.theme.standard.Standard'/>
+<%for (String inherits : genModel.getEditorModuleInherits()) {%>
+  <inherits name="<%=inherits%>" />
+<%}%>
+
+  <entry-point class='<%=genModel.getQualifiedEditorEntryPointClassName()%>'/>
+
+<%for (String source : genModel.getEditorModuleSources()) {%>
+  <source path="<%=source%>"/>
+<%}%>
+</module>
