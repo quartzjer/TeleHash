@@ -39,6 +39,7 @@ public class SeeHandler implements TelexHandler {
 		}
 		
 		public void execute() {
+			logger.info("BEGIN .see HANDLER");
 		    for (InetSocketAddress seeAddr : telex.getSee()) {
 		    	if (seeAddr.equals(switchHandler.getAddress())) {
 		    		continue;
@@ -65,6 +66,7 @@ public class SeeHandler implements TelexHandler {
 		            // send direct (should open our outgoing to them)
 		        	Telex telexOut = tf.createTelex().withTo(seeAddr)
 		        		.withEnd(switchHandler.getAddressHash());
+		            switchHandler.send(telexOut);
 		            
 		            // send pop signal back to the switch who .see'd us in case the new one is behind a nat
 		            telexOut = (Telex) tf.createTelex().withTo(recvLine)
@@ -75,6 +77,7 @@ public class SeeHandler implements TelexHandler {
 		            switchHandler.send(telexOut);
 		        }
 		    }
+			logger.info("END .see HANDLER");
 		}
 
 		private boolean bucketWant(InetSocketAddress seeAddr, Hash seeHash) {
