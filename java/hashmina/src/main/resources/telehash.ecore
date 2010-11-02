@@ -3,7 +3,7 @@
     xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="telehash"
     nsURI="http://telehash.org/ecore/2010" nsPrefix="telehash">
-  <eClassifiers xsi:type="ecore:EClass" name="TelehashObject" abstract="true" eSuperTypes="../../../../org.eclipse.emf.json/src/main/resources/json.ecore#//JsObject">
+  <eClassifiers xsi:type="ecore:EClass" name="TelehashObject" eSuperTypes="../../../../org.eclipse.emf.json/src/main/resources/json.ecore#//JsObject">
     <eOperations name="getHeader" eType="ecore:EDataType ../../../../org.eclipse.emf.json/src/main/resources/json.ecore#//AnySimpleType">
       <eParameters name="key" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     </eOperations>

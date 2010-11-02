@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 
+import junit.framework.Assert;
 import junit.framework.TestCase;
 
 import org.telehash.Hash;
@@ -73,4 +74,13 @@ public class TestJsonUtil extends TestCase {
 		System.out.println(jsonTxt);
 	}
 	
+	public void testParseTaps() throws Exception {
+		String msg =
+			"{\".tap\":[{\"has\":[\"+pop\"],\"is\":{\"+end\":\"38666817e1b38470644e004b9356c1622368fa57\"}}],\"_line\":346630599,\"_br\":18218,\"+end\":\"38666817e1b38470644e004b9356c1622368fa57\",\"_to\":\"24.155.138.225:54782\"}";	
+		Telex telex = (Telex) JsonMapper.fromJson(msg, TelehashPackage.Literals.TELEX);
+		Assert.assertTrue(telex.getTap().get(0).getHas().contains("+pop"));
+		Assert.assertTrue(
+				((String) telex.getTap().get(0).getIs().getSignal("end")).startsWith("38666"));
+		
+	}
 }

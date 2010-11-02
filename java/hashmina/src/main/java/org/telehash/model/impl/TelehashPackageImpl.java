@@ -575,7 +575,7 @@ public class TelehashPackageImpl extends EPackageImpl implements
 
 		// Initialize classes and features; add operations and parameters
 		initEClass(telehashObjectEClass, TelehashObject.class,
-				"TelehashObject", IS_ABSTRACT, !IS_INTERFACE,
+				"TelehashObject", !IS_ABSTRACT, !IS_INTERFACE,
 				IS_GENERATED_INSTANCE_CLASS);
 
 		EOperation op = addEOperation(telehashObjectEClass,

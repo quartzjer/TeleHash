@@ -20,8 +20,7 @@ import org.telehash.model.TelehashPackage;
  *
  * @generated
  */
-public abstract class TelehashObjectImpl extends JsObjectImpl implements
-		TelehashObject {
+public class TelehashObjectImpl extends JsObjectImpl implements TelehashObject {
 	/**
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->

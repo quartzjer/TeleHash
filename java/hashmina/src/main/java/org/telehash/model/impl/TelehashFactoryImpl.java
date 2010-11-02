@@ -67,6 +67,8 @@ public class TelehashFactoryImpl extends EFactoryImpl implements
 	@Override
 	public EObject create(EClass eClass) {
 		switch (eClass.getClassifierID()) {
+		case TelehashPackage.TELEHASH_OBJECT:
+			return createTelehashObject();
 		case TelehashPackage.TELEX:
 			return createTelex();
 		case TelehashPackage.TAP_RULE:
@@ -113,6 +115,16 @@ public class TelehashFactoryImpl extends EFactoryImpl implements
 			throw new IllegalArgumentException("The datatype '"
 					+ eDataType.getName() + "' is not a valid classifier");
 		}
+	}
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @generated
+	 */
+	public TelehashObject createTelehashObject() {
+		TelehashObjectImpl telehashObject = new TelehashObjectImpl();
+		return telehashObject;
 	}
 
 	/**

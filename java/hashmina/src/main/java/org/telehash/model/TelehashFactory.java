@@ -27,6 +27,15 @@ public interface TelehashFactory extends EFactory {
 			.init();
 
 	/**
+	 * Returns a new object of class '<em>Object</em>'.
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @return a new object of class '<em>Object</em>'.
+	 * @generated
+	 */
+	TelehashObject createTelehashObject();
+
+	/**
 	 * Returns a new object of class '<em>Telex</em>'.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->

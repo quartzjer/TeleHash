@@ -54,22 +54,31 @@ public final class JsonMapper {
 		EObject result = eClass.getEPackage().getEFactoryInstance().create(eClass);
 		Map<String, EStructuralFeature> fieldFeatureMap = getFieldFeatureMap(eClass);
 		
-		jp.nextToken(); // should == START_OBJECT?
-		while (jp.nextToken() != JsonToken.END_OBJECT) {
+		for (JsonToken nextToken = jp.nextToken(); nextToken != JsonToken.END_OBJECT; nextToken = jp.nextToken()) {
+			
+			// If this is start of object, skip to field
+			if (nextToken == JsonToken.START_OBJECT) {
+				nextToken = jp.nextToken(); // should be FIELD_NAME
+				if (nextToken == JsonToken.END_OBJECT) {
+					break;
+				}
+			}
 			
 			String fieldName = jp.getCurrentName();
+			nextToken = jp.nextToken();
 			EStructuralFeature feature = fieldFeatureMap.get(fieldName);
-			JsonToken nextToken = jp.nextToken();
 			
 			if (feature instanceof EAttribute) {
 				
 				EDataType dataType = (EDataType) feature.getEType();
-				if (feature.isMany() && nextToken == JsonToken.START_ARRAY) {
-					EList values = new BasicEList();
-					while (jp.nextToken() != JsonToken.END_ARRAY) {
-						values.add(parseValueForDataType(jp, dataType));
+				if (feature.isMany()) {
+					if (nextToken == JsonToken.START_ARRAY) {
+						EList values = new BasicEList();
+						while (jp.nextToken() != JsonToken.END_ARRAY) {
+							values.add(parseValueForDataType(jp, dataType));
+						}
+						result.eSet(feature, values);
 					}
-					result.eSet(feature, values);
 				}
 				else {
 					result.eSet(feature, parseValueForDataType(jp, dataType));

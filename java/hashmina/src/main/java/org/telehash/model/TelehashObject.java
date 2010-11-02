@@ -15,7 +15,7 @@ import org.eclipse.emf.json.model.JsObject;
  *
  *
  * @see org.telehash.model.TelehashPackage#getTelehashObject()
- * @model abstract="true"
+ * @model
  * @generated
  */
 public interface TelehashObject extends JsObject {
