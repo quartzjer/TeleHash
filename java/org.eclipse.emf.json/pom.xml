@@ -2,11 +2,17 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.eclipse.emf</groupId>
+  <groupId>telehash</groupId>
   <artifactId>org.eclipse.emf.json</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <packaging>jar</packaging>
 
+  <parent>
+    <groupId>telehash</groupId>
+    <artifactId>telehash</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+  
   <name>org.eclipse.emf.json</name>
   <url>http://maven.apache.org</url>
 
@@ -16,11 +22,15 @@
 
   <build>
   	<plugins>
-  		<plugin>
-  			<groupId>net.sf.mapasuta.build.maven.plugins</groupId>
-  			<artifactId>maven-emfgen-plugin</artifactId>
-  			<version>1.1</version>
-  		</plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>2.0.2</version>
+            <configuration>
+                <source>1.6</source>
+                <target>1.6</target>
+            </configuration>
+        </plugin>
   	</plugins>
   </build>
   <dependencies>
@@ -32,8 +42,8 @@
     </dependency>
     <dependency>
     	<groupId>org.eclipse.emf</groupId>
-    	<artifactId>ecore</artifactId>
-    	<version>2.3.0-v200706262000</version>
+    	<artifactId>org.eclipse.emf.ecore</artifactId>
+    	<version>2.6.0.v20100614-1136</version>
     	<type>jar</type>
     	<scope>compile</scope>
     </dependency>

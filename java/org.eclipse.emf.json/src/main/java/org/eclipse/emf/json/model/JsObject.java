@@ -6,6 +6,7 @@
  */
 package org.eclipse.emf.json.model;
 
+import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.common.util.EMap;
 import org.eclipse.emf.ecore.EObject;
 
@@ -51,6 +52,14 @@ public interface JsObject extends EObject {
 	 * @generated
 	 */
 	Object get(String key);
+
+	/**
+	 * <!-- begin-user-doc -->
+	 * <!-- end-user-doc -->
+	 * @model kind="operation"
+	 * @generated
+	 */
+	EList<String> getFieldNames();
 
 	/**
 	 * <!-- begin-user-doc -->

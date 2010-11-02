@@ -3,7 +3,6 @@ package org.eclipse.emf.json;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -24,25 +23,14 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.emf.ecore.EcorePackage;
-import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.emf.json.model.JsObject;
 import org.eclipse.emf.json.model.JsonPackage;
 
 public final class JsonMapper {
 
-	private static final String JSON_KEY = "key";
-	private static final String JSON_KEY_TYPE = "keyType";
-	private static final String JSON_METADATA_ANN_URI = "JsonMetadata";
-	private static final String JSON_KEYTYPE_COMMAND = "command";
-	private static final String JSON_KEYTYPE_SIGNAL = "signal";
-	private static final String JSON_KEYTYPE_HEADER = "header";
-
 	public static EObject fromJson(String jsonTxt, EClass eClass) throws IOException {
 		return new JsonMapper().from(jsonTxt, eClass);
 	}
-	
-	private Map<EClass, Map<String, EStructuralFeature>> jsonMetadataCache =
-		new HashMap<EClass, Map<String,EStructuralFeature>>();
 	
 	public EObject from(String jsonTxt, EClass eClass) throws IOException {
 		JsonFactory f = new MappingJsonFactory();
@@ -50,9 +38,10 @@ public final class JsonMapper {
 		return from(jp, eClass);
 	}
 	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private EObject from(JsonParser jp, EClass eClass) throws JsonParseException, IOException {
 		EObject result = eClass.getEPackage().getEFactoryInstance().create(eClass);
-		Map<String, EStructuralFeature> fieldFeatureMap = getFieldFeatureMap(eClass);
+		Map<String, EStructuralFeature> fieldFeatureMap = JsonMetadata.INSTANCE.getJsonFeatures(eClass);
 		
 		for (JsonToken nextToken = jp.nextToken(); nextToken != JsonToken.END_OBJECT; nextToken = jp.nextToken()) {
 			
@@ -91,7 +80,6 @@ public final class JsonMapper {
 				}
 				
 				if (feature.isMany() && nextToken == JsonToken.START_ARRAY) {
-					@SuppressWarnings("rawtypes")
 					EList values = new BasicEList();
 					while (jp.nextToken() != JsonToken.END_ARRAY) {
 						values.add(from(jp, eRef.getEReferenceType()));
@@ -165,22 +153,6 @@ public final class JsonMapper {
 		return dataType.getEPackage().getEFactoryInstance().createFromString(dataType, jp.getText());
 	}
 
-	private Map<String, EStructuralFeature> getFieldFeatureMap(EClass eClass) {
-		Map<String, EStructuralFeature> map = jsonMetadataCache.get(eClass);
-		if (map != null) {
-			return map;
-		}
-		map = new HashMap<String, EStructuralFeature>();
-		
-		for (EStructuralFeature feature : eClass.getEAllStructuralFeatures()) {
-			String key = getJsonFieldName(feature);
-			map.put(key, feature);
-		}
-		
-		jsonMetadataCache.put(eClass, map);
-		return map;
-	}
-
 	static public String toJson(EObject eObj) throws IOException {
 		return new JsonMapper().to(eObj);
 	}
@@ -196,11 +168,12 @@ public final class JsonMapper {
 		return result.toString();
 	}
 
+	@SuppressWarnings("unchecked")
 	private void to(EObject eObj, JsonGenerator jg) throws JsonGenerationException, IOException {
 		EClass eClass = eObj.eClass();
 		jg.writeStartObject();
 		for (EStructuralFeature feature : eClass.getEStructuralFeatures()) {
-			String jsonKey = getJsonFieldName(feature);
+			String jsonKey = JsonMetadata.getJsonFieldName(feature);
 			if (feature.isUnsettable() && !eObj.eIsSet(feature)) {
 				continue;
 			}
@@ -232,6 +205,7 @@ public final class JsonMapper {
 			else if (feature instanceof EReference) {
 				if (feature.isMany()) {
 					List<EObject> childObjs = (List<EObject>) eObj.eGet(feature);
+					jg.writeFieldName(jsonKey);
 					jg.writeStartArray();
 					for (EObject childObj : childObjs) {
 						to(childObj, jg);
@@ -241,6 +215,7 @@ public final class JsonMapper {
 				else {
 					EObject childObj = (EObject) eObj.eGet(feature);
 					if (childObj != null) {
+						jg.writeFieldName(jsonKey);
 						to(childObj, jg);
 					}
 				}
@@ -286,28 +261,4 @@ public final class JsonMapper {
 				dataType.getEPackage().getEFactoryInstance().convertToString(dataType, value));
 	}
 
-	private static String getJsonFieldName(EStructuralFeature feature) {
-		String key = EcoreUtil.getAnnotation(feature, JSON_METADATA_ANN_URI, JSON_KEY);
-		if (key == null) {
-			key = feature.getName();
-		}
-		
-		StringBuilder keyBuilder = new StringBuilder();
-		String keyType = EcoreUtil.getAnnotation(feature, JSON_METADATA_ANN_URI, JSON_KEY_TYPE);
-		if (keyType != null) {
-			if (keyType.equals(JSON_KEYTYPE_COMMAND)) {
-				keyBuilder.append('.');
-			}
-			else if (keyType.equals(JSON_KEYTYPE_SIGNAL)) {
-				keyBuilder.append('+');
-			}
-			else if (keyType.equals(JSON_KEYTYPE_HEADER)) {
-				keyBuilder.append('_');
-			}
-		}
-		keyBuilder.append(key);
-		
-		return keyBuilder.toString();
-	}
-	
 }

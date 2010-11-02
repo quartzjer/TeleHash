@@ -1,0 +1,11 @@
+<project>
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>telehash</groupId>
+	<artifactId>telehash</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<modules>
+		<module>telehash-core</module>
+		<module>org.eclipse.emf.json</module>
+	</modules>
+</project>

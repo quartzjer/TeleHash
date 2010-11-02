@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="telehash"
+    nsURI="http://telehash.org/ecore/2010" nsPrefix="telehash">
+  <eClassifiers xsi:type="ecore:EClass" name="Telex" eSuperTypes="../../../../org.eclipse.emf.json/src/main/resources/json.ecore#//JsObject">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="to" eType="#//Endpoint">
+      <eAnnotations source="JsonMetadata">
+        <details key="keyType" value="header"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="end" eType="#//Hash" unsettable="true">
+      <eAnnotations source="JsonMetadata">
+        <details key="keyType" value="signal"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="line" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        unsettable="true">
+      <eAnnotations source="JsonMetadata">
+        <details key="keyType" value="header"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="ring" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        unsettable="true">
+      <eAnnotations source="JsonMetadata">
+        <details key="keyType" value="header"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="bytesReceived" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        defaultValueLiteral="0" unsettable="true">
+      <eAnnotations source="JsonMetadata">
+        <details key="keyType" value="header"/>
+        <details key="key" value="br"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="see" upperBound="-1" eType="#//Endpoint"
+        unsettable="true">
+      <eAnnotations source="JsonMetadata">
+        <details key="keyType" value="command"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="tap" upperBound="-1" eType="#//TapRule"
+        unsettable="true" containment="true">
+      <eAnnotations source="JsonMetadata">
+        <details key="keyType" value="command"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="TapRule" eSuperTypes="../../../../org.eclipse.emf.json/src/main/resources/json.ecore#//JsObject">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="is" eType="ecore:EClass ../../../../org.eclipse.emf.json/src/main/resources/json.ecore#//JsObject"
+        unsettable="true" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="has" upperBound="-1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+        unsettable="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Line">
+    <eOperations name="isRulesMatch" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean">
+      <eParameters name="telex" eType="#//Telex"/>
+    </eOperations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="address" eType="#//Endpoint"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="end" eType="#//Hash"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="neighbors" upperBound="-1"
+        eType="#//Hash"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="ringIn" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        unsettable="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="ringOut" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        unsettable="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="init" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong"
+        unsettable="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="seenAt" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong"
+        unsettable="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="sentAt" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong"
+        unsettable="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="lineAt" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong"
+        unsettable="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="tapLastAt" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        unsettable="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="br" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        defaultValueLiteral="0"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="brIn" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        defaultValueLiteral="0"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="brOut" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        defaultValueLiteral="0"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="bsent" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        defaultValueLiteral="0"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="lineId" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        unsettable="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="visible" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="false"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="advertised" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="false"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="rules" upperBound="-1"
+        eType="#//TapRule" unsettable="true" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="session" eType="#//IoSession"
+        transient="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="Endpoint" instanceClassName="java.net.InetSocketAddress"/>
+  <eClassifiers xsi:type="ecore:EDataType" name="Hash" instanceClassName="org.telehash.Hash"/>
+  <eClassifiers xsi:type="ecore:EDataType" name="IoSession" instanceClassName="org.apache.mina.core.session.IoSession"
+      serializable="false"/>
+</ecore:EPackage>

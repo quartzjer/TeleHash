@@ -19,6 +19,7 @@
       <genOperations ecoreOperation="json.ecore#//JsObject/get">
         <genParameters ecoreParameter="json.ecore#//JsObject/get/key"/>
       </genOperations>
+      <genOperations ecoreOperation="json.ecore#//JsObject/getFieldNames"/>
       <genOperations ecoreOperation="json.ecore#//JsObject/with">
         <genParameters ecoreParameter="json.ecore#//JsObject/with/key"/>
         <genParameters ecoreParameter="json.ecore#//JsObject/with/value"/>

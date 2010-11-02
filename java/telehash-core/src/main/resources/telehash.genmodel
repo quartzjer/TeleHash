@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<genmodel:GenModel xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI" xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    xmlns:genmodel="http://www.eclipse.org/emf/2002/GenModel" modelDirectory="/telehash-core/src/main/java"
+    editDirectory="/telehash-edit/src" editorDirectory="/telehash-editor/src" modelPluginID=""
+    templateDirectory="telehash-core/templates" dynamicTemplates="true" modelName="Telehash"
+    updateClasspath="false" codeFormatting="true" testsDirectory="/telehash-core/src"
+    importerID="org.eclipse.emf.importer.ecore" bundleManifest="false" complianceLevel="6.0"
+    copyrightFields="false" language="" usedGenPackages="../../../../org.eclipse.emf.json/src/main/resources/json.genmodel#//json">
+  <foreignModel>telehash.ecore</foreignModel>
+  <genPackages prefix="Telehash" basePackage="org" disposableProviderFactory="true"
+      interfacePackageSuffix="model" metaDataPackageSuffix="model" classPackageSuffix="model.impl"
+      utilityPackageSuffix="model.util" providerPackageSuffix="model.provider" presentationPackageSuffix="model.presentation"
+      testsPackageSuffix="model.tests" ecorePackage="telehash.ecore#/">
+    <genDataTypes ecoreDataType="telehash.ecore#//Endpoint"/>
+    <genDataTypes ecoreDataType="telehash.ecore#//Hash"/>
+    <genDataTypes ecoreDataType="telehash.ecore#//IoSession"/>
+    <genClasses ecoreClass="telehash.ecore#//Telex">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Telex/to"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Telex/end"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Telex/line"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Telex/ring"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Telex/bytesReceived"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Telex/see"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference telehash.ecore#//Telex/tap"/>
+    </genClasses>
+    <genClasses ecoreClass="telehash.ecore#//TapRule">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference telehash.ecore#//TapRule/is"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//TapRule/has"/>
+    </genClasses>
+    <genClasses ecoreClass="telehash.ecore#//Line">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/address"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/end"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/neighbors"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/ringIn"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/ringOut"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/init"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/seenAt"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/sentAt"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/lineAt"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/tapLastAt"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/br"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/brIn"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/brOut"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/bsent"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/lineId"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/visible"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/advertised"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference telehash.ecore#//Line/rules"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute telehash.ecore#//Line/session"/>
+      <genOperations ecoreOperation="telehash.ecore#//Line/isRulesMatch">
+        <genParameters ecoreParameter="telehash.ecore#//Line/isRulesMatch/telex"/>
+      </genOperations>
+    </genClasses>
+  </genPackages>
+</genmodel:GenModel>
