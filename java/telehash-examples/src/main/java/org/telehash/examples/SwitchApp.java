@@ -1,4 +1,4 @@
-package org.telehash;
+package org.telehash.examples;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -14,14 +14,15 @@ import org.apache.mina.transport.socket.DatagramSessionConfig;
 import org.apache.mina.transport.socket.nio.NioDatagramAcceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.telehash.SwitchHandler;
 
 /**
  * Hello world!
  * 
  */
-public class App {
+public class SwitchApp {
 
-	static private Logger logger = LoggerFactory.getLogger(App.class);
+	static private Logger logger = LoggerFactory.getLogger(SwitchApp.class);
 
 	public static void main(String[] args) throws IOException {
 		

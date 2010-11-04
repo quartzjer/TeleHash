@@ -20,6 +20,8 @@ import org.telehash.model.Telex;
  */
 public class TestJsonUtil extends TestCase {
 	
+	static private TelehashFactory tf = TelehashFactory.eINSTANCE;
+	
 	/**
 	 * Rigourous Test :-)
 	 * @throws IOException 
@@ -97,5 +99,18 @@ public class TestJsonUtil extends TestCase {
 		
 		JsObject thObj = telex.getTap().get(0).getIs();
 		Assert.assertEquals("38666817e1b38470644e004b9356c1622368fa57", thObj.get("+end"));
+	}
+	
+	public void testWallTelex() throws Exception {
+		Telex telex = (Telex) tf.createTelex()
+			.withTo(new InetSocketAddress(Inet4Address.getLocalHost(), 40104))
+			.withEnd(Hash.of("42"))
+			.with("+guid", System.currentTimeMillis())
+			.with("_hop", 1)
+			.with("+wall", "hello world");
+		String json = JsonMapper.toJson(telex);
+		System.out.println(json);
+		Assert.assertTrue(json.contains("+wall"));
+		Assert.assertTrue(json.contains("hello world"));
 	}
 }

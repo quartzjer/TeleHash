@@ -6,6 +6,7 @@
 	<packaging>pom</packaging>
 	<modules>
 		<module>telehash-core</module>
+		<module>telehash-examples</module>
 		<module>org.eclipse.emf.json</module>
 	</modules>
 </project>

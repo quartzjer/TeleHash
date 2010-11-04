@@ -172,7 +172,7 @@ public final class JsonMapper {
 	private void to(EObject eObj, JsonGenerator jg) throws JsonGenerationException, IOException {
 		EClass eClass = eObj.eClass();
 		jg.writeStartObject();
-		for (EStructuralFeature feature : eClass.getEStructuralFeatures()) {
+		for (EStructuralFeature feature : eClass.getEAllStructuralFeatures()) {
 			String jsonKey = JsonMetadata.getJsonFieldName(feature);
 			if (feature.isUnsettable() && !eObj.eIsSet(feature)) {
 				continue;

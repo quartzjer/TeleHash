@@ -31,7 +31,9 @@ import org.telehash.model.TelehashFactory;
 import org.telehash.model.TelehashPackage;
 import org.telehash.model.Telex;
 
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -57,9 +59,9 @@ public class SwitchHandler extends IoHandlerAdapter {
 		connector.setHandler(this);
 		allocator = new SimpleBufferAllocator();
 		
-		addTelexHandler(".see", new SeeHandler());
-		addTelexHandler(".tap", new TapHandler());
-		addTelexHandler("+end", new EndSignalHandler());
+		addTelexHandler(new SeeHandler());
+		addTelexHandler(new TapHandler());
+		addTelexHandler(new EndSignalHandler());
 	}
 	
 	@Override
@@ -80,6 +82,16 @@ public class SwitchHandler extends IoHandlerAdapter {
 		return state.getLines().get(endHash);
 	}
 	
+	public Collection<InetSocketAddress> getLineAddresses() {
+		return Collections2.transform(state.getLines().values(), 
+				new Function<Line, InetSocketAddress>() {
+					@Override
+					public InetSocketAddress apply(Line from) {
+						return from.getAddress();
+					}
+				});
+	}
+	
 	public InetSocketAddress getAddress() {
 		return state.getSelfAddress();
 	}
@@ -88,7 +100,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 		return state.getSelfHash();
 	}
 
-	public void addTelexHandler(String key, TelexHandler handler) {
+	public void addTelexHandler(TelexHandler handler) {
 		telexHandlers.add(handler);
 	}
 	
@@ -549,11 +561,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 				break;
 			}
 			
-			String tapEndStr = (String) tapRule.getIs().get("+end");
-	        if (tapEndStr == null) {
-	            continue;
-	        }
-	        Hash tapEnd = new Hash(tapEndStr);
+			Hash tapEnd = (Hash) tapRule.getIs().get("+end");
 	        
 	        for (Hash hash : Iterables.limit(nearTo(tapEnd, state.getSelfAddress()), 3)) {
 	            Line line = getLine(hash);
@@ -570,6 +578,10 @@ public class SwitchHandler extends IoHandlerAdapter {
 	            send(telexOut);
 	        }
 	    }
+	}
+	
+	public void addTapRule(TapRule rule) {
+		tapRules.add(rule);
 	}
 	
 }
