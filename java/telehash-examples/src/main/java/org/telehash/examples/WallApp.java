@@ -104,7 +104,7 @@ public class WallApp {
 		InetSocketAddress bindAddress = new InetSocketAddress(0);
 		acceptor.bind(bindAddress);
 
-		logger.info("Listening on address: "
+		logger.debug("Listening on address: "
 				+ acceptor.getLocalAddress().getPort());
 		
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));

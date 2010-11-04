@@ -39,7 +39,7 @@ public class SeeHandler implements TelexHandler {
 		}
 		
 		public void execute() {
-			logger.info("BEGIN .see HANDLER");
+			logger.debug("BEGIN .see HANDLER");
 		    for (InetSocketAddress seeAddr : telex.getSee()) {
 		    	if (seeAddr.equals(switchHandler.getAddress())) {
 		    		continue;
@@ -47,7 +47,7 @@ public class SeeHandler implements TelexHandler {
 		        
 		        // they're making themselves visible now, awesome
 		        if (seeAddr.equals(recvLine.getAddress()) && !recvLine.isVisible()) {
-		            logger.info("VISIBLE " + recvLine.getAddress());
+		            logger.debug("VISIBLE " + recvLine.getAddress());
 		            recvLine.setVisible(true);
 		            recvLine.getNeighbors().addAll(
 		            		switchHandler.nearTo(recvLine.getEnd(), switchHandler.getAddress()));
@@ -77,12 +77,12 @@ public class SeeHandler implements TelexHandler {
 		            switchHandler.send(telexOut);
 		        }
 		    }
-			logger.info("END .see HANDLER");
+			logger.debug("END .see HANDLER");
 		}
 
 		private boolean bucketWant(InetSocketAddress seeAddr, Hash seeHash) {
 			int dist = seeHash.diffBit(switchHandler.getAddressHash());
-			logger.info("BUCKET WANT[{} -> {} -> {}]", new Object[]{
+			logger.debug("BUCKET WANT[{} -> {} -> {}]", new Object[]{
 					seeAddr, Integer.toString(dist), switchHandler.getAddress()});
 			return dist >= 0;
 		}

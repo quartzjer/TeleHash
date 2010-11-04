@@ -69,13 +69,13 @@ public class SwitchHandler extends IoHandlerAdapter {
 		super.sessionCreated(session);
 		Line line = state.getOrCreateLine((InetSocketAddress)session.getRemoteAddress());
 		session.setAttribute("line", line);
-		logger.info("Session[{}] created", session.getId());
+		logger.debug("Session[{}] created", session.getId());
 	}
 
 	@Override
 	public void sessionClosed(IoSession session) throws Exception {
 		super.sessionClosed(session);
-		logger.info("Session[{}] closed", session.getId());
+		logger.debug("Session[{}] closed", session.getId());
 	}
 
 	public Line getLine(Hash endHash) {
@@ -173,7 +173,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 			};
 			
 	        if (line != null && line.getSession() != null && line.getSession().getAttribute("line") == line) {
-	            logger.info("SEND[{}]: {} bytes: {}", new Object[]{
+	            logger.debug("SEND[{}]: {} bytes: {}", new Object[]{
 	            		line.getSession().getId(), bytes.length, msg});
 	        	line.getSession().write(buffer).addListener(onWriteComplete);
 	        }
@@ -187,7 +187,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 		                    line.setSession(session);
 		                    session.setAttribute("line", line);
 		                    
-		                    logger.info("SEND[{}]: {} bytes: {}", new Object[]{
+		                    logger.debug("SEND[{}]: {} bytes: {}", new Object[]{
 		                    		session.getId(), bytes.length, msg});
 		                    session.write(buffer).addListener(onWriteComplete);
 		                }
@@ -209,7 +209,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 			IoBuffer buffer = (IoBuffer) message;
 			String response = buffer.getString(decoder);
 			int br = response.getBytes().length;
-			logger.info("RECV[{}] from {}: {} bytes: {}", new Object[]{
+			logger.debug("RECV[{}] from {}: {} bytes: {}", new Object[]{
 					session.getId(),
 					(InetSocketAddress)session.getRemoteAddress(), br, response});
 			Telex telex = (Telex) 
@@ -234,11 +234,11 @@ public class SwitchHandler extends IoHandlerAdapter {
 		
 		boolean lineStatus = checkLine(line, telex, br);
 		if (lineStatus) {
-			logger.info("LINE [{}] STATUS {}", line.getAddress(), 
+			logger.debug("LINE [{}] STATUS {}", line.getAddress(), 
 					telex.isSetLine() ? "OPEN" : "RINGING");
 		}
 		else {
-			logger.info("LINE [{}] FAIL", line.getAddress());
+			logger.debug("LINE [{}] FAIL", line.getAddress());
 			return;
 		}
 		
@@ -265,7 +265,7 @@ public class SwitchHandler extends IoHandlerAdapter {
                 // it's us, it has to be our tap_js        
                 if (matchedLine.getAddress().equals(state.getSelfAddress())) {
                     try {
-						logger.info("STDOUT[{}]", JsonMapper.toJson(telex));
+						logger.debug("STDOUT[{}]", JsonMapper.toJson(telex));
 					} catch (IOException e) {
 						logger.error(e.getMessage(), e);
 					}
@@ -287,7 +287,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 			@Override
 			public void run() {
 				state.setSelfAddress(telex.getTo());
-				logger.info("SELF[{} = {}]", state.getSelfAddress(), state.getSelfHash());
+				logger.debug("SELF[{} = {}]", state.getSelfAddress(), state.getSelfHash());
 				
 				Line line = state.getOrCreateLine(state.getSelfAddress());
 				if (line == null) {
@@ -298,7 +298,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 //				line.getRules().add(getSwitchRules());
 				
 				if (state.getSelfAddress().equals(session.getRemoteAddress())) {
-					logger.info("We're the seed.");
+					logger.debug("We're the seed.");
 				}
 				
 				// start scanning thread
@@ -369,7 +369,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	    	
 	        // already had a ring and this one doesn't match, should be rare
 	        if (line.isSetRingIn() && telex.getRing() != line.getRingIn()) {
-	        	logger.info("unmatched _ring from " + line.getAddress());
+	        	logger.debug("unmatched _ring from " + line.getAddress());
 	            return false;
 	        }
 	        
@@ -387,7 +387,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	    }
 	    
 	    // we're valid at this point, line or otherwise, track bytes
-	    logger.info(
+	    logger.debug(
 	        "BR " + line.getAddress() + " [" + line.getBr() + " += " 
 	        	+ br + "] DIFF " + (line.getBsent() - telex.getBytesReceived()));
 	    line.setBr(line.getBr() + br);
@@ -411,7 +411,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	    long now = time();
 	    int numValid = 0;
 	    
-    	logger.info("SCAN " + state.getLines().size() + " lines");
+    	logger.debug("SCAN " + state.getLines().size() + " lines");
     	
 	    for (Iterator<Entry<Hash, Line>> entryIter = state.getLines().entrySet().iterator(); entryIter.hasNext(); ) {
 	    	Entry<Hash, Line> entry = entryIter.next();
@@ -428,7 +428,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	        if ((line.getSeenAt() == 0 && now - line.getInit() > 70)
 	                || (line.getSeenAt() != 0 && now - line.getSeenAt() > 70)) {
 	            // remove line if they never responded or haven't in a while
-	            logger.info("PURGE[" + hash + " " + line.getAddress() + "] last seen "
+	            logger.debug("PURGE[" + hash + " " + line.getAddress() + "] last seen "
 	            		+ Long.toString(now - line.getSeenAt()) + "s ago");
 	            entryIter.remove();
 	            continue;
@@ -501,7 +501,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	    
 	    Hash firstSeeHash = visibleNeighbors.get(0);
 	    
-	    logger.info(StringUtils.join(
+	    logger.debug(StringUtils.join(
 	    		new String[]{
 	    			"NEARTO " + endHash,
 	    			address.toString(),
@@ -522,7 +522,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	        // this +end == this line then replace the neighbors cache with this result 
 	        // and each in the result walk and insert self into their neighbors
 	        if (addrLine.getEnd().equals(endHash)) {
-	        	logger.info("NEIGH for " + endHash + " was " 
+	        	logger.debug("NEIGH for " + endHash + " was " 
 	        			+ StringUtils.join(addrLine.getNeighbors(), ",") 
 	        			+ " " + visibleNeighbors.size());
 	        	
@@ -530,7 +530,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	        	Iterables.addAll(addrLine.getNeighbors(),
 	        			Iterables.limit(visibleNeighbors, 5));
 	            
-	        	logger.info("NEIGH for " + endHash + " is now " 
+	        	logger.debug("NEIGH for " + endHash + " is now " 
 	        			+ StringUtils.join(addrLine.getNeighbors(), ",") 
 	        			+ " " + visibleNeighbors.size());
 	        	
@@ -541,12 +541,12 @@ public class SwitchHandler extends IoHandlerAdapter {
 	        		}
 	        		
 	        		neighborLine.getNeighbors().add(endHash);
-                    logger.info("SEED " + address + " into " + neighborLine.getAddress());
+                    logger.debug("SEED " + address + " into " + neighborLine.getAddress());
 	        	}
 	        	
 	        }
 	        
-	        logger.info("SEE distance=" + endHash.diffBit(firstSeeHash) 
+	        logger.debug("SEE distance=" + endHash.diffBit(firstSeeHash) 
 	        		+ " count=" + visibleNeighbors.size());
 	        return visibleNeighbors;
 	    }
@@ -573,7 +573,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	            line.setTapLastAt(time());
 	            Telex telexOut = (Telex) tf.createTelex().withTo(line)
 	            	.with(".tap", Lists.newArrayList(tapRule)); // tap the closest ipp to our target end 
-	            logger.info("TAPTAP to {} end {} tap {}", new Object[]{
+	            logger.debug("TAPTAP to {} end {} tap {}", new Object[]{
 	            		line.getAddress(), tapEnd, JsonMapper.toJson(telexOut)});
 	            send(telexOut);
 	        }

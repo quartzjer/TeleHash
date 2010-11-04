@@ -85,13 +85,13 @@ public class SwitchState {
 
 	public void seeding(Runnable runnable) {
 		connectionStatus = ConnectionStatus.SEEDING;
-		logger.info("SEEDING");
+		logger.debug("SEEDING");
 		runnable.run();
 	}
 
 	public void connected(Runnable runnable) {
 		connectionStatus = ConnectionStatus.CONNECTED;
-		logger.info("CONNECTED");
+		logger.debug("CONNECTED");
 		runnable.run();
 	}
 	
@@ -100,7 +100,7 @@ public class SwitchState {
 		selfHash = null;
 		lines.clear();
 		connectionStatus = ConnectionStatus.OFFLINE;
-		logger.info("OFFLINE");
+		logger.debug("OFFLINE");
 		runnable.run();
 	}
 

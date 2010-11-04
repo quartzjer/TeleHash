@@ -14,7 +14,7 @@
   </parent>
   
   <name>telehash-core</name>
-  <url>http://maven.apache.org</url>
+  <url>http://telehash.org</url>
 
   <dependencyManagement>
   	<dependencies>
@@ -35,27 +35,6 @@
                 <target>1.6</target>
             </configuration>
         </plugin>
-        <plugin>
-        	<groupId>org.codehaus.mojo</groupId>
-        	<artifactId>exec-maven-plugin</artifactId>
-        	<version>1.2</version>
-			   <executions>
-			    <execution>
-			     <goals>
-			      <goal>java</goal>
-			     </goals>
-			     <configuration>
-			      <mainClass>org.telehash.App</mainClass>
-			      <arguments>
-			      <!-- 
-			       <argument>arg0</argument>
-			       <argument>arg1</argument>
-			       -->
-			      </arguments>
-			     </configuration>
-			    </execution>
-			   </executions>
-        </plugin>
     </plugins>
   </build>
     
@@ -73,25 +52,23 @@
     	<scope>compile</scope>
     </dependency>
     <dependency>
-    	<groupId>org.apache.mina</groupId>
-    	<artifactId>mina-core</artifactId>
-    	<version>2.0.0</version>
+    	<groupId>org.slf4j</groupId>
+    	<artifactId>slf4j-api</artifactId>
+    	<version>1.6.1</version>
     	<type>jar</type>
-    	<classifier>javadoc</classifier>
-    	<scope>compile</scope>
-    </dependency>
-    <dependency>
-    	<groupId>org.apache.mina</groupId>
-    	<artifactId>mina-core</artifactId>
-    	<version>2.0.0</version>
-    	<type>jar</type>
-    	<classifier>sources</classifier>
     	<scope>compile</scope>
     </dependency>
     <dependency>
     	<groupId>org.slf4j</groupId>
-    	<artifactId>slf4j-simple</artifactId>
-    	<version>1.5.11</version>
+    	<artifactId>slf4j-log4j12</artifactId>
+    	<version>1.6.1</version>
+    	<type>jar</type>
+    	<scope>compile</scope>
+    </dependency>
+    <dependency>
+    	<groupId>log4j</groupId>
+    	<artifactId>log4j</artifactId>
+    	<version>1.2.16</version>
     	<type>jar</type>
     	<scope>compile</scope>
     </dependency>
@@ -107,22 +84,6 @@
     	<artifactId>guava-collections</artifactId>
     	<version>r03</version>
     	<type>jar</type>
-    	<scope>compile</scope>
-    </dependency>
-    <dependency>
-    	<groupId>com.google.guava</groupId>
-    	<artifactId>guava-collections</artifactId>
-    	<version>r03</version>
-    	<type>jar</type>
-    	<classifier>javadoc</classifier>
-    	<scope>compile</scope>
-    </dependency>
-    <dependency>
-    	<groupId>com.google.guava</groupId>
-    	<artifactId>guava-collections</artifactId>
-    	<version>r03</version>
-    	<type>jar</type>
-    	<classifier>sources</classifier>
     	<scope>compile</scope>
     </dependency>
     <dependency>
