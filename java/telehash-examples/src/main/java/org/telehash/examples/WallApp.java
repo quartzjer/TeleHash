@@ -55,7 +55,7 @@ public class WallApp {
 			@Override
 			public void telexReceived(SwitchHandler switchHandler, Line line,
 					Telex telex) {
-				System.out.println("<" + line.getAddress() + "> " + telex.get("+wall"));
+				logger.info("<{}> {}", line.getAddress(), telex.get("+wall"));
 			}
 			
 			@Override
@@ -114,6 +114,7 @@ public class WallApp {
 	}
 
 	private static void sendWallMessage(String msg) {
+		logger.info("Wall: {}", msg);
 		for (InetSocketAddress addr : handler.getLineAddresses()) {
 			Telex telex = (Telex) tf.createTelex().withTo(addr)
 				.withEnd(Hash.of(addr))
