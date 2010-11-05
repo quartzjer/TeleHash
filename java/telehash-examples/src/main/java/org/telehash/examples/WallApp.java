@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.mina.core.filterchain.DefaultIoFilterChainBuilder;
 import org.apache.mina.core.service.IoService;
@@ -14,6 +16,7 @@ import org.apache.mina.core.session.IoSession;
 import org.apache.mina.filter.logging.LoggingFilter;
 import org.apache.mina.transport.socket.DatagramSessionConfig;
 import org.apache.mina.transport.socket.nio.NioDatagramAcceptor;
+import org.eclipse.emf.json.JsonMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telehash.Hash;
@@ -25,6 +28,7 @@ import org.telehash.model.TelehashFactory;
 import org.telehash.model.Telex;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.MapMaker;
 
 /**
  * Hello world!
@@ -49,8 +53,11 @@ public class WallApp {
 		wallRule.setIs(tf.createTelex().withEnd(room));
 		wallRule.getHas().add("+wall");
 		handler.addTapRule(wallRule);
+		logger.info("Using tap rule {}", JsonMapper.toJson(wallRule));
 		
 		handler.addTelexHandler(new TelexHandler() {
+			
+			private Map<Object, Object> msgIds = new MapMaker().expiration(60, TimeUnit.SECONDS).makeMap();
 			
 			@Override
 			public void telexReceived(SwitchHandler switchHandler, Line line,
@@ -60,7 +67,15 @@ public class WallApp {
 			
 			@Override
 			public boolean isMatch(Telex telex) {
-				return Objects.equal(telex.get("+wall"), room);
+				Object guidObj = telex.get("+guid");
+				if (guidObj == null) {
+					return false;
+				}
+				String guid = guidObj.toString();
+				if (guid == null || msgIds.put(guid, guid) != null) {
+					return false;
+				}
+				return Objects.equal(telex.getEnd(), room) && telex.get("+wall") != null;
 			}
 			
 		});
@@ -96,7 +111,7 @@ public class WallApp {
 			@Override
 			public void serviceActivated(IoService service) throws Exception {
 				InetSocketAddress seedAddr = new InetSocketAddress(InetAddress.getByName("telehash.org"), 42424);
-//				InetSocketAddress seedAddr = new InetSocketAddress(InetAddress.getByName("localhost"), 40401);
+//				InetSocketAddress seedAddr = new InetSocketAddress(InetAddress.getByName("localhost"), 40404);
 				handler.seed(seedAddr);
 			}
 		});

@@ -74,6 +74,7 @@ public class SwitchState {
 		Line line = lines.get(endHash);
 		if (line == null || !line.getAddress().equals(endpoint)) {
 			line = tf.createLine().withAddress(endpoint).withEnd(endHash);
+			line.getNeighbors().add(endHash);
 			lines.put(endHash, line);
 		}
 		return line;

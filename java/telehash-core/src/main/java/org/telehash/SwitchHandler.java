@@ -295,16 +295,16 @@ public class SwitchHandler extends IoHandlerAdapter {
 				}
 				
 				line.setVisible(true);
-//				line.getRules().add(getSwitchRules());
+				line.getRules().addAll(tapRules);
 				
 				if (state.getSelfAddress().equals(session.getRemoteAddress())) {
 					logger.debug("We're the seed.");
 				}
 				
+				processTelex(session, telex, br);
+				
 				// start scanning thread
 				startScannerThread();
-				
-				processTelex(session, telex, br);
 			}
 		});
 	}
@@ -536,11 +536,12 @@ public class SwitchHandler extends IoHandlerAdapter {
 	        	
 	        	for (Hash neighborHash : addrLine.getNeighbors()) {
 	        		Line neighborLine = getLine(neighborHash);
-	        		if (neighborLine == null || neighborLine == addrLine) {
+	        		if (neighborLine == null || neighborLine == addrLine
+	        				|| neighborLine.getNeighbors().contains(endHash)) {
 	        			continue;
 	        		}
 	        		
-	        		neighborLine.getNeighbors().add(endHash);
+        			neighborLine.getNeighbors().add(endHash);
                     logger.debug("SEED " + address + " into " + neighborLine.getAddress());
 	        	}
 	        	
@@ -562,8 +563,12 @@ public class SwitchHandler extends IoHandlerAdapter {
 			}
 			
 			Hash tapEnd = (Hash) tapRule.getIs().get("+end");
+	        if (tapEnd == null) {
+	        	continue;
+	        }
 	        
-	        for (Hash hash : Iterables.limit(nearTo(tapEnd, state.getSelfAddress()), 3)) {
+	        Collection<Hash> nearestHashes = nearTo(tapEnd, state.getSelfAddress());
+	        for (Hash hash : Iterables.limit(nearestHashes, 3)) {
 	            Line line = getLine(hash);
 	            
 	            if (line.isSetTapLastAt() && line.getTapLastAt() + 50 > time()) {
@@ -573,7 +578,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	            line.setTapLastAt(time());
 	            Telex telexOut = (Telex) tf.createTelex().withTo(line)
 	            	.with(".tap", Lists.newArrayList(tapRule)); // tap the closest ipp to our target end 
-	            logger.debug("TAPTAP to {} end {} tap {}", new Object[]{
+	            logger.info("TAPTAP to {} end {} tap {}", new Object[]{
 	            		line.getAddress(), tapEnd, JsonMapper.toJson(telexOut)});
 	            send(telexOut);
 	        }
