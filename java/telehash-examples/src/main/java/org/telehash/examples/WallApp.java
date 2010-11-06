@@ -19,6 +19,7 @@ import org.apache.mina.core.service.IoService;
 import org.apache.mina.core.service.IoServiceListener;
 import org.apache.mina.core.session.IdleStatus;
 import org.apache.mina.core.session.IoSession;
+import org.apache.mina.filter.logging.LogLevel;
 import org.apache.mina.filter.logging.LoggingFilter;
 import org.apache.mina.transport.socket.DatagramSessionConfig;
 import org.apache.mina.transport.socket.nio.NioDatagramAcceptor;
@@ -113,6 +114,8 @@ public class WallApp {
 
 		DefaultIoFilterChainBuilder chain = acceptor.getFilterChain();
 		LoggingFilter loggingFilter = new LoggingFilter();
+		loggingFilter.setMessageReceivedLogLevel(LogLevel.TRACE);
+		loggingFilter.setMessageSentLogLevel(LogLevel.TRACE);
 		chain.addLast("logger", loggingFilter);
 
 		DatagramSessionConfig dcfg = acceptor.getSessionConfig();
@@ -164,7 +167,7 @@ public class WallApp {
 		logger.info("Wall: {}", msg);
 		for (InetSocketAddress addr : handler.getLineAddresses()) {
 			Telex telex = (Telex) tf.createTelex().withTo(addr)
-				.withEnd(Hash.of(addr))
+				.withEnd(room)
 				.with("+guid", System.currentTimeMillis())
 				.with("_hop", 1)
 				.with("+wall", msg);

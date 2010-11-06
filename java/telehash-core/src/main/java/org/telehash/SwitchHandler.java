@@ -174,12 +174,7 @@ public class SwitchHandler extends IoHandlerAdapter {
 	        	line.getSession().write(buffer).addListener(onWriteComplete);
 	        }
 	        else {
-	        	InetSocketAddress fromAddr = state.getSelfAddress();
-	        	if (fromAddr == null) {
-	        		fromAddr = acceptor.getLocalAddress();
-	        	}
-	        	
-		        IoSession session = acceptor.newSession(telex.getTo(), fromAddr);
+		        IoSession session = acceptor.newSession(telex.getTo(), acceptor.getLocalAddress());
                 line.setSession(session);
                 session.setAttribute("line", line);
                 logger.debug("SEND[{}]: {} bytes: {}", new Object[]{
