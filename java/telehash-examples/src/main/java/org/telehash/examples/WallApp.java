@@ -76,7 +76,7 @@ public class WallApp {
 		room = Hash.of(cli.getOptionValue("wall", "42"));
 		
 		NioDatagramAcceptor acceptor = new NioDatagramAcceptor();
-		handler = new SwitchHandler();
+		handler = new SwitchHandler(acceptor);
 		
 		TapRule wallRule = tf.createTapRule();
 		wallRule.setIs(tf.createTelex().withEnd(room));
@@ -140,7 +140,8 @@ public class WallApp {
 			@Override
 			public void serviceActivated(IoService service) throws Exception {
 				InetSocketAddress seedAddr = 
-					(InetSocketAddress) tf.createFromString(TelehashPackage.Literals.ENDPOINT,
+					(InetSocketAddress) TelehashFactory.eINSTANCE
+					.createFromString(TelehashPackage.Literals.ENDPOINT,
 						cli.getOptionValue("seed", "telehash.org:42424"));
 				handler.seed(seedAddr);
 			}

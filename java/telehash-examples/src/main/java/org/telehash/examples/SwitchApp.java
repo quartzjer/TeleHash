@@ -54,7 +54,7 @@ public class SwitchApp {
 				cli.getOptionValue("loglevel", "INFO")));
 		
 		NioDatagramAcceptor acceptor = new NioDatagramAcceptor();
-		final SwitchHandler handler = new SwitchHandler();
+		final SwitchHandler handler = new SwitchHandler(acceptor);
 		acceptor.setHandler(handler);
 
 		DefaultIoFilterChainBuilder chain = acceptor.getFilterChain();

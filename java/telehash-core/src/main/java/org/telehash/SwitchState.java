@@ -84,10 +84,14 @@ public class SwitchState {
 		lines.remove(end);
 	}
 
-	public void seeding(Runnable runnable) {
+	public void seeding(final Runnable runnable) {
 		connectionStatus = ConnectionStatus.SEEDING;
 		logger.debug("SEEDING");
-		runnable.run();
+		new Thread(){
+			public void run() {
+				runnable.run();
+			};
+		}.start();
 	}
 
 	public void connected(Runnable runnable) {
