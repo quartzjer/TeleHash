@@ -1,16 +1,11 @@
-telehash-core
-=============
-telehash-core is a Telehash switch and application framework for Java.
-
-Features
-========
-* Async network programming model with Apache MINA. Similar to node.js, with similar benefits.
+Telehash Java Implementation
+============================
+* Async networking with Apache MINA.
 * Apache commons and Google Guava to enable some FP-style and generally turn down the suck.
-* EMF and Jackson for mapping JSON to Java classes while retaining some dynamic capabilities.
+* EMF and Jackson for static-where-you-want-it, dynamic-where-you-don't JSON mapping.
 
 TODO
 ====
-* Implement tap rules
 * Research DemuxingIoHandler for cleaner separation of SwitchHandler business logic
 * Apps!
 
@@ -30,10 +25,30 @@ Ideas
 Building
 ========
 Get JDK 1.6, Maven2, do 'mvn compile' in this directory. 'mvn test' to run unit tests.
-'mvn package' to build a standalone, self-contained jar that (for now) runs a switch. 
+'mvn package' to build a standalone, self-contained jar. 
+
+On OSX, you might need to configure your Java installation to work with Maven's compiler plugin.
+See http://nelz.net/2009/05/13/jdk-1-6-on-os-x/
+
+Running
+=======
+Requires JRE 1.6. Tested with Oracle JDK 1.6 and Harmony 6.0-jre-991881.
+
+The example apps in the standalone jar support some command-line options:
+
+usage: class org.telehash.examples.SwitchApp
+ -help                 Display this usage info.
+ -port <arg>           Listen port. Default: random open port
+ -seed <arg>           Seed, <hostname:port>. Default: telehash.org:42424
+ -v,--loglevel <arg>   log4j log level. Default: INFO
+
+The wall app (org.telehash.examples.WallApp) also supports -wall <arg>, useful for testing your own wall.
 
 Development
 ===========
+If you're using Eclipse, do 'mvn eclipse:eclipse' at the top level to create Eclipse project metadata, 
+yhen you can import these projects into your workspace
+
 Model classes are generated from the ecore metamodels. Edit the metamodels (preferrably with 
 EMF Ecore tools in Eclipse IDE), reload the genmodel, then generate the model code.
 

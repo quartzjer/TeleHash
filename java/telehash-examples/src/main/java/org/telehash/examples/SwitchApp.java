@@ -47,7 +47,7 @@ public class SwitchApp {
 		final CommandLine cli = cliParser.parse(options, args);
 		
 		if (cli.hasOption("help")) {
-			new HelpFormatter().printHelp(WallApp.class.toString(), options);
+			new HelpFormatter().printHelp(SwitchApp.class.toString(), options);
 			System.exit(1);
 		}
 		
