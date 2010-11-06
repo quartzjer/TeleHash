@@ -28,7 +28,7 @@ Get JDK 1.6, Maven2, do 'mvn compile' in this directory. 'mvn test' to run unit 
 'mvn package' to build a standalone, self-contained jar. 
 
 On OSX, you might need to configure your Java installation to work with Maven's compiler plugin.
-See http://nelz.net/2009/05/13/jdk-1-6-on-os-x/
+See [http://nelz.net/2009/05/13/jdk-1-6-on-os-x/].
 
 Running
 =======
@@ -36,20 +36,20 @@ Requires JRE 1.6. Tested with Oracle JDK 1.6 and Harmony 6.0-jre-991881.
 
 The example apps in the standalone jar support some command-line options:
 
-usage: class org.telehash.examples.SwitchApp
- -help                 Display this usage info.
- -port <arg>           Listen port. Default: random open port
- -seed <arg>           Seed, <hostname:port>. Default: telehash.org:42424
- -v,--loglevel <arg>   log4j log level. Default: INFO
+    usage: class org.telehash.examples.SwitchApp
+     -help                 Display this usage info.
+     -port <arg>           Listen port. Default: random open port
+     -seed <arg>           Seed, <hostname:port>. Default: telehash.org:42424
+     -v,--loglevel <arg>   log4j log level. Default: INFO
 
 The wall app (org.telehash.examples.WallApp) also supports -wall <arg>, useful for testing your own wall.
 
 Development
 ===========
 If you're using Eclipse, do 'mvn eclipse:eclipse' at the top level to create Eclipse project metadata, 
-yhen you can import these projects into your workspace
+then you can import these projects into your workspace.
 
-Model classes are generated from the ecore metamodels. Edit the metamodels (preferrably with 
+Model classes (in org.telehash.model.*) are generated from the ecore metamodels. Edit the metamodels (preferrably with 
 EMF Ecore tools in Eclipse IDE), reload the genmodel, then generate the model code.
 
 You only need EMF tooling if you are working directly on the EMF models. The model classes 
