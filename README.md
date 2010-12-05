@@ -1,21 +1,25 @@
 TeleHash - Distributed JSON - http://telehash.org/
+==================================================
 
-org/		telehash.org contents (all docs so far)
-perl/		test implementations and utils in Perl
-c/			basic test stuff in C
-ruby/ 		rudimentary testing in Ruby
-switchd/	plans to create a utility daemon to do the dirty work
-diag/	 	graffle/diagrams of protocol states
+* org/		telehash.org contents (all docs so far)
+* perl/		test implementations and utils in Perl
+* c/			basic test stuff in C
+* ruby/ 		rudimentary testing in Ruby
+* switchd/	plans to create a utility daemon to do the dirty work
+* diag/	 	graffle/diagrams of protocol states
 
 
 What tech does one need to implement a switch?
-	UDP
-	JSON
-	SHA1
-	XOR'ing the 160 bits of a SHA1 hash
-	handling both network events and timers (and possibly interactions with the "app" it's serving)
+==============================================
+
+*	UDP
+*	JSON
+*	SHA1
+*	XOR'ing the 160 bits of a SHA1 hash
+*	handling both network events and timers (and possibly interactions with the "app" it's serving)
 
 What does a switch need to do?
+==============================
 	- listen for UDP packets (off a random port)
 	- send something to an initial seed to discover it's public IP:PORT
 	- announce itself and try to discover other switches nearby to it

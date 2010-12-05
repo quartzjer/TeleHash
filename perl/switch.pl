@@ -55,6 +55,14 @@ while(1)
 		in_stdin() if($s == \*STDIN);
 		in_udp() if($s == \*SOCKET);
 	}
+	# check any dials in progress to see if they're done
+	for my $end (keys %dialing)
+	{
+		if(time - $dialing{$end}->{lastat} > 3)
+		{
+			# send back to stdout the dial done event w/ top few
+		}
+	}
 	# maintenance
 	if(scalar @ready == 0 || $lastloop+1 < int(time))
 	{
@@ -76,13 +84,17 @@ sub in_stdin
 	# track an active tap to another switch
 	if($j->{"-tap"})
 	{
-		
+		# tap specific switch or auto-dial?
+		$tap_end = $j->{"-tap"};
+		$tap_js = $j->{".tap"};
+		# dial $tap_end now
 	}
 
 	# keep a line open and send back status changes
 	if($j->{"-line"})
 	{
-		
+		# IPP must be connected?
+		# return immediate status
 	}
 	
 	# convenience, do the dialing work
