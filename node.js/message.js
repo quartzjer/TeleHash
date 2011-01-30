@@ -84,7 +84,7 @@ http.createServer(function(req,res){
   }
     
   res.end(output);
-}).listen(8080, "127.0.0.01");
+}).listen(8080, "0.0.0.0");
 
 socket.sendData = function(message){ console.log(message.toString()); this.send(message, 0, message.length, 42424, "telehash.org"); }
 //socket.formatter = function(message){ new Buffer(JSON.stringify({".tap":[{"has":["+key"]}],"_line":ring, "_to":"208.68.163.247:42424"}));
