@@ -1,0 +1,3 @@
+[submodule "ezcrypto-js"]
+	path = ezcrypto-js
+	url = git://github.com/tjgillies/ezcrypto-js.git
