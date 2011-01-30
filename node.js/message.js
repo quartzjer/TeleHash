@@ -71,7 +71,7 @@ Mu.render('index.html', logic, {}, function(err, output){
 http.renderTweets = function(res, rows){
   
   var tweetLogic = {
-    tweets: rows
+    tweets: rows.reverse()
   };
   console.log(tweetLogic);
   Mu.render('tweets.html', tweetLogic, {}, function(err, output){
