@@ -21,15 +21,35 @@ db.open("tweets.db", function(error){
       throw error;
   }
   db.getTweets = function(res){ 
+    console.log("calling get tweets");
     db.execute("select name,message,timestamp from tweets join names on tweets.key = names.key", function(error, rows){
-      if (error && error.message.search("no such table") != -1){
+      if (error && error.message.search("no such table: tweets") != -1){
         console.log(error);//throw error;
         db.execute("CREATE TABLE tweets (key, message, timestamp)",function(){});
-        db.getTweets();
+        db.execute("CREATE TABLE names (key, name)",function(){});
+        db.getTweets(res);
+        return;
       }
+      if (!rows){
+        db.execute("select key,message,timestamp from tweets", function(error, rows){
+          
+          for (x in rows){
+            row = rows[x];
+            row.name = row.key;
+            //row.name = 'test';
+          }
+          //console.log(rows);
+          console.log("Calling render tweets from select key");
+          http.renderTweets(res, rows);
+        });
+        return
+      }    
       //res.end(JSON.stringify(rows));
+      console.log("calling render tweets from main function");
+      console.log(rows);
       http.renderTweets(res, rows);
       console.log(rows);
+    
     });
   };
   //db.getTweets();
@@ -49,10 +69,11 @@ Mu.render('index.html', logic, {}, function(err, output){
 
 
 http.renderTweets = function(res, rows){
+  
   var tweetLogic = {
     tweets: rows
   };
- 
+  console.log(tweetLogic);
   Mu.render('tweets.html', tweetLogic, {}, function(err, output){
     if (err){
       throw err;
@@ -61,7 +82,7 @@ http.renderTweets = function(res, rows){
     var buffer = '';
     
     output.addListener('data', function (c) {buffer += c; })
-          .addListener('end', function () { res.end(buffer) });
+          .addListener('end', function () { res.end(buffer); console.log(buffer) });
   });
 };
 
