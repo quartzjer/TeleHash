@@ -1,3 +1,12 @@
 [submodule "ezcrypto-js"]
 	path = ezcrypto-js
 	url = git://github.com/tjgillies/ezcrypto-js.git
+[submodule "mustache.js"]
+	path = mustache.js
+	url = https://github.com/janl/mustache.js.git
+[submodule "Mu"]
+	path = Mu
+	url = https://github.com/raycmorgan/Mu.git
+[submodule "node-sqlite"]
+	path = node-sqlite
+	url = https://github.com/orlandov/node-sqlite.git

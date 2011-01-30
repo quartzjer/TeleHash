@@ -2,17 +2,24 @@ var dgram = require('dgram');
 var crypto = require('crypto');
 var fs = require('fs');
 var ezcrypto = require('../ezcrypto-js/ezcrypto.js').ezcrypto;
-var keys = ezcrypto.generateKey();
-
+//var process = require('process');
 
 //var keyPem = fs.readFileSync("mykey.pem", 'ascii');
 //var pubKey = fs.readFileSync("mycert.pem", 'ascii');
 //var cred = crypto.createCredentials({key:keyPem});
 //var key = cred.key;
+try { 
+  data = fs.readFileSync('./keys','ascii')
+  keys = JSON.parse(data);
+} catch(e) {
+  console.log(e);
+  keys = ezcrypto.generateKey();
+  fs.writeFileSync('./keys',JSON.stringify(keys));
+}
 
 var socket = dgram.createSocket("udp4");
 //var signer = crypto.createSign('RSA-SHA1');
-var msg = "I like cheese";
+var msg = process.argv[2];
 //signer.update(msg);
 //var signature = signer.sign(keyPem, output_format='hex');
 var hash = ezcrypto.hash(msg);
