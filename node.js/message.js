@@ -114,10 +114,15 @@ socket.on("message", function(data, rinfo){
     if (test){
       console.log("Key validates");
       var timestamp = new Date().toString();
-      db.execute("INSERT INTO tweets (key, message, timestamp) VALUES (?,?,?)", [key, message, timestamp], function(error, rows){
-        if (error) throw error;
-      });
-      
+      db.insertTweets = function(){
+        db.execute("INSERT INTO tweets (key, message, timestamp) VALUES (?,?,?)", [key, message, timestamp], function(error, rows){
+          if (error){
+            db.execute("CREATE TABLE tweets (key, message, timestamp)",function(){});
+            db.insertTweets();
+          }
+        });
+      };
+      db.insertTweets();
     } else {
       console.log("Key doesn't validate");
     }
