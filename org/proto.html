@@ -149,7 +149,7 @@ function flag(id)
 
 <h2>Startup</h2>
 <p>
-	The very first thing any Switch needs to do upon starting is discover the public IP:PORT that it is known to the world as, and it does this by contacting a seed.  Seeds can be a list of well known public IP:PORTs, such as one the current primary one is "telehash.org:42424".  Every Telex sent/received should contain a _to header of the recipients IP:PORT, so a new Switch needs only trigger any response from the seed.  This can be done by sending: {"+end":"a9993e364706816aba3e25717850c26c9cd0d89d"} to the seed (or any sha1 hash as the value).  The response should contain a "_to":"1.2.3.4:5678" of the new Switch's public IP:PORT.  The new Switch now has a location within the global DHT of the hash value of SHA1("1.2.3.4:5678").
+	The very first thing any Switch needs to do upon starting is discover the public IP:PORT that it is known to the world as, and it does this by contacting a seed.  Seeds are a list of well known, public IP:PORTs, such as the current primary one "telehash.org:42424".  Every Telex sent/received should contain a _to header of the recipients IP:PORT, so a new Switch needs only trigger any response from the seed.  This can be done by sending: {"+end":"a9993e364706816aba3e25717850c26c9cd0d89d"} to the seed (or any sha1 hash as the value).  The response should contain a "_to":"1.2.3.4:5678" of the new Switch's public IP:PORT.  The new Switch now has a location within the global DHT of the hash value of SHA1("1.2.3.4:5678").
 
 <p>
 	Next, the new Switch needs to seed itself in the DHT.  It does this by sending it's hash to one or more seeds in order to discover other Switches closer to itself, and repeating this process until no closer Switches are returned.
