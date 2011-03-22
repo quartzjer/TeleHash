@@ -1,0 +1,52 @@
+how does pop etc work?
+do i need to do nat traversal if i have the nodes reported address?
+address comparisons are tricky... maybe address_from_binary should do dns lookup
+totally confused by _ring/_line semantics
+need to figure out how _ring/_line/_to/_br will be implemented (maybe only need modify/drop outgoing, _ring and _br might need to drop incoming...)
+find_value and store? caching?
+what happens if my address changes? need to restart app?
+
+###
+
+!!! hardening !!!
+
+logging everywhere
+	source: module, rather than just module (do it in the log module)
+        replace report by better logging
+
+###
+
+sup tree:
+top
+  switch_server
+  switch_event
+    event handlers
+
+###
+
+bucket : {branch, child0, child1} or {leaf, items (pq), replacement (pq)}
+item : distance, last_seen, end, suffix, address
+when a node is seen, update last_seen
+when a new node is seen,
+  put in bucket
+  if more than k nodes in bucket
+    if (self in bucket range)
+      split
+    else
+      put in replacement cache, ping lru
+pinging nodes -
+  if reply, update last_seen
+  if timeout, remove node, maybe add from replacement cache
+per bucket
+  record last dial (event on outgoing +end)
+  if no dial in T, dial a random id
+reboot?
+  potential address change
+  keep nodes but rebuild kbuckets with new self end
+
+bootstrap - separate module
+  send +end to root
+  record own ip:port (start routing table with arg)
+  dial self
+  refresh every bucket further away than nearest neighbour
+  
