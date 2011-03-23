@@ -5,6 +5,7 @@ TeleHash - Distributed JSON - http://telehash.org/
 * perl/		test implementations and utils in Perl
 * c/			basic test stuff in C
 * ruby/ 		rudimentary testing in Ruby
+* erlang/		basic announcer in erlang
 * switchd/	plans to create a utility daemon to do the dirty work
 * diag/	 	graffle/diagrams of protocol states
 
