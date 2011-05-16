@@ -10,3 +10,6 @@
 [submodule "node-sqlite"]
 	path = node-sqlite
 	url = https://github.com/orlandov/node-sqlite.git
+[submodule "erlang"]
+	path = erlang
+	url = git@github.com:jamii/erl-telehash.git
