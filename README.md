@@ -22,7 +22,7 @@ What tech does one need to implement a switch?
 What does a switch need to do?
 ==============================
 	- listen for UDP packets (off a random port)
-	- send something to an initial seed to discover it's public IP:PORT
+	- send something to an initial seed to discover its public IP:PORT
 	- announce itself and try to discover other switches nearby to it
 	- maintain the "lines" it has active with any other switches
 		- validate sender/status
