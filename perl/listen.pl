@@ -107,7 +107,7 @@ sub telex
 	return $js;
 }
 
-# actually send a telex to it's writer
+# actually send a telex to its writer
 sub tsend
 {
 	my $j = shift;

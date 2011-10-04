@@ -66,7 +66,7 @@ function flag(id)
 
 <h2>Switch</h2>
 <p>
-	Every TeleHash endpoint on the network is called a Switch, there is usually one per application.  It is identified by it's public IP:PORT, and placed within the DHT by the SHA1(IP:PORT). Switches communicate only by sending UDP packets to each other.
+	Every TeleHash endpoint on the network is called a Switch, there is usually one per application.  It is identified by its public IP:PORT, and placed within the DHT by the SHA1(IP:PORT). Switches communicate only by sending UDP packets to each other.
 
 <h2>Telex</h2>
 <p>
@@ -135,16 +135,16 @@ function flag(id)
 </blockquote>
 
 <h2>DHT (Kademlia)</h2>
-<p>For the specific details, learning more about <a href="http://en.wikipedia.org/wiki/Kademlia">Kademlia</a> is highly encouraged. Essentially, every Switch on the DHT is identified by a SHA1 hash, and it has a known distance between every other Switch that is the XOR of the two hashes.  Every Switch maintains a list of it's neighbors, some further from that, and a few from very far away (see "buckets" in the Kademlia paper), that it uses to recommend who else to connect to for someone querying a location on the DHT.
+<p>For the specific details, learning more about <a href="http://en.wikipedia.org/wiki/Kademlia">Kademlia</a> is highly encouraged. Essentially, every Switch on the DHT is identified by a SHA1 hash, and it has a known distance between every other Switch that is the XOR of the two hashes.  Every Switch maintains a list of its neighbors, some further from that, and a few from very far away (see "buckets" in the Kademlia paper), that it uses to recommend who else to connect to for someone querying a location on the DHT.
 
 <span class="flag" onclick="this.parentNode.nextSibling.className='out';this.style.display='none'"></span>
 <blockquote class="in">
 	<h4>Switch Identity</h4>
-	<p>Every Switch's location in the DHT is simply the SHA1 of it's public IP:PORT.</p>
+	<p>Every Switch's location in the DHT is simply the SHA1 of its public IP:PORT.</p>
 	<h4>Location Requests ("Dialing")</h4>
 	<p>The most common activity in TeleHash is that of looking for closer Switches to a given +end hash.  Any Telex that contains a +end should be responded to with a list of the closest known Switches to that +end.  This is called the .see command, the value is an array of IP:PORTs of other Switches. (needs more, send self if closest, send self to make visible, how many to return and how to prefer, etc)
 	<h4>Seeding</h4>
-	<p>Upon starting up the Switch must contact one or more other Switches from a default list, and from there "Dial" recursively Switches that are closer to it's own +end hash.  Once it can't find any closer it then maintains lines to those closest, filling in it's "buckets".
+	<p>Upon starting up the Switch must contact one or more other Switches from a default list, and from there "Dial" recursively Switches that are closer to its own +end hash.  Once it can't find any closer it then maintains lines to those closest, filling in its "buckets".
 </blockquote>
 
 <h2>Startup</h2>
@@ -152,7 +152,7 @@ function flag(id)
 	The very first thing any Switch needs to do upon starting is discover the public IP:PORT that it is known to the world as, and it does this by contacting a seed.  Seeds are a list of well known, public IP:PORTs, such as the current primary one "telehash.org:42424".  Every Telex sent/received should contain a _to header of the recipients IP:PORT, so a new Switch needs only trigger any response from the seed.  This can be done by sending: {"+end":"a9993e364706816aba3e25717850c26c9cd0d89d"} to the seed (or any sha1 hash as the value).  The response should contain a "_to":"1.2.3.4:5678" of the new Switch's public IP:PORT.  The new Switch now has a location within the global DHT of the hash value of SHA1("1.2.3.4:5678").
 
 <p>
-	Next, the new Switch needs to seed itself in the DHT.  It does this by sending it's hash to one or more seeds in order to discover other Switches closer to itself, and repeating this process until no closer Switches are returned.
+	Next, the new Switch needs to seed itself in the DHT.  It does this by sending its hash to one or more seeds in order to discover other Switches closer to itself, and repeating this process until no closer Switches are returned.
 
 <h2>NATs</h2>
 <p>A very common pattern that every Switch has to deal with is working through NATs.  This is accomplished using the already mentioned mechanisms of .tap commands and a signal called +pop, for ping-open-port.
@@ -170,7 +170,7 @@ function flag(id)
 	<p>
 	<p>Lexicon:
 	<ul><blockquote>
-	<li>		<big>Switch</big> - every TeleHash endpoint is called a Switch, one per app, it's GUID is formed from the SHA1 of it's IP:PORT
+	<li>		<big>Switch</big> - every TeleHash endpoint is called a Switch, one per app, its GUID is formed from the SHA1 of its IP:PORT
 	<li>		<big>Telex</big> - each UDP packet is a JSON object, contains any valid JSON and one or more Commands, Signals, or Headers
 	<li>		<big>+Signal</big> - A public broadcast "key":"value" pair, routed/relayed between Switches
 	<li>		<big>.Command</big> - An instruction sent from one Switch to another
@@ -286,7 +286,7 @@ function flag(id)
 
 	<p>The low level protocol is designed to be the absolute minimal to build connections and exchange notifications, all needs for peer trust, proxying, anonymizing, etc happen at a higher layer and outside of the basic protocol. The required headers/commands are a bare minimum at every step even if it creates some implementation headaches, every additional datum sent is an vector for introducing future trust or spoofing problems.
 
-	<p>Dampening is used to reduce congestion around any single Switch or group of them nearby when there is a lot of signals or listeners coming in around one or more Ends.  There are two strategies, one when all the traffic is to a single End, and another when it's just to one part of the ring (different but nearby Ends).  A Switch should not .see back to anyone the IP:PORT of any other Switch when it's _br is sufficiently out of sync with it (need to test to find an appropriate window here), this dampens general parts of the DHT when traffic might flow beyond any Switches desire or ability to respond to.  Secondarily, any Switch should return itself as the endpoint for any End that is the most popular one it is seeing (also need to test to find best time window to check popularity).
+	<p>Dampening is used to reduce congestion around any single Switch or group of them nearby when there is a lot of signals or listeners coming in around one or more Ends.  There are two strategies, one when all the traffic is to a single End, and another when it's just to one part of the ring (different but nearby Ends).  A Switch should not .see back to anyone the IP:PORT of any other Switch when its _br is sufficiently out of sync with it (need to test to find an appropriate window here), this dampens general parts of the DHT when traffic might flow beyond any Switches desire or ability to respond to.  Secondarily, any Switch should return itself as the endpoint for any End that is the most popular one it is seeing (also need to test to find best time window to check popularity).
 
 
 	<h2>Switch Implementations</h2>
@@ -300,9 +300,9 @@ function flag(id)
 
 	<p>Full Switches need to implement seeding, keeping lines open, a basic bucketing system that tracks active Switches at different distances from themselves.  A Full Switch needs to do basic duplicate detection, it should only process a unique set of signals at most once every 10 seconds (hash the sorted string sigs/values).
 
-	<p>The _br header is important to any long-lived Switch to prevent sudden flooding and to control bandwidth rates.  Every incoming Telex's raw byte size should be totaled for it's sender, and any outgoing Telex sent back to them should contain a _br header with the current total received from them.  The raw bytes sent out to any other Switch should also be tracked, so that the two can be compared.  If the bytes sent out grows to more than 10k over the last _br reported back from the recipient, no more should be sent until an updated _br is received.  This also works in reverse, if more than 10k is received beyond the last _br sent out, incoming Telexes can be dropped.  An artificially higher _br can always be sent to allow a bigger than 10k window.
+	<p>The _br header is important to any long-lived Switch to prevent sudden flooding and to control bandwidth rates.  Every incoming Telex's raw byte size should be totaled for its sender, and any outgoing Telex sent back to them should contain a _br header with the current total received from them.  The raw bytes sent out to any other Switch should also be tracked, so that the two can be compared.  If the bytes sent out grows to more than 10k over the last _br reported back from the recipient, no more should be sent until an updated _br is received.  This also works in reverse, if more than 10k is received beyond the last _br sent out, incoming Telexes can be dropped.  An artificially higher _br can always be sent to allow a bigger than 10k window.
 
-	<p>The ideology of headers/cmds/sigs is as such: A _header can be of any type and it's purpose is to convey information about that single instance of a Telex and the state of a connection between Switches, meant to only carry extra information about the exchange, metadata, it is never meant to be used by any application or persisted/relayed.  A .command also can have any type of value and it's intended to cause an action on the recipient involving it's value and optionally including any signals in the same telex, also never to be relayed/persisted, private between Switches and open for applications to use custom commands to talk directly to each other.  A signal is always a string value usually relating to or from an application and is always considered public, possibly persisted and relayed to other Switches, and should only be used to convey information that may be of interest to an unknown or more than one party, discovery/announcements.
+	<p>The ideology of headers/cmds/sigs is as such: A _header can be of any type and its purpose is to convey information about that single instance of a Telex and the state of a connection between Switches, meant to only carry extra information about the exchange, metadata, it is never meant to be used by any application or persisted/relayed.  A .command also can have any type of value and it's intended to cause an action on the recipient involving its value and optionally including any signals in the same telex, also never to be relayed/persisted, private between Switches and open for applications to use custom commands to talk directly to each other.  A signal is always a string value usually relating to or from an application and is always considered public, possibly persisted and relayed to other Switches, and should only be used to convey information that may be of interest to an unknown or more than one party, discovery/announcements.
 
 	<p>Only one .tap can be active between any two Switches at any time, and while it can have some complex filters internal to it, it is one unit.  This simplifies what a receiving Switch has to do to manage a bunch of active .taps.  If an app really needs more than one .tap active on some Switch at the same time, it can create another listener-only Switch to do that.
 

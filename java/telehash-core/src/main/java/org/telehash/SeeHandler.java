@@ -51,7 +51,7 @@ public class SeeHandler implements TelexHandler {
 		            recvLine.setVisible(true);
 		            recvLine.getNeighbors().addAll(
 		            		switchHandler.nearTo(recvLine.getEnd(), switchHandler.getAddress()));
-		            switchHandler.nearTo(recvLine.getEnd(), recvLine.getAddress()); // injects this switch as hints into it's neighbors, fully seeded now
+		            switchHandler.nearTo(recvLine.getEnd(), recvLine.getAddress()); // injects this switch as hints into its neighbors, fully seeded now
 		        }
 		        
 		        Hash seeHash = Hash.of(seeAddr); 

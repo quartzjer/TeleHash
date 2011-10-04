@@ -471,7 +471,7 @@ Switch.prototype.onCommand_see = function(remoteipp, telex, line) {
             console.log(["\t\tVISIBLE ", remoteipp].join(""));
             line.visible=1;
             self.near_to(line.end, self.selfipp).map(function(x) { return line.neighbors[x]=1; });
-            self.near_to(line.end, remoteipp); // injects this switch as hints into it's neighbors, fully seeded now
+            self.near_to(line.end, remoteipp); // injects this switch as hints into its neighbors, fully seeded now
         }
         
         var seeippHash = new Hash(seeipp).toString(); 
