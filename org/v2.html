@@ -2,84 +2,128 @@
 
 <h2 id="intro">Intro</h2>
 
-<p>The first version was a minimal layer to do just the DHT/NAT and tried to be very generic and extensible, deferring identity and transport to the app.  This second version simplifies the base protocol and incorporates the identity and transport elements into the core.</p>
+<p>The first version was a minimal layer to do just the DHT/NAT and tried to be very generic and extensible, deferring identity and transport to the app.  This second version drastically simplifies the base protocol and incorporates the identity and transport elements into the core.</p>
 
 <h2 id="vocab">Vocab</h2>
 
 <ul>
 <li>DHT - Distributed Hash Table</li>
 <li>NAT - A device/router that acts as a bridge to internal IPPs (Network Address Translation)</li>
-<li>IPP - IP:Port, 123.45.67.89:10111</li>
-<li>Switch - An active IPP, making it part of the DHT</li>
-<li>Packet - A UDP packet less than 1400 bytes sent between any switches</li>
-<li>Session - When two switches establish a shared secret and a reliable connection between them</li>
-<li>Thread - Simple request and response packet tracking between any switches</li>
+<li>Hashname - The sha1(public key) of a RSA keypair that belongs to and is signed by a Space, the unique ID of an individual application/instance using telehash</li>
+<li>Packet - A UDP packet less than 1400 bytes sent between any hashnames</li>
+<li>Switch - The name of the software layer or service parsing packets and listening to an IPP</li>
+<li>Space - A collection of signed hashnames that can trust each other, often supporting a DHT</li>
+<li>Spacer - The protocol every hashname within a Space uses to manage it&#8217;s DHT</li>
+<li>Operator - A special hashname that uses the &#8216;op&#8217; protocol to introduce/describe a space to any other hashname</li>
+<li>Line - The protocol any two hashnames use to exchange their identity and trust and form a temporary session between two IPPs</li>
 </ul>
 
 <h2 id="parsing">Parsing</h2>
 
 <p>Every packet must begin with two bytes that are a short unsigned integer representing the length of bytes that follow it.  That length of bytes are UTF8 encoded JSON and can be parsed by any JSON parser.  Any remaining bytes on the packet are considered raw binary and referenced as the &#8216;body&#8217; during content transport.</p>
 
+<pre><code>[LENGTH][JSON][BODY]
+</code></pre>
+
 <h2 id="json">JSON</h2>
 
-<p>The top level keys of the JSON are for switch use only, the presence of different keys trigger different responses:</p>
+<p>The JSON included in any packet is arbitrary, any hashname must have some prior knowledge of what is acceptable to send to any IPP.  There are many common patterns to serve different functions that any two hashnames &#8216;speak&#8217; to each other defined here, but beyond these definitions an application can implement it&#8217;s own patterns as needed, and all switches should ignore anything they don&#8217;t understand.</p>
 
-<h3 id="8220tid8221_threads">&#8220;tid&#8221; (THREADS)</h3>
+<p>The most fundamental pattern is called &#8216;line&#8217; and it&#8217;s how any two hashnames can exchange identity and create a session. When an app is starting it will typically begin by speaking op to one or more operators, the seed list of which is well defined and stable for any space.  From there the operator will return other hashnames and what they speak as is appropriate for that space.  To use the DHT any hashname must also speak spacer, and to exchange arbitrary content any hashname mush speak streamer.</p>
 
-<p>The value is any string, and is the thread id as defined by the sending switch.  When received and any response is generated at all, the same tid value must be returned so the sending switch can match up the response to it&#8217;s request.  The value format can be anything and is the domain of the sending switch only.</p>
+<h3 id="spaces">Spaces</h3>
 
-<h3 id="8220start8221_session_setup">&#8220;start&#8221; (SESSION SETUP)</h3>
+<p>A space is simply a collection of RSA public keys that trust each other (typically a single application domain) and is identified simply by a valid host/domain name.  Every public key within a space is identified by it&#8217;s hashname, which is the SHA1 of it&#8217;s public key + space name (simple string append of sha1(pubkey+space)).</p>
 
-<p>This is to initiate a new session with any switch, and can be any arbitrary string value, but should be sufficiently unique and random per use so that it can&#8217;t be guessed by anyone. Along with start, the <code>to</code> and <code>from</code> keys should also be set to the IPP of the sending and receiving switches, so that the public IPP can be identified and verified.</p>
+<p>Every space is administrated by &#8220;operators&#8221; who will resolve a hashname to it&#8217;s public key for anyone, and this list of operators is typically bundled within an app (seed list).  Operators may perform other app administrative duties such as updating the seed list, redirecting to other spaces and operators, providing what level of supported protocols different hashnames have, etc.</p>
 
-<p>Upon receiving a <code>start</code> to create a session one must be generated to return and create the shared <code>sid</code> value, which is calculated as the SHA1 hash of both starts combined in either order.  To validate, either side should combined the start values sent and received and compare to the <code>sid</code> value.</p>
+<p>Spaces may also be defined where anyone can be an operator, a typical open DHT, but trust must then be externally determined by the application within such spaces.</p>
 
-<p>Once a <code>sid</code> is validate, it should be used for all future packets in that session.</p>
+<h3 id="operators">Operators</h3>
 
-<h3 id="8220seq8221_8220range8221_and_8220miss8221_session_reliability">&#8220;seq&#8221;, &#8220;range&#8221;, and &#8220;miss&#8221; (SESSION RELIABILITY)</h3>
+<p>The only required function of any operator is to resolve a hashname to a public key for it&#8217;s space.  An incoming key lookup request can come from any hashname in the same space or not, but it must be signed so that the operator can decide if it should respond. These key lookup requests contain:</p>
 
-<p>These are only allowed along with a <code>sid</code> and are the mechanism for reliable packet delivery.  The <code>seq</code> must always be increased incrementally with every packet sent.  A buffer of sent packets must be kept keyed by the <code>seq</code> value until the receiving switch has responded confirming them in a <code>range</code> and not in the <code>miss</code>.</p>
+<ul>
+<li><code>op</code> - the RSA signature (by the sending hashname) of the included BODY</li>
+<li>BODY - the attached body is a JSON object containing:
+<ul>
+<li><code>who</code> - the hashname that the public key is requested for</li>
+<li><code>from</code> - the sending hashname</li>
+<li><code>to</code> - the hashname of the operator</li>
+<li><code>x</code> - an integer of the expiration time of this request (epoch milliseconds, default 10 seconds in the future or more as needed)</li>
+<li><code>key</code> the RSA signature of the public key for the hashname combined with the included <code>x</code> value (key+x).</li>
+<li><code>space</code> - the name of the space the sending hashname is part of</li>
+</ul></li>
+</ul>
 
-<p>The <code>range</code> is an array of two integers, the first seq received in the session, and the last one received.</p>
+<p>After (optionally) verifying the request, an operator returns the public key by sending back to the requesting hashname a packet with a <code>key</code> field and the value being the same as the original <code>op</code> one so that the recipient can match it to the request.  It also includes a The BODY then contains the actual public key value, and if it&#8217;s too large for one packet it can be broken into multiple, each of which contains a <code>seq</code> key with an integer value starting at 0 and incrementing.</p>
 
-<p>The <code>miss</code> is an array of integers and must be sent along with any <code>range</code> if in the process of receiving packets there were any missing sequences, containing in any order the missing sequence values within the associated <code>range</code>.  Upon receipt those packets should be resent verbatim.</p>
+<h3 id="line">Line</h3>
 
-<p>By default a session should be invalidated if a sequence has been missed three or more times, or there&#8217;s more than 100 missed packets by default (senders cannot send more than that without a confirming range). When there&#8217;s consistently missing packets, senders should not send very many packets beyond the confirmed range. (TBD)</p>
+<p>Line helps establish a relationship between any two hashnames and their current IPPs.  The first packet requires the following top level fields (similar to an operator request):</p>
 
-<h3 id="8220pop8221_nats">&#8220;pop&#8221; (NATs)</h3>
+<ul>
+<li><code>open</code> - the RSA signature (by the sending hashname) of the included BODY</li>
+<li>BODY - the attached body is also a JSON object containing:
+<ul>
+<li><code>to</code> - the hashname the request is going to</li>
+<li><code>from</code> - the sending hashname</li>
+<li><code>x</code> - an integer of the expiration time of this request (epoch milliseconds, default 10 seconds in the future or more as needed)</li>
+<li><code>key</code> the RSA signature of the public key for the hashname combined with the included <code>x</code> value (key+x).</li>
+<li><code>space</code> the name of the space the sending hashname is part of</li>
+</ul></li>
+</ul>
 
-<p>When any switch is told about another, there may be a NAT between them, so they must both be told to send a packet to each other to make sure the path between them is open, this is called &#8220;hole punching.&#8221; The <code>pop</code> value is used to do this, containing the IPP of the switch being contacted for the first time.</p>
+<p>Upon receiving, any hashname can check the incoming <code>from</code> in the body and see if it already knows the public key for it, if it does it can verify the signature and return a corresponding packet to confirm the line.  All subsequent packets should include only a <code>line</code> key (value being the same as the <code>open</code>) in each direction as the secret for the receiving switch to identify it.  Only the <code>open</code> value is used to initiate a new line at any time.</p>
 
-<p>The local switch is A, the existing one in the DHT is B, and this happens when B tells A about C, a new switch that A may be interested in.  When A goes to contact C it should send the packet directly, as well as send a packet containing a <code>pop</code>:&#8221;IPP of C&#8221; to B.  Upon receiving a <code>pop</code> with an IPP value that is not itself, it sends a new packet with a <code>pop</code> and the same value to the given IPP, as well as setting the <code>source</code> value to that of A. When C receives a <code>pop</code> value of itself, it sends a packet with <code>popped</code>:true to the value of <code>source</code>.  If the first packet A receives from C is <code>popped</code>:true, it should resend the original packet since it was likely dropped due to the NAT, but the path is open now.</p>
+<p>When a receiving hashname doesn&#8217;t know the public key for the sender it must ask an operator in the appropriate space for it first.  Public keys for hashnames should be cached as much as possible so that operator lookups aren&#8217;t often required.</p>
 
-<h3 id="8220recv8221_and_8220stop8221_listening">&#8220;recv&#8221; and &#8220;stop&#8221; (LISTENING)</h3>
+<p>Once a line is established, any packet may be optionally encrypted since both sides have each other&#8217;s public key.  An encrypted packet simply uses <code>sline</code> as the key instead of <code>line</code> with no other values in the JSON, and the BODY is a fully encrypted packet.  The receiver then decodes the body and processes it as a normal packet (LENGTH/JSON/BODY) from the sending hashname. </p>
 
-<p>Only valid with a <code>sid</code>, the <code>recv</code> value is a hash to match against any incoming <code>send</code> value.  All received values are associated with the active <code>sid</code>, so that once the session is over, they are all invalid as well.  In order to validate a <code>recv</code> was accepted, the matching <code>send</code> and a tracking <code>tid</code> can be sent too, as any receiving switch should apply the <code>recv</code> before processing the rest of the packet, which would then match and be relayed back.</p>
+<h3 id="spacer">Spacer</h3>
 
-<p>To stop receiving any hash on a session, just send <code>stop</code> with the hash.</p>
+<p>Any space can support a DHT if enough of it&#8217;s hashnames are connected to each other using spacer.  Speaking spacer has only two simple patterns to support it, finding other hashnames and working around NATs, the bulk of the complexity is in the rules around maintaining a mesh of lines and calculating distance (to be defined again here based on v1).</p>
 
-<h3 id="8220bind8221_identity">&#8220;bind&#8221; (IDENTITY)</h3>
+<p>The DHT can be used for any hash value, to find other hashnames directly or at an app level around arbitrary content.  Each space and app may do this differently, but the basic rules around discovery are the same.</p>
 
-<p>On any packet a <code>bind</code> can be sent, this is an object containing keys/values of a base URI and crypto signatures to validate it.  The recipient should cache the validated mapping between the contained base uri and the IPP it came from.</p>
+<p>When one hashname wants to lookup a hash, it finds the closest lines it knows and sends a <code>seek</code> containing the hash value to them.  They return a compact <code>see</code> array of addresses that are closer to the hash value than they are, if any (no response if none).  The addresses are a compound comma-delimited string containing the &#8220;hash,ip,port&#8221; (these are intentionally not JSON as the verbosity is not helpful here), for example &#8220;a9993e364706816aba3e25717850c26c9cd0d89d,123.45.67.89,10111&#8221; and the IP can be v4 or v6 (there can be multiple entries in the array for one hashname).</p>
 
-<p>A <code>bind</code> enables the recipient to verify the sender&#8217;s id and trust the IPP of that sending id.  It can be sent proactively with any <code>send</code>, and can also be sent in response to any request to verify the responder.</p>
+<p>Since the sender doesn&#8217;t know these addresses and may not need to establish a line with them since it&#8217;s a transient request, it must also send the hashname that referred them as a lightweight way to vouch for the request as a <code>via</code>.  Any incoming <code>seek</code> with a <code>via</code> should be validated that the receiving hashname has a line open to the one in the via to deter network scanners.</p>
 
-<p>The contents of the <code>bind</code> are TBD.</p>
+<h4 id="8220pop8221_nats">&#8220;pop&#8221; (NATs)</h4>
 
-<h3 id="8220req8221_and_8220res8221_content_transport">&#8220;req&#8221; and &#8220;res&#8221; (CONTENT TRANSPORT)</h3>
+<p>When any hashname is told about a new one (in the <code>see</code>), there may be a NAT between them so they must both be told to send a packet to each other to make sure the path between them is open, this is called &#8220;hole punching.&#8221; The <code>pop</code> value is used to do this and contains the address being contacted for the first time, and since often the recipient hashname doesn&#8217;t know (or need to know) the sender, a <code>for</code> must be included with it as well containing the address value (hash,ip,port) of the requestor.</p>
 
-<p>Any HTTP request can be performed within a session using the <code>req</code> and <code>res</code> objects.  A <code>tid</code> is required and must be unique to each request.  </p>
+<p>The local hashname is A, the existing one in the DHT is B, and this happens when B tells A about C&#8217;s address.  When A goes to contact C it should send the packet directly, as well as send a packet containing a <code>pop</code>:&#8221;hashname,ip,port&#8221; to B.  Upon receiving a <code>pop</code> with a value that is not itself and verified that it is to a line it has open, it sends a new packet with a <code>pop</code> and the same value to the given line, as well as relaying the original <code>for</code> value (the IP must be validated as the same as the sender). When C receives a <code>pop</code> value of itself, it sends a packet with <code>popped</code>:true to the value of the <code>for</code>.  If the first packet A receives from C is <code>popped</code>:true, it should resend the original packet since it was likely dropped due to the NAT, but the path is open now.</p>
+
+<h3 id="streamer">Streamer</h3>
+
+<p>A line establishes a lossy connection between hashnames, streamer adds a lightweight stream representation to order, buffer, and retransmit packets.</p>
+
+<p>Any hashname can open a stream simply by sending a <code>stream</code> key with a unique 40 length hex value (sha1) that is the same on all subsequent packets for that stream and returned in all responses by the receiver. All streams have a <code>seq</code> integer value that starts at 0 and increments per packet sent.</p>
+
+<p>A buffer of sent packets must be kept keyed by the <code>seq</code> value until the receiving hashname has responded confirming them in a <code>range</code> and not in the <code>miss</code>. The <code>range</code> is an array of two integers, the first seq confirmed received in the session as well as the last one received. The <code>miss</code> is an array of integers and must be sent along with any <code>range</code> if in the process of receiving packets there were any missing sequences, containing in any order the missing sequence values within the associated <code>range</code>.  Upon receipt those missed packets should be resent verbatim.</p>
+
+<p>When a stream is open and the responding hashname has sent a range with confirmed sequences, and also gets a confirmation of the packet containing that range, it can advance the first number in the range (they&#8217;ve all been confirmed) so that for an idle stream it doesn&#8217;t need to preserve any state at all.</p>
+
+<p>By default a session should be invalidated if a sequence has been missed three or more times, or there&#8217;s more than 100 missed packets by default (senders cannot send more than that without a confirming range). When there&#8217;s consistently missing packets, senders should limit the number of packets beyond the confirmed range. (TBD)</p>
+
+<p>The JSON and/or BODY can be used arbitrarily within a stream by an app, multiple streams may exist between two hashnames and their state should be preserved as long as the line is open.</p>
+
+<h3 id="http_proxy">HTTP Proxy</h3>
+
+<p>Any HTTP request can be performed within a stream using the <code>req</code> and <code>res</code> objects.  A <code>stream</code> is required and must be unique to each request.  </p>
 
 <p>The <code>req</code> is an object that looks like:</p>
 
 <pre><code>"req": {
-    "uri":"http://telehash.org/"
     "m":"GET",
+    "p":"/foo?id=42",
     "h":{ "User-Agent": "testing" }
 }
 </code></pre>
 
-<p>It can also be a POST or PUT, and any content body on the request should be included as binary appended to the packet, and spread across subsequent packets containing only just the same <code>tid</code> value if it&#8217;s larger than a single one.  When all the data has been sent, a <code>done</code> of true must be set on the last packet (or first one if it was all self contained).</p>
+<p>It can also be a POST, PUT, etc, and any content body on the request should be included as binary in the BODY on the packet and spread across subsequent packets containing only just the same <code>stream</code> value if it&#8217;s larger than a single one.  When all the BODY data has been sent, a <code>done</code> of true must be set on the last packet (or first one if it was all self contained).</p>
 
 <p>Any response works identically, a <code>res</code> object like:</p>
 
@@ -89,16 +133,17 @@
 }
 </code></pre>
 
-<p>The binary body is appended to the packet, and when broken across multiple they must all contain just the same <code>tid</code> and the body is appended in order based on the <code>seq</code> until the last one containing the <code>done</code> of true.</p>
+<p>The binary body is appended to the packet, and when broken across multiple they must all contain just the same <code>stream</code> and the body is appended in order based on the <code>seq</code> until the last one containing the <code>done</code> of true.</p>
 
-<p>The URI in the request doesn&#8217;t need to be just HTTP either, this pattern can be used for streaming or other content transport patterns, and application specific schemes.</p>
+<h2 id="hashname_state">Hashname state</h2>
 
-<h3 id="8220send8221_and_8220see8221_connecting">&#8220;send&#8221; and &#8220;see&#8221; (CONNECTING)</h3>
+<p>At any point the relationship between two hashnames would be in one of the following states:</p>
 
-<p>To reach any other switch you have to use the DHT to find it or the switches close to the same hash you&#8217;re both using.  You start by contacting any switch closest to the target hash and a <code>send</code> with the hash value (and any <code>bind</code> and <code>tid</code> and body as needed).  If that switch knows any closer, it will respond with a <code>see</code> array of other switches closer than it.  Take the top three closest and repeat the process until nobody responds or you get the <code>tid</code> returned with the reciprocating <code>bind</code> of the target you were trying to reach, connected to a new session with the sending IPP.</p>
-
-<p>When a <code>recv</code> is matched with an incoming <code>send</code>, a new packet is sent in the session the <code>recv</code> came from copying in the <code>send</code>, <code>tid</code>, <code>bind</code>, and any body data, along with a <code>source</code> of the switch it came from.</p>
-
-<h3 id="dht">DHT</h3>
-
-<p>This is the same as telehash v1 and needs to be re-described here yet&#8230;</p>
+<ul>
+<li>UNKNOWN - no contact</li>
+<li>SEEN - was referenced in a <code>see</code> with an address</li>
+<li>RESOLVING - don&#8217;t know the public key, asked an operator</li>
+<li>RESOLVED - have the public key and an address to contact</li>
+<li>CONNECTING - sent a line open request</li>
+<li>CONNECTED - a line was received back and is open</li>
+</ul>
