@@ -1,7 +1,7 @@
 switch implementation outline
 =============================
 
-This is a rough high level guide for implementing a switch.
+This is a bunch of rough notes for implementing a switch.
 
 ## Core Functions
 
@@ -43,6 +43,17 @@ Any installed hashname should support the following actions when given another h
 * key -> op requests (transient)
 * see -> seeking object (transient, if spacer is supported)
 
+## Hashname state
+
+At any point the relationship between two hashnames would be in one of the following states:
+
+* UNKNOWN - no contact
+* SEEN - was referenced in a `see` with an address
+* RESOLVING - don't know the public key, asked an operator
+* RESOLVED - have the public key and an address to contact
+* CONNECTING - sent a line open request
+* CONNECTED - a line was received back and is open
+
 ## Objects
 
 ### Space
@@ -80,6 +91,12 @@ Any installed hashname should support the following actions when given another h
 ## Logic Flows
 
 ### parsed packet processing (understand)
+
+1. process signatures
+2. process ad-hoc keys
+3. validate/process line/open/via
+4. process trusted keys
+5. process line-only keys
 
 Based on the keys in the JSON on the packet, trigger the following actions:
 
