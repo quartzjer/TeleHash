@@ -143,3 +143,13 @@ The following only happen when there's a line or stream open:
 	* look for the first 5 misses, resend, increment
 	* if any misses > 3 and last received > 1min, kill stream
 	* no misses, delete timer
+
+## DHT
+
+* mesh level 200+
+* maintain lines every 25sec (nat)
+* sort all seen, any new in last 30sec in top 100, line them
+* calculate "spread" as mesh level / # of buckets with lines
+* sort all lines by bucket, for each bucket:
+	* count active in last 30sec
+	* any remainder left in spread, send ping
