@@ -1,6 +1,42 @@
 Experimental!
 =============
 
+# Social
+
+The goal is to always support the most commonly accepted/expected set of social features for any app, and define them here such that apps can inter-operate easily.
+
+## Apps
+
+Each app must have it's own global/single hashname defining the owner, and be available to return info describing the app.  Networks can have only one single app as created by the network operator, or allow selected or any third party apps to register/join.
+
+Every running instance of an app then links itself to that owner hashname.
+
+## Profiles
+
+An app must associate itself with a user, this can either be through in-app login (password) or by getting a link from an official app (oauth-like, app-switching on mobile, etc). Once it has a link, it should always have a copy of the profile json to return on request to anyone.
+
+## Friends
+
+TBD: A QA interface for single friend checks, friend requests, etc.  A stream interface to get a list of friends, filter/search options.
+
+## Feeds/Sharing
+
+TBD: A stream interface for list of shared items. Items support tagging, media references.  Items support comments and likes.
+
+## Tagging
+
+Every item can be tagged with friends.
+
+## Notifications
+
+Using the proper links, any app can send different notifications to any other app.
+
+## Messaging
+
+TBD: A stream interface for direct messaging between one or more friends.
+
+# Older Notes...
+
 ## Topics / Search
 
 By default the `seek` and `see` allow searching for and discovery of another hashname and facilitate connecting to them, but often an app will need to find instances based on some other form of identity (username) or temporary address (group chat).  While an operator can completely facilitate this process in a centralized way, the goal of telehash is to enable as much functionality as possible via decentralized methods.
