@@ -21,7 +21,7 @@ TBD: A QA interface for single friend checks, friend requests, etc.  A stream in
 
 ## Feeds/Sharing
 
-TBD: A stream interface for list of shared items. Items support tagging, media references.  Items support comments and likes.
+TBD: A stream interface for list of shared items. Items support tagging, media references.  Items support comments and likes.  Media references can be specifically filtered (just photos, videos).
 
 ## Tagging
 
@@ -29,7 +29,7 @@ Every item can be tagged with friends.
 
 ## Notifications
 
-Using the proper links, any app can send different notifications to any other app.
+Using the proper links, any app can send different notifications to any other app.  Real-time mode can be requested, all shares sent live.
 
 ## Messaging
 
