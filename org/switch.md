@@ -153,3 +153,10 @@ The following only happen when there's a line or stream open:
 * sort all lines by bucket, for each bucket:
 	* count active in last 30sec
 	* any remainder left in spread, send ping
+
+## v2+ notes
+
+* must always have key before sending open
+	* fetch key from the via
+	* fallback to seek the hashname
+* after opened, all data via line, send initial packet
