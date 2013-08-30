@@ -39,7 +39,7 @@ common utility patterns
 		configured shared authority, probably app-defined or selectable
 		custom protocol to authority to authenticate app on initialization (http or th)
 		have announcement signal signed by authority
-		dial the hash(es) that peers would be listening on sending your identifying signal and it's sig
+		dial the hash(es) that peers would be listening on sending your identifying signal and its sig
 			"itsme"="1.2.3.4:5678"
 			"itsme-sig"="60AD5A78..."
 	self-signed (trust is discovered and then remembered, like ssh/otr)
@@ -60,7 +60,7 @@ data structure thoughts
 	two root lists
 		writers
 			hashtable by cb as the key
-			each one contains details about a writer and it's last known state
+			each one contains details about a writer and its last known state
 		hashes
 			hashtable by sha1 hash as the key
 			contains what we know about this hash

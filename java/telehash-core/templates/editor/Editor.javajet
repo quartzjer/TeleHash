@@ -698,7 +698,7 @@ public class <%=genPackage.getEditorClassName()%>
 <%}%>
 
 	/**
-	 * Handles activation of the editor or it's associated views.
+	 * Handles activation of the editor or its associated views.
 	 * <!-- begin-user-doc -->
 	 * <!-- end-user-doc -->
 	 * @generated

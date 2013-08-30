@@ -12,7 +12,7 @@
 # 3. when a sig comes in, verify it
 # 4. +pop and try to connect back to it if good
 # 5. once connected, send our own verification and a challenge
-# 6. if challenge good, open another port and get it's public IP:PORT, +pop that back to the requestor
+# 6. if challenge good, open another port and get its public IP:PORT, +pop that back to the requestor
 # 7. once other port open/handshake, open udptunnel on it
 
 die("temp hack, plz run from the same dir as ./switch.pl and ./udptunnel") if(!-f "switch.pl" || !-f "udptunnel");
