@@ -24,7 +24,7 @@ bind(SOCKET, $paddr)                          or die "bind: $!";
 $sel = IO::Select->new();
 $sel->add(\*SOCKET);
 
-# resolve our seed to it's ip:port
+# resolve our seed to its ip:port
 my($seedhost,$seedport) = split(":",$seed);
 my $seedip = gethostbyname($seedhost);
 my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
@@ -111,7 +111,7 @@ sub telex
 	return $js;
 }
 
-# actually send a telex to it's IPP
+# actually send a telex to its IPP
 sub tsend
 {
 	my $j = shift;

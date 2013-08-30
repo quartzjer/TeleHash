@@ -1,6 +1,6 @@
 switchd - The easy way to get your app up and running with TeleHash
 
-Keeping a TeleHash Switch running takes some babysitting, all the timers to make sure Lines stay open, Dialing works, Listening is thorough, bandwidth usage is respected, and that peers are behaving appropriately.  Most applications need to have very careful control over their internal threading/event-handling models and the myriad of events needed to be a Switch adds a lot of complexity, so "switchd" is a simple localhost-based daemon that can do all that work in it's own process space, and provide some simple local API calls that are much more easily adopted by any application wanting to use TeleHash.
+Keeping a TeleHash Switch running takes some babysitting, all the timers to make sure Lines stay open, Dialing works, Listening is thorough, bandwidth usage is respected, and that peers are behaving appropriately.  Most applications need to have very careful control over their internal threading/event-handling models and the myriad of events needed to be a Switch adds a lot of complexity, so "switchd" is a simple localhost-based daemon that can do all that work in its own process space, and provide some simple local API calls that are much more easily adopted by any application wanting to use TeleHash.
 
 Goals:
 	- super lightweight daemon, like memcached

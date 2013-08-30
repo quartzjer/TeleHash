@@ -29,12 +29,12 @@ B->A (just forwarding due to the tap)
 	"_hop":1
 }
 
-A then knows to send a tiny hello Telex to C to open up a mapping from it's NAT to C:
+A then knows to send a tiny hello Telex to C to open up a mapping from its NAT to C:
 	{
 		"_to":"CIP:CPORT"
 	}
 
-Now C will have gotten that one since it had sent A a telex to open the mapping through it's NAT, and it can send any subsequent Telex it wants (either an end it's dialing, or a tap, or negotiate a direct connection for an app, etc).
+Now C will have gotten that one since it had sent A a telex to open the mapping through its NAT, and it can send any subsequent Telex it wants (either an end it's dialing, or a tap, or negotiate a direct connection for an app, etc).
 
 Switches can also negotiate internal network direct connections when they detect a peer they're trying to connect to is behind the same NAT (since the peer has the same IP but a different PORT).  Not defined here (yet) would be using Diffie–Hellman involving an external switch to swap each other's internal IP (10.x 172.x 192.x etc) to connect internally, without revealing that IP to the public network.
 

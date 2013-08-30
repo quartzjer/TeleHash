@@ -32,7 +32,7 @@ $sel = IO::Select->new();
 $sel->add(\*SOCKET);
 $sel->add(\*STDIN);
 
-# resolve our seed to it's ip:port
+# resolve our seed to its ip:port
 my($seedhost,$seedport) = split(":",$seed);
 my $seedip = gethostbyname($seedhost);
 my $seedipp = sprintf("%s:%d",inet_ntoa($seedip),$seedport);
@@ -181,7 +181,7 @@ sub in_udp
 					printf STDERR "\t\tVISIBLE %s\n",$remoteipp;
 					$line->{visible}=1;
 					map {$line->{neighbors}->{$_}=1} near_to($line->{end},$selfipp); # load values into this switch's neighbors list, start from ourselves
-					near_to($line->{end},$remoteipp); # injects this switch as hints into it's neighbors, fully seeded now
+					near_to($line->{end},$remoteipp); # injects this switch as hints into its neighbors, fully seeded now
 				}
 				next if($master{sha1_hex($seeipp)}); # skip if we know them already
 				# XXX todo: if we're dialing we'd want to reach out to any of these closer to that $tap_end
@@ -419,7 +419,7 @@ sub tnew
 	return $js;
 }
 
-# actually send a telex to it's switch, add/track all line headers
+# actually send a telex to its switch, add/track all line headers
 sub tsend
 {
 	my $j = shift;
