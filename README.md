@@ -1,3 +1,7 @@
+This is the old/depreicated v1 repo, all of the work since 2013 is now located at [https://github.com/telehash/](https://github.com/telehash/).
+
+***
+
 TeleHash - Distributed JSON - http://telehash.org/
 ==================================================
 
