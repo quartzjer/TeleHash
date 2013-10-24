@@ -16,10 +16,8 @@
 <header>
 <nav>
 <ul>
-<li><a href="about.html">About</a></li>
-<li><a href="http://github.com/quartzjer/TeleHash">Code</a></li>
-<li><a href="http://wiki.github.com/quartzjer/TeleHash/">Wiki</a></li>
-<li><a href="proto.html">Protocol</a></li>
+<li><a href="https://github.com/quartzjer/TeleHash/blob/master/org/v2.md#telehash-switches">Code</a></li>
+<li><a href="https://github.com/quartzjer/TeleHash/blob/master/org/v2.md">Protocol</a></li>
 <li><a href="http://twitter.com/search?q=telehash">News</a></li>
 </ul>
 </nav>
@@ -33,7 +31,7 @@
 
 <div class="alt" id="intro">
 <p>
-A new wire protocol enabling applications to connect directly in a real-time and fully distributed manner, freeing them from relying on centralized datacenters
+A new wire protocol enabling applications to connect privately in a real-time and fully distributed manner, freeing them from relying on centralized datacenters
 </p>
 </div>
 
@@ -41,27 +39,17 @@ A new wire protocol enabling applications to connect directly in a real-time and
 <div class="stripe" id="steps">
 <div class="span-8">
 <h3>What</h3>
-	<p>It works by sending and receiving small bits of <a href="http://www.json.org/">JSON</a> via <a href="http://en.wikipedia.org/wiki/User_Datagram_Protocol">UDP</a> using an efficient routing system based on <a href="http://en.wikipedia.org/wiki/Kademlia">Kademlia</a>, a proven and popular <a href="http://en.wikipedia.org/wiki/Distributed_hash_table">Distributed Hash Table</a>.  Everything within TeleHash is routed based on a generic <a href="http://en.wikipedia.org/wiki/Secure_Hash_Algorithm">SHA</a> hash of the related id or URL.
-
+	<p>It works by sending and receiving small encrypted bits of <a href="http://www.json.org/">JSON</a> (with optional binary payloads) via <a href="http://en.wikipedia.org/wiki/User_Datagram_Protocol">UDP</a> using an efficient routing system based on <a href="http://en.wikipedia.org/wiki/Kademlia">Kademlia</a>, a proven and popular <a href="http://en.wikipedia.org/wiki/Distributed_hash_table">Distributed Hash Table</a>.  
 </div>
 <div class="span-8">
-<h3>Live Seed</h3>
-<p>
-From any command line
-</p><ol class="code">
-<li>echo '{"+end":"3b6a6..."}' | nc -u telehash.org 42424</li>
-</ol>
-<p></p>
-<p>
-Then you'll get
-</p><ol class="code">
-<li>{"_ring":17904, ".see":[ "208.68.163.247:42424", "208.68.160.25:55137"], "_br":52, "_to":"173.19.99.143:63681" }</li>
-</ol>
+<h3>Demo</h3>
+<p>It's very much in the R&amp;D stages yet, but check out <a href="https://github.com/quartzjer/hash-im">hash-im</a> for a simple demo.
+</p>
 </div>
 <div class="span-8 last">
 <h3>Status</h3>
 <p>
-The current <a href="proto.html">spec</a> is implemented in a <a href="http://github.com/quartzjer/TeleHash">few languages</a> (any help here would be great!) and prototype apps are being created to test it.  Questions can be directed at the <a href="http://wiki.github.com/quartzjer/TeleHash/">wiki</a>, <a href="http://twitter.com/jeremie">twitter</a>, or to <a href="xmpp:jer@jabber.org">Jeremie Miller</a> directly.
+The current <a href="https://github.com/quartzjer/TeleHash/blob/master/org/v2.md">spec</a> is implemented in a <a href="https://github.com/quartzjer/TeleHash/blob/master/org/v2.md#telehash-switches">few languages</a> (any help here would be great!) and prototype apps are being created to test it.  Questions can be directed at <a href="http://twitter.com/jeremie">twitter</a>, or to <a href="xmpp:jer@jabber.org">Jeremie Miller</a> directly.
 </p>
 </div>
 </div>
